@@ -1,0 +1,47 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    MiguelAngelus para Windows: uma janela com o WebView2 (motor do Edge, já presente no Windows 10/11)
+    rodando os arquivos da pasta ..\lumen. Usa o .NET Framework 4.8, que também já vem no Windows:
+    quem recebe o programa não precisa instalar nada.
+    Gerar:  dotnet publish -c Release -o "..\MiguelAngelus App"
+  -->
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net48</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <LangVersion>latest</LangVersion>
+    <Nullable>disable</Nullable>
+    <AssemblyName>MiguelAngelus</AssemblyName>
+    <RootNamespace>MiguelAngelus</RootNamespace>
+    <ApplicationIcon>..\lumen\img\miguelangelus.ico</ApplicationIcon>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <Version>1.2.0</Version>
+    <Product>MiguelAngelus</Product>
+    <Description>MiguelAngelus — projeção para a Missa</Description>
+    <Copyright>Paróquia São José Operário — PASCOM</Copyright>
+    <!-- 64 bits (Windows 10/11 64 bits): assim vai junto o WebView2Loader.dll certo -->
+    <PlatformTarget>x64</PlatformTarget>
+    <Prefer32Bit>false</Prefer32Bit>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <SatelliteResourceLanguages>pt-BR</SatelliteResourceLanguages>
+    <DebugType Condition="'$(Configuration)' == 'Release'">none</DebugType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.*" />
+    <!-- leitura das mensagens da página (JSON) -->
+    <Reference Include="System.Web.Extensions" />
+    <!-- download dos folhetos -->
+    <Reference Include="System.Net.Http" />
+    <!-- acesso ao Google guardado criptografado (DPAPI) -->
+    <Reference Include="System.Security" />
+  </ItemGroup>
+
+  <!-- O app web (mesma pasta usada no navegador) vai junto, na subpasta "web" -->
+  <ItemGroup>
+    <Content Include="..\lumen\**\*" Exclude="..\lumen\teste\**;..\lumen\*.bat"
+             Link="web\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>

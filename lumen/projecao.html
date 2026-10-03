@@ -1,0 +1,391 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>MiguelAngelus — Projeção</title>
+<link rel="icon" type="image/svg+xml" href="img/icone.svg">
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #000; }
+  body { cursor: none; font-family: "Segoe UI", Arial, sans-serif; }
+  body.preview, body.mostra-cursor { cursor: default; }
+  #fundo { position: fixed; inset: 0; background: #000 center / cover no-repeat; }
+  .canto { position: fixed; width: auto; max-width: 38vw; object-fit: contain; pointer-events: none; display: none; }
+  .canto.on { display: block; }
+  #canto-se { top: 2.5vh; left: 1.8vw; }
+  #canto-sd { top: 2.5vh; right: 1.8vw; }
+  #canto-ie { bottom: 0; left: 1vw; object-position: left bottom; }
+  #canto-id { bottom: 0; right: 1vw; object-position: right bottom; }
+  #area { position: fixed; inset: 5vh 5vw 12vh; display: flex; align-items: center; justify-content: center; }
+  /* Slide com imagem (item "Imagem + texto") */
+  /* Câmera ao vivo (NDI Webcam / webcam): tela cheia; as imagens dos cantos continuam por cima */
+  #cam { position: fixed; inset: 0; width: 100%; height: 100%; object-fit: cover; background: #000; display: none; }
+  body.camera #cam { display: block; }
+  body.camera.sem-letra #area, body.camera.sem-letra #rodape { visibility: hidden; }
+  /* "Letra por cima": o slide vira uma faixa na parte de baixo, sobre a câmera */
+  body.camera.com-letra #area { inset: auto 0 3vh 0; height: 27vh; padding: 1.2vh 5vw; background: rgba(0, 0, 0, .55); box-sizing: border-box; }
+  body.camera.com-letra #area:has(#texto:empty) { background: transparent; }
+  body.camera.com-letra #rodape { display: none; }
+  #imgSlide { position: fixed; display: none; object-fit: contain; transition: opacity .14s ease; }
+  #veu { position: fixed; inset: 0; display: none; background: #000; pointer-events: none; }
+  body.lay-esquerda #imgSlide, body.lay-direita #imgSlide { display: block; top: 5vh; bottom: 12vh; width: 44vw; height: 83vh; }
+  body.lay-esquerda #imgSlide { left: 4vw; }
+  body.lay-esquerda #area { left: 51vw; right: 4vw; }
+  body.lay-direita #imgSlide { right: 4vw; }
+  body.lay-direita #area { left: 4vw; right: 51vw; }
+  body.lay-acima #imgSlide { display: block; top: 4vh; left: 5vw; width: 90vw; height: 52vh; }
+  body.lay-acima #area { top: 58vh; }
+  body.lay-fundo #imgSlide, body.lay-so #imgSlide { display: block; inset: 0; width: 100%; height: 100%; }
+  body.lay-fundo #imgSlide { object-fit: cover; }
+  body.lay-fundo #veu { display: block; }
+  body.lay-so #area, body.lay-so #rodape { display: none; }
+  #texto { max-width: 100%; line-height: 1.22; color: #fff; text-align: center; transition: opacity .14s ease; overflow-wrap: break-word; }
+  #texto sup { font-size: .5em; opacity: .75; margin-right: .15em; vertical-align: .6em; }
+  #texto .resp { font-weight: 700; }
+  #texto .quem { font-weight: 700; color: var(--cor-quem, #ff5a4f); }
+  #rodape { position: fixed; left: 5vw; right: 5vw; bottom: 3.5vh; text-align: center; font-size: 3.3vh; color: #fff; opacity: .8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: opacity .14s ease; }
+  #video { position: fixed; inset: 0; width: 100%; height: 100%; object-fit: contain; background: #000; display: none; }
+  #video.on { display: block; }
+  #aviso-som { position: fixed; bottom: 2vh; left: 50%; transform: translateX(-50%); background: rgba(160,30,30,.92); color: #fff; font: 15px "Segoe UI", sans-serif; padding: 8px 14px; border-radius: 8px; display: none; z-index: 6; }
+  #preto { position: fixed; inset: 0; background: #000; opacity: 0; transition: opacity .25s ease; pointer-events: none; }
+  #preto.on { opacity: 1; }
+  #dica { position: fixed; top: 2vh; left: 50%; transform: translateX(-50%); background: rgba(20,22,26,.92); color: #eee; font: 15px "Segoe UI", sans-serif; padding: 10px 16px; border-radius: 8px; transition: opacity .6s; z-index: 5; text-align: center; }
+  #dica.fora { opacity: 0; pointer-events: none; }
+  body.preview #dica { display: none; }
+  /* Aviso na tela: faixa por cima de tudo (letra, vídeo e até a tela preta) */
+  #aviso { position: fixed; left: 0; right: 0; top: 0; z-index: 8; display: flex; align-items: center; justify-content: center; gap: 1.6vw;
+    padding: 2.2vh 4vw; background: rgba(176, 28, 28, .95); color: #fff; font-family: "Segoe UI", Arial, sans-serif; font-weight: 700;
+    font-size: 5.2vh; line-height: 1.2; text-align: center; box-shadow: 0 .6vh 2.5vh rgba(0,0,0,.6);
+    transform: translateY(-110%); transition: transform .35s ease; }
+  #aviso.baixo { top: auto; bottom: 0; transform: translateY(110%); box-shadow: 0 -.6vh 2.5vh rgba(0,0,0,.6); }
+  #aviso.on { transform: none; }
+  #aviso .ic { font-size: 1.25em; }
+  #aviso.pisca { animation: pisca .55s ease-in-out 4; }
+  @keyframes pisca { 50% { background: rgba(255, 196, 0, .97); color: #1a1000; } }
+</style>
+</head>
+<body>
+<div id="fundo"></div>
+<video id="cam" autoplay muted playsinline></video>
+<img id="canto-se" class="canto" alt="">
+<img id="canto-sd" class="canto" alt="">
+<img id="canto-ie" class="canto" alt="">
+<img id="canto-id" class="canto" alt="">
+<img id="imgSlide" alt="">
+<div id="veu"></div>
+<div id="area"><div id="texto"></div></div>
+<div id="rodape"></div>
+<video id="video" playsinline preload="auto"></video>
+<div id="aviso-som">O navegador bloqueou o som: clique uma vez nesta janela.</div>
+<div id="preto"></div>
+<div id="aviso"><span class="ic"></span><span class="txt"></span></div>
+<div id="dica">Arraste esta janela para o telão e <b>clique duas vezes</b> para tela cheia.<br>As setas do teclado também funcionam aqui.</div>
+
+<script>
+'use strict';
+const PREVIEW = new URLSearchParams(location.search).has('preview');
+const alvo = PREVIEW ? window.parent : window.opener;
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+if (PREVIEW) document.body.classList.add('preview');
+// No aplicativo, o programa já põe esta janela no telão (a dica de arrastar só aparece se houver um monitor só)
+if (window.chrome && window.chrome.webview) $('dica').innerHTML = 'Só há um monitor ligado: esta janela abriu aqui.<br>Ligue o telão e abra a projeção de novo, ou <b>clique duas vezes</b> para tela cheia.';
+
+let cfg = {}, slide = null, chaveAtual = '', timer = 0;
+
+function htmlSlide(s) {
+  if (s.versos) {
+    return s.versos.map(v => (cfg.numerarVersos !== false ? `<sup>${esc(v.n)}</sup>` : '') + esc(v.t)).join(' ');
+  }
+  // A partir da linha que começa com "—" (resposta do povo), o resto do slide fica em negrito.
+  // Letra de quem fala no começo da linha (P., T., L., C., D. — vem do folheto): colorida; T. = povo (negrito), as outras não.
+  let povo = false;
+  const linhas = esc(s.texto).split('\n').map((l, i) => {
+    const num = i === 0 && s.numerado ? /^\s*(\d+)\.\s+/.exec(l) : null;     // nº da prece / estrofe do salmo
+    if (num) return (cfg.mostrarRotulos === false ? '' : `<span class="quem">${num[1]}.</span> `) + l.slice(num[0].length);
+    const m = /^\s*([PTLCD])\.\s+/.exec(l);
+    let quem = '';
+    if (m) {
+      povo = m[1] === 'T';
+      if (cfg.mostrarRotulos !== false) quem = `<span class="quem">${m[1]}.</span> `;
+      l = l.slice(m[0].length);
+    } else if (/^\s*(—|R\.)/.test(l)) povo = true;
+    return quem + (povo ? `<span class="resp">${l}</span>` : l);
+  });
+  const html = linhas.join('<br>');
+  return s.refrao ? `<span class="resp">${html}</span>` : html;
+}
+
+// Com limite de linhas: a letra é calculada para caber exatamente N linhas de ~C caracteres.
+// Sem limite: começa no tamanho máximo e diminui até o texto caber.
+function ajustar() {
+  const texto = $('texto'), area = $('area');
+  const maxPx = (+cfg.fonteMax || 9) * window.innerHeight / 100;
+  let f = maxPx;
+  if (cfg.quebraAuto) {
+    const L = +cfg.linhasPorSlide || 4, C = +cfg.caracteresPorLinha || 40;
+    f = Math.min(maxPx, area.clientHeight / (L * 1.22));
+    texto.style.maxWidth = `min(100%, ${(C * 0.55).toFixed(1)}em)`;
+  } else {
+    texto.style.maxWidth = '100%';
+  }
+  texto.style.fontSize = f + 'px';
+  while ((texto.scrollHeight > area.clientHeight || texto.scrollWidth > area.clientWidth) && f > 4) {
+    f *= 0.96;
+    texto.style.fontSize = f + 'px';
+  }
+}
+
+const LAYOUTS = ['esquerda', 'direita', 'acima', 'fundo', 'so'];
+function desenharImagem() {
+  const lay = slide?.img ? slide.layout || 'esquerda' : '';
+  for (const l of LAYOUTS) document.body.classList.toggle('lay-' + l, l === lay);
+  const img = $('imgSlide');
+  if (lay) { if (img.getAttribute('src') !== slide.img) img.src = slide.img; }
+  else img.removeAttribute('src');
+  $('veu').style.opacity = lay === 'fundo' ? (+slide.escurecer || 0) / 100 : 0;
+  harmonizar(lay);
+}
+
+// Imagem + texto (abertura, homilia, apresentações): imagem um pouco menor e, junto com o texto, sem passar por cima
+// das imagens dos cantos (brasão, PASCOM, padroeiro). Para cada canto que invade, corta o lado que perde menos espaço.
+const CAIXAS = {   // em fração da tela: [esquerda, topo, direita, base]
+  esquerda: { img: [.04, .05, .48, .88], area: [.51, .05, .96, .88] },
+  direita: { img: [.52, .05, .96, .88], area: [.04, .05, .49, .88] },
+  acima: { img: [.05, .04, .95, .56], area: [.05, .58, .95, .88] },
+};
+function harmonizar(lay) {
+  const img = $('imgSlide'), area = $('area');
+  const limpar = () => { for (const p of ['left', 'top', 'right', 'bottom', 'width', 'height']) { img.style[p] = ''; area.style[p] = ''; } };
+  const cx = CAIXAS[lay];
+  if (!cx || document.body.classList.contains('camera')) return limpar();
+  const W = innerWidth, H = innerHeight, folga = H * .02;
+  const cantos = [...document.querySelectorAll('.canto.on')].filter(c => c.naturalWidth).map(c => c.getBoundingClientRect());
+  const encaixar = (fr, encolher) => {
+    let [l, t, r, b] = [fr[0] * W, fr[1] * H, fr[2] * W, fr[3] * H];
+    if (encolher) { const dx = (r - l) * encolher, dy = (b - t) * encolher; l += dx; r -= dx; t += dy; b -= dy; }
+    const area0 = (r - l) * (b - t);
+    for (const c of cantos) {
+      if (c.right <= l || c.left >= r || c.bottom <= t || c.top >= b) continue;          // não encosta
+      const vert = c.top < H / 2 ? [l, c.bottom + folga, r, b] : [l, t, r, c.top - folga];
+      const horz = c.left < W / 2 ? [c.right + folga, t, r, b] : [l, t, c.left - folga, b];
+      const tam = q => Math.max(0, q[2] - q[0]) * Math.max(0, q[3] - q[1]);
+      const melhor = tam(vert) >= tam(horz) ? vert : horz;
+      if (tam(melhor) > area0 * .25) [l, t, r, b] = melhor;                              // nunca deixa sumir
+    }
+    return [l, t, r, b];
+  };
+  const [il, it, ir, ib] = encaixar(cx.img, .05);
+  Object.assign(img.style, { left: il + 'px', top: it + 'px', width: (ir - il) + 'px', height: (ib - it) + 'px', right: 'auto', bottom: 'auto' });
+  const [al, at, ar, ab] = encaixar(cx.area, 0);
+  Object.assign(area.style, { left: al + 'px', top: at + 'px', right: (W - ar) + 'px', bottom: (H - ab) + 'px' });
+}
+// as imagens dos cantos chegam depois: refaz o encaixe quando carregam (e quando a janela muda de tamanho)
+document.querySelectorAll('.canto').forEach(c => c.addEventListener('load', () => { if (slide?.img) { desenharImagem(); ajustar(); } }));
+
+function desenhar() {
+  desenharImagem();
+  $('texto').innerHTML = slide ? htmlSlide(slide) : '';
+  $('rodape').textContent = slide && cfg.rodape !== false ? (slide.rodape || '') : '';
+  ajustar();
+}
+
+function mostrar(s) {
+  const chave = JSON.stringify(s);
+  if (chave === chaveAtual) return;
+  chaveAtual = chave;
+  slide = s;
+  if (PREVIEW) return desenhar();
+  clearTimeout(timer);
+  // a imagem só pisca quando muda (entre slides do mesmo item ela fica parada)
+  const trocaImg = (s?.img || '') !== ($('imgSlide').getAttribute('src') || '');
+  $('texto').style.opacity = 0; $('rodape').style.opacity = 0;
+  if (trocaImg) $('imgSlide').style.opacity = 0;
+  timer = setTimeout(() => { desenhar(); $('texto').style.opacity = 1; $('rodape').style.opacity = .8; $('imgSlide').style.opacity = 1; }, 140);
+}
+
+function aplicarConfig(c) {
+  cfg = c || {};
+  const t = $('texto');
+  document.body.style.fontFamily = cfg.fonte || '';
+  t.style.color = $('rodape').style.color = cfg.corTexto || '#fff';
+  t.style.textAlign = cfg.alinhamento || 'center';
+  t.style.textTransform = cfg.maiusculas ? 'uppercase' : 'none';
+  t.style.fontWeight = cfg.negrito ? 700 : 400;     // temas claros: letra preta em negrito
+  t.style.setProperty('--cor-quem', cfg.corRotulo || '#ff5a4f');
+  t.style.textShadow = cfg.sombra ? '0 .3vh .9vh rgba(0,0,0,.85), 0 0 .3vh rgba(0,0,0,.6)' : 'none';
+  $('fundo').style.backgroundColor = cfg.corFundo || '#000';
+  $('fundo').style.backgroundImage = cfg.fundoImagem ? `url("${cfg.fundoImagem}")` : 'none';
+  desenhar();
+}
+
+// ---------- Vídeo ----------
+const video = $('video');
+let videoId = null, urlVideo = null, ultimoStatus = 0;
+if (PREVIEW) video.muted = true;               // a prévia nunca tem som
+
+function status(forcar) {
+  const agora = Date.now();
+  if (!forcar && agora - ultimoStatus < 250) return;
+  ultimoStatus = agora;
+  if (alvo && alvo !== window) try {
+    alvo.postMessage({ app: 'lumen', tipo: 'midiaStatus', preview: PREVIEW, id: videoId, t: video.currentTime,
+      dur: video.duration || 0, pausado: video.paused, ativo: video.classList.contains('on') }, '*');
+  } catch (_) {}
+}
+['timeupdate', 'play', 'pause', 'loadedmetadata', 'seeked'].forEach(ev => video.addEventListener(ev, () => status(ev !== 'timeupdate')));
+video.addEventListener('ended', () => { if (!video.loop) { video.classList.remove('on'); status(true); } });
+// Formato de imagem que o motor não decodifica (ex.: MPEG-4 Parte 2/"mp4v", Xvid): toca só o som. Avisa o operador.
+video.addEventListener('loadedmetadata', () => {
+  if (video.videoWidth || PREVIEW || !alvo || alvo === window) return;
+  try { alvo.postMessage({ app: 'lumen', tipo: 'midiaSemImagem', id: videoId }, '*'); } catch (_) {}
+});
+
+function tocarVideo() {
+  video.play().catch(() => {
+    if (PREVIEW) return;
+    // Sem clique nesta janela o Chrome pode bloquear o som: toca sem som e avisa
+    video.muted = true;
+    video.play().catch(() => {});
+    $('aviso-som').style.display = 'block';
+  });
+}
+document.addEventListener('click', () => {
+  if (!PREVIEW && video.muted) { video.muted = false; $('aviso-som').style.display = 'none'; }
+});
+
+function midia(m) {
+  if (m.acao === 'carregar') {
+    pararCam();                                   // vídeo no telão tira a câmera
+    if (m.id !== videoId) {
+      if (urlVideo && urlVideo.startsWith('blob:')) URL.revokeObjectURL(urlVideo);
+      urlVideo = m.blob ? URL.createObjectURL(m.blob) : m.url;   // url = arquivo da pasta de vídeos (servido pelo programa)
+      videoId = m.id;
+      video.src = urlVideo;
+    }
+    video.loop = !!m.loop;
+    if (!PREVIEW && m.volume != null) video.volume = m.volume;
+    if (m.t != null) video.currentTime = m.t;
+    video.classList.add('on');
+    if (m.tocar) tocarVideo(); else video.pause();
+  } else if (m.acao === 'play') { video.classList.add('on'); tocarVideo(); }
+  else if (m.acao === 'pause') video.pause();
+  else if (m.acao === 'seek') video.currentTime = m.t;
+  else if (m.acao === 'volume') { if (!PREVIEW) video.volume = m.v; }
+  else if (m.acao === 'loop') video.loop = !!m.on;
+  else if (m.acao === 'parar') { video.pause(); video.classList.remove('on'); status(true); }
+}
+
+// ---------- Câmera ao vivo ----------
+let camStream = null;
+async function camera(m) {
+  const b = document.body;
+  if (m.acao === 'letra') { b.classList.toggle('com-letra', !!m.on); b.classList.toggle('sem-letra', !m.on); ajustar(); return; }
+  pararCam();
+  if (m.acao !== 'mostrar') return;
+  try {
+    let lista = (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === 'videoinput');
+    if (lista.length && !lista[0].label) {
+      try { const s = await Promise.race([navigator.mediaDevices.getUserMedia({ video: true }), new Promise((_, f) => setTimeout(() => f(new Error('tempo')), 6000))]); s.getTracks().forEach(t => t.stop()); } catch (_) {}
+      lista = (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === 'videoinput');
+    }
+    const d = lista.find(x => x.label === m.rotulo) || lista.find(x => x.deviceId === m.dispositivo);
+    if (!d) throw new Error(`"${m.rotulo}" não encontrada (o NDI Webcam está aberto?)`);
+    camStream = await navigator.mediaDevices.getUserMedia({ video: { deviceId: { exact: d.deviceId }, width: { ideal: 1920 }, height: { ideal: 1080 } }, audio: false });
+    $('cam').srcObject = camStream;
+    b.classList.add('camera');
+    b.classList.toggle('com-letra', !!m.letra); b.classList.toggle('sem-letra', !m.letra);
+    ajustar();
+  } catch (e) {
+    if (alvo && alvo !== window) try { alvo.postMessage({ app: 'lumen', tipo: 'cameraStatus', preview: PREVIEW, erro: e.message }, '*'); } catch (_) {}
+  }
+}
+function pararCam() {
+  if (camStream) { camStream.getTracks().forEach(t => t.stop()); camStream = null; }
+  $('cam').srcObject = null;
+  document.body.classList.remove('camera', 'com-letra', 'sem-letra');
+  ajustar();
+}
+
+// ---------- Aviso (placa de carro, criança…) ----------
+let avisoN = 0;
+function aviso(a) {
+  const el = $('aviso');
+  if (!a) { el.classList.remove('on', 'pisca'); return; }
+  const novo = a.n !== avisoN;
+  avisoN = a.n;
+  el.querySelector('.ic').textContent = a.icone || '📢';
+  el.querySelector('.txt').textContent = a.texto;
+  el.classList.toggle('baixo', a.pos === 'baixo');
+  // textos longos: diminui a letra até caber em no máximo 3 linhas
+  el.style.fontSize = '';
+  el.classList.add('on');
+  let f = 5.2;
+  while (el.offsetHeight > window.innerHeight * 0.3 && f > 2.4) { f -= 0.3; el.style.fontSize = f + 'vh'; }
+  if (novo) { el.classList.remove('pisca'); void el.offsetWidth; el.classList.add('pisca'); }
+}
+
+window.addEventListener('message', e => {
+  const m = e.data;
+  if (!m || m.app !== 'lumen') return;
+  if (m.tipo === 'config') aplicarConfig(m.config);
+  else if (m.tipo === 'layout') {
+    // imagens nos cantos (brasão, logo, padroeiro…); tam = % da altura da tela
+    for (const c of ['se', 'sd', 'ie', 'id']) {
+      const el = $('canto-' + c), x = m.cantos?.[c];
+      el.classList.toggle('on', !!x);
+      if (x) { if (el.src !== x.src) el.src = x.src; el.style.height = x.tam + 'vh'; }
+      else el.removeAttribute('src');
+    }
+    if (slide?.img) { desenharImagem(); ajustar(); }
+  }
+  else if (m.tipo === 'midia') midia(m);
+  else if (m.tipo === 'slide') {
+    // projetar texto tira o vídeo da tela
+    if (video.classList.contains('on')) { video.pause(); video.classList.remove('on'); status(true); }
+    mostrar(m.slide);
+  }
+  else if (m.tipo === 'preto') $('preto').classList.toggle('on', !!m.on);
+  else if (m.tipo === 'aviso') aviso(m.aviso);
+  else if (m.tipo === 'camera') camera(m);
+  else if (m.tipo === 'posicionar') {
+    try { window.moveTo(m.x, m.y); window.resizeTo(m.w, m.h); } catch (_) { /* o usuário arrasta manualmente */ }
+  }
+});
+
+window.addEventListener('resize', () => { if (slide?.img) desenharImagem(); ajustar(); });
+
+// Avisa o painel que esta janela está pronta (e continua avisando, caso o painel seja recarregado)
+function ola(primeiro) {
+  if (alvo && alvo !== window) try { alvo.postMessage({ app: 'lumen', tipo: 'ola', preview: PREVIEW, primeiro }, '*'); } catch (_) {}
+}
+ola(true);
+
+if (!PREVIEW) {
+  setInterval(() => ola(false), 2000);
+  setTimeout(() => $('dica').classList.add('fora'), 7000);
+
+  document.addEventListener('dblclick', () => {
+    if (document.fullscreenElement) document.exitFullscreen();
+    else document.documentElement.requestFullscreen().catch(() => {});
+  });
+
+  // Teclas pressionadas aqui controlam o painel também
+  window.addEventListener('keydown', e => {
+    if (['ArrowRight', 'ArrowLeft', 'ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', ' ', 'b', 'B', 'l', 'L', 'Escape'].includes(e.key)) {
+      if (e.key !== 'Escape' || !document.fullscreenElement) e.preventDefault();
+      ola(false);
+      if (alvo) alvo.postMessage({ app: 'lumen', tipo: 'tecla', key: e.key }, '*');
+    }
+  });
+
+  // Mostra o cursor só enquanto o mouse se mexe
+  let tc = 0;
+  document.addEventListener('mousemove', () => {
+    document.body.classList.add('mostra-cursor');
+    clearTimeout(tc);
+    tc = setTimeout(() => document.body.classList.remove('mostra-cursor'), 1500);
+  });
+}
+</script>
+</body>
+</html>
