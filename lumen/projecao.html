@@ -20,6 +20,8 @@
   /* Câmera ao vivo (NDI Webcam / webcam): tela cheia; as imagens dos cantos continuam por cima */
   #cam { position: fixed; inset: 0; width: 100%; height: 100%; object-fit: cover; background: #000; display: none; }
   body.camera #cam { display: block; }
+  /* com a câmera no ar, as imagens dos cantos de baixo (padroeiro, logos) saem para não cobrir a imagem; as de cima ficam */
+  body.camera #canto-ie, body.camera #canto-id { display: none; }
   body.camera.sem-letra #area, body.camera.sem-letra #rodape { visibility: hidden; }
   /* "Letra por cima": o slide vira uma faixa na parte de baixo, sobre a câmera */
   body.camera.com-letra #area { inset: auto 0 3vh 0; height: 27vh; padding: 1.2vh 5vw; background: rgba(0, 0, 0, .55); box-sizing: border-box; }
@@ -94,7 +96,7 @@ let cfg = {}, slide = null, chaveAtual = '', timer = 0;
 
 function htmlSlide(s) {
   if (s.versos) {
-    return s.versos.map(v => (cfg.numerarVersos !== false ? `<sup>${esc(v.n)}</sup>` : '') + esc(v.t)).join(' ');
+    return acabamento(s.versos.map(v => (cfg.numerarVersos !== false ? `<sup>${esc(v.n)}</sup>` : '') + esc(v.t)).join(' '));
   }
   // A partir da linha que começa com "—" (resposta do povo), o resto do slide fica em negrito.
   // Letra de quem fala no começo da linha (P., T., L., C., D. — vem do folheto): colorida; T. = povo (negrito), as outras não.
@@ -111,8 +113,16 @@ function htmlSlide(s) {
     } else if (/^\s*(—|R\.)/.test(l)) povo = true;
     return quem + (povo ? `<span class="resp">${l}</span>` : l);
   });
-  const html = linhas.join('<br>');
+  const html = acabamento(linhas.join('<br>'));
   return s.refrao ? `<span class="resp">${html}</span>` : html;
+}
+
+// Negrito/itálico/sublinhado digitados como <b> <i> <u> (botões N I S na edição) e referências bíblicas sem quebrar:
+// "(Fl 4,6-9)" fica sempre inteira na mesma linha (espaço e hífen que não quebram).
+function acabamento(html) {
+  return html
+    .replace(/&lt;(\/?)(b|i|u)&gt;/gi, '<$1$2>')
+    .replace(/\(([^()<>]{0,40}\d[^()<>]{0,40})\)/g, (_, r) => '(' + r.replace(/ /g, ' ').replace(/-/g, '‑') + ')');
 }
 
 // Com limite de linhas: a letra é calculada para caber exatamente N linhas de ~C caracteres.
@@ -208,7 +218,11 @@ function aplicarConfig(c) {
   const t = $('texto');
   document.body.style.fontFamily = cfg.fonte || '';
   t.style.color = $('rodape').style.color = cfg.corTexto || '#fff';
-  t.style.textAlign = cfg.alinhamento || 'center';
+  // justificado: as linhas que quebram sozinhas ficam com as duas margens retas; a última linha de cada parágrafo e as
+  // linhas curtas (versos) não esticam — ficam à esquerda ou, no "justificado e centralizado", no centro
+  const al = cfg.alinhamento || 'center';
+  t.style.textAlign = al.startsWith('justify') ? 'justify' : al;
+  t.style.textAlignLast = al === 'justify-center' ? 'center' : al === 'justify' ? 'left' : 'auto';
   t.style.textTransform = cfg.maiusculas ? 'uppercase' : 'none';
   t.style.fontWeight = cfg.negrito ? 700 : 400;     // temas claros: letra preta em negrito
   t.style.setProperty('--cor-quem', cfg.corRotulo || '#ff5a4f');

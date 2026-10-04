@@ -7,7 +7,7 @@
 ;   nem ao instalar uma versão nova por cima.
 
 #define Nome "MiguelAngelus"
-#define Versao "1.2"
+#define Versao "1.3"
 #define Editor "Paróquia São José Operário — PASCOM"
 
 [Setup]
@@ -57,6 +57,8 @@ Name: "{autodesktop}\{#Nome}"; Filename: "{app}\MiguelAngelus.exe"; Tasks: atalh
 
 [Run]
 Filename: "{app}\MiguelAngelus.exe"; Description: "Abrir o {#Nome} agora"; Flags: nowait postinstall skipifsilent
+; atualização automática (instalação silenciosa): reabre o programa sozinho no fim
+Filename: "{app}\MiguelAngelus.exe"; Flags: nowait postinstall skipifnotsilent
 
 [Messages]
 pt.WelcomeLabel2=Este assistente vai instalar o [name/ver] neste computador.%n%nO MiguelAngelus é o programa de projeção para a Missa da Paróquia São José Operário.%n%nSe já houver uma versão instalada, ela será atualizada e os cantos, roteiros e demais dados serão mantidos.

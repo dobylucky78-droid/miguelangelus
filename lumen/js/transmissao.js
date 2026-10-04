@@ -38,7 +38,7 @@ function linhasDoSlide(s) {
   for (const [i, l] of (s.texto || '').split('\n').entries()) {
     if (!l.trim()) continue;
     povo = povoDaLinha(l, povo);
-    const sem = i === 0 && s.numerado ? l.replace(/^\s*\d+\.\s+/, '') : l;      // na transmissão, sem o nº da prece/estrofe
+    const sem = (i === 0 && s.numerado ? l.replace(/^\s*\d+\.\s+/, '') : l).replace(/<\/?[biu]>/gi, '');   // sem o nº da prece/estrofe e sem as marcas de negrito/itálico
     linhas.push(maius(sem.replace(/^\s*—\s*/, '').replace(RX_QUEM, '').trim()));   // … e sem "P."/"T."
     negrito.push(povo || !!s.refrao);
   }

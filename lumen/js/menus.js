@@ -86,7 +86,7 @@ function acaoMenu(acao) {
     case 'novoCanto': return $('#btnNovoCanto').click();
     case 'novaOracao': return $('#btnNovaOracao').click();
     case 'telaCheia': return alternarTelaCheiaPainel();
-    case 'projecao': return abrirProjecao();
+    case 'projecao': return alternarProjecao();
     case 'proximo': return proximo();
     case 'anterior': return anterior();
     case 'preto': return alternarPreto();
@@ -103,6 +103,7 @@ function acaoMenu(acao) {
     case 'agenda-paroquia': return abrirAgenda('paroquia');
     case 'manual': return abrirManual();
     case 'atalhos': return abrirDialogo('dlgAtalhos');
+    case 'atualizar': return verificarAtualizacao({ silencioso: false });
     case 'sobre': return abrirDialogo('dlgSobre');
   }
 }

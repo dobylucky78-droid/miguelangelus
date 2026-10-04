@@ -7,11 +7,12 @@
  * Usa S, Agenda, localDe, localDoRoteiro, enviar, salvarAgenda… (em tempo de execução).
  */
 
+// Um tema muda só as CORES (e tira a sombra nos fundos claros). Fonte, tamanho e MAIÚSCULAS continuam os dos Ajustes.
 const TEMAS = [
   { id: 'ajustes', nome: 'Ajustes', dica: 'O que está em Ferramentas → Ajustes → Aparência' },
-  { id: 'escuro', nome: 'Escuro', corFundo: '#000000', corTexto: '#ffffff', maiusculas: false, negrito: false, sombra: true, corRotulo: '#ff5a4f' },
-  { id: 'azul', nome: 'Azul claro', corFundo: '#d9eefa', corTexto: '#111111', maiusculas: false, negrito: false, sombra: false, corRotulo: '#c8102e' },
-  { id: 'creme', nome: 'Creme', corFundo: '#fbf1de', corTexto: '#111111', maiusculas: false, negrito: false, sombra: false, corRotulo: '#c8102e' },
+  { id: 'escuro', nome: 'Escuro', corFundo: '#000000', corTexto: '#ffffff', corRotulo: '#ff5a4f' },
+  { id: 'azul', nome: 'Azul claro', corFundo: '#d9eefa', corTexto: '#111111', sombra: false, corRotulo: '#c8102e' },
+  { id: 'creme', nome: 'Creme', corFundo: '#fbf1de', corTexto: '#111111', sombra: false, corRotulo: '#c8102e' },
 ];
 const temaPorId = id => TEMAS.find(t => t.id === id) || TEMAS[0];
 

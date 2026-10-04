@@ -20,7 +20,7 @@
       <div class="splash-sub">Projeção para a Missa</div>
     </div>
     <div class="splash-info">
-      <div>Versão 1.2</div>
+      <div>Versão 1.3</div>
       <div>© 2026 · PASCOM</div>
       <div><b>Paróquia São José Operário</b></div>
     </div>
@@ -114,6 +114,7 @@
       <div class="menu-itens">
         <button data-menu="manual">📘 Manual do MiguelAngelus <span class="atalho">F1</span></button>
         <button data-menu="atalhos">Atalhos do teclado…</button>
+        <button data-menu="atualizar">Procurar atualizações…</button>
         <hr>
         <button data-menu="sobre">Sobre o MiguelAngelus…</button>
       </div>
@@ -361,6 +362,7 @@
               <option value="claro">Claro: fundo branco e letras pretas</option>
             </select>
           </label>
+          <label class="check"><input type="checkbox" data-cfg="atualizarAuto"> Procurar atualizações ao abrir</label>
           <p class="sutil pequeno">Muda só a tela do MiguelAngelus. O telão continua com o tema dele (quadradinhos <b>Tema</b> na tela de controle ou <b>Agenda → Paróquia → 🖼</b>).</p>
         </section>
 
@@ -368,13 +370,37 @@
           <h3>🎨 Aparência do telão</h3>
           <label class="campo">Fonte
             <select data-cfg="fonte">
-              <option value='"Segoe UI", Arial, sans-serif'>Segoe UI</option>
-              <option value='Arial, Helvetica, sans-serif'>Arial</option>
-              <option value='Calibri, Arial, sans-serif'>Calibri</option>
-              <option value='Georgia, serif'>Georgia</option>
-              <option value='Cambria, Georgia, serif'>Cambria</option>
-              <option value='"Trebuchet MS", sans-serif'>Trebuchet MS</option>
-              <option value='Verdana, sans-serif'>Verdana</option>
+              <optgroup label="Sem serifa — as mais legíveis no telão">
+              <option value='"Segoe UI", Arial, sans-serif' style='font-family:"Segoe UI", Arial, sans-serif'>Segoe UI</option>
+              <option value='"Segoe UI Semibold", "Segoe UI", Arial, sans-serif' style='font-family:"Segoe UI Semibold", "Segoe UI", Arial, sans-serif'>Segoe UI Semibold (mais encorpada)</option>
+              <option value='Arial, Helvetica, sans-serif' style='font-family:Arial, Helvetica, sans-serif'>Arial</option>
+              <option value='Calibri, Arial, sans-serif' style='font-family:Calibri, Arial, sans-serif'>Calibri</option>
+              <option value='Verdana, sans-serif' style='font-family:Verdana, sans-serif'>Verdana</option>
+              <option value='Tahoma, Verdana, sans-serif' style='font-family:Tahoma, Verdana, sans-serif'>Tahoma</option>
+              <option value='"Trebuchet MS", sans-serif' style='font-family:"Trebuchet MS", sans-serif'>Trebuchet MS</option>
+              <option value='Candara, Calibri, sans-serif' style='font-family:Candara, Calibri, sans-serif'>Candara</option>
+              <option value='Corbel, Calibri, sans-serif' style='font-family:Corbel, Calibri, sans-serif'>Corbel</option>
+              <option value='Bahnschrift, "Segoe UI", sans-serif' style='font-family:Bahnschrift, "Segoe UI", sans-serif'>Bahnschrift (estreita)</option>
+              <option value='"Franklin Gothic Medium", Arial, sans-serif' style='font-family:"Franklin Gothic Medium", Arial, sans-serif'>Franklin Gothic</option>
+              <option value='"Lucida Sans Unicode", "Segoe UI", sans-serif' style='font-family:"Lucida Sans Unicode", "Segoe UI", sans-serif'>Lucida Sans</option>
+              <option value='"Century Gothic", "Segoe UI", sans-serif' style='font-family:"Century Gothic", "Segoe UI", sans-serif'>Century Gothic (com Office)</option>
+              <option value='"Gill Sans MT", Calibri, sans-serif' style='font-family:"Gill Sans MT", Calibri, sans-serif'>Gill Sans (com Office)</option>
+              </optgroup>
+              <optgroup label="Com serifa — estilo livro e missal">
+              <option value='Georgia, serif' style='font-family:Georgia, serif'>Georgia</option>
+              <option value='Cambria, Georgia, serif' style='font-family:Cambria, Georgia, serif'>Cambria</option>
+              <option value='Constantia, Georgia, serif' style='font-family:Constantia, Georgia, serif'>Constantia</option>
+              <option value='"Palatino Linotype", "Book Antiqua", Georgia, serif' style='font-family:"Palatino Linotype", "Book Antiqua", Georgia, serif'>Palatino</option>
+              <option value='"Times New Roman", Times, serif' style='font-family:"Times New Roman", Times, serif'>Times New Roman</option>
+              <option value='"Sitka Text", Georgia, serif' style='font-family:"Sitka Text", Georgia, serif'>Sitka</option>
+              <option value='"Book Antiqua", "Palatino Linotype", serif' style='font-family:"Book Antiqua", "Palatino Linotype", serif'>Book Antiqua (com Office)</option>
+              <option value='Garamond, "Palatino Linotype", serif' style='font-family:Garamond, "Palatino Linotype", serif'>Garamond (com Office)</option>
+              </optgroup>
+              <optgroup label="Destaque — títulos e avisos">
+              <option value='"Segoe UI Black", "Arial Black", sans-serif' style='font-family:"Segoe UI Black", "Arial Black", sans-serif'>Segoe UI Black</option>
+              <option value='"Arial Black", Arial, sans-serif' style='font-family:"Arial Black", Arial, sans-serif'>Arial Black</option>
+              <option value='Gabriola, Georgia, serif' style='font-family:Gabriola, Georgia, serif'>Gabriola (caligráfica)</option>
+              </optgroup>
             </select>
           </label>
           <label class="campo">Tamanho máximo do texto
@@ -388,6 +414,8 @@
             <select data-cfg="alinhamento">
               <option value="center">Centralizado</option>
               <option value="left">À esquerda</option>
+              <option value="justify">Justificado (linhas curtas à esquerda)</option>
+              <option value="justify-center">Justificado e centralizado (linhas curtas no centro)</option>
             </select>
           </label>
           <div class="linha">
@@ -749,7 +777,7 @@
       <figure><img src="img/brasao-paroquia.webp" alt="Brasão da Paróquia São José Operário"><figcaption>Paróquia São José Operário (RJ)</figcaption></figure>
       <figure><img src="img/brasao-pascom.webp" alt="Logotipo da PASCOM"><figcaption>PASCOM</figcaption></figure>
     </div>
-    <p class="sutil pequeno" id="versaoApp">Versão 1.2</p>
+    <p class="sutil pequeno" id="versaoApp">Versão 1.3</p>
     <div class="linha"><span class="espaco"></span><button value="ok" class="primario">OK</button></div>
   </form>
 </dialog>
@@ -894,6 +922,23 @@
 </dialog>
 
 <div id="toast" class="toast"></div>
+<dialog id="dlgAtualizacao">
+  <div class="form">
+    <h2 id="atuTitulo">Nova versão do MiguelAngelus</h2>
+    <p id="atuVersoes" class="sutil" style="margin:0"></p>
+    <div class="campo">O que mudou</div>
+    <pre id="atuNotas" class="atu-notas"></pre>
+    <p id="atuStatus" class="status" style="margin:0"></p>
+    <div class="linha" style="flex-wrap:wrap">
+      <button id="btnAtuPular" title="Não avisar mais desta versão">Pular esta versão</button>
+      <span class="espaco"></span>
+      <button id="btnAtuDepois">Depois</button>
+      <button id="btnAtuAgora" class="primario">Atualizar agora</button>
+    </div>
+    <p class="sutil pequeno" style="margin:0">O instalador só é usado se tiver a assinatura digital do MiguelAngelus. Os cantos, roteiros e ajustes continuam.</p>
+  </div>
+</dialog>
+
 <dialog id="dlgFechar">
   <div class="form">
     <h2>Fechar o MiguelAngelus</h2>
@@ -931,6 +976,9 @@
 <script src="js/camera.js"></script>
 <script src="js/folhetosonline.js"></script>
 <script src="js/sincronia.js"></script>
+<script src="js/atualizacao.js"></script>
+<script src="js/formatacao.js"></script>
+<script src="js/cowabunga.js"></script>
 <script src="js/menus.js"></script>
 <script src="js/app.js"></script>
 </body>

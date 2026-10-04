@@ -17,10 +17,11 @@ const MOMENTOS = ['Entrada', 'Ato Penitencial', 'Glória', 'Salmo', 'Aclamação
 
 const CONFIG_PADRAO = {
   fonte: '"Segoe UI", Arial, sans-serif', fonteMax: 9, corTexto: '#ffffff', corFundo: '#000000', fundoImagem: '',
-  alinhamento: 'center', sombra: true, maiusculas: false, rodape: true, versosPorSlide: 1, numerarVersos: true,
+  alinhamento: 'justify-center', sombra: true, maiusculas: false, rodape: true, versosPorSlide: 1, numerarVersos: true,
   quebraAuto: true, linhasPorSlide: 4, caracteresPorLinha: 40, quebraCantos: false,
   textoAltar: 'TODOS DIRIJAM SEU OLHAR PARA O ALTAR',
   temaApp: 'escuro',                                // aparência do próprio aplicativo: 'escuro' ou 'claro'
+  atualizarAuto: true, versaoIgnorada: '',          // atualização automática (atualizacao.js)
   mostrarRotulos: true, corRotulo: '#ff5a4f',     // letra de quem fala (P., T., L.) colorida no telão
   // transmissão (NDI): faixa de letras para o OBS
   ndiLigado: false, ndiNome: 'MiguelAngelus Letras', faixaTamanho: 4.6, faixaOpacidade: 0.6,
@@ -130,12 +131,26 @@ async function abrirProjecao() {
   } catch (_) { /* sem permissão: o usuário arrasta a janela */ }
 }
 
+// Fecha a janela do telão (o botão do alto vira "Fechar projeção" quando ela está aberta)
+function fecharProjecao() {
+  if (S.projWin && !S.projWin.closed) S.projWin.close();
+  setTimeout(renderEstadoProj, 300);
+}
+function alternarProjecao() {
+  if (S.projWin && !S.projWin.closed) fecharProjecao(); else abrirProjecao();
+}
+
 function renderEstadoProj() {
   const aberta = S.projWin && !S.projWin.closed;
   const el = $('#estadoProj');
   el.textContent = aberta ? '● projeção aberta' : 'projeção fechada';
   el.classList.toggle('aberta', !!aberta);
-  $('#btnProjecao').textContent = aberta ? 'Mostrar projeção' : 'Abrir projeção';
+  const b = $('#btnProjecao');
+  b.textContent = aberta ? '✕ Fechar projeção' : 'Abrir projeção';
+  b.classList.toggle('primario', !aberta);
+  b.classList.toggle('fechar-proj', !!aberta);
+  const m = document.querySelector('[data-menu="projecao"]');
+  if (m) m.textContent = aberta ? 'Fechar janela de projeção' : 'Abrir janela de projeção';
 }
 
 // =====================================================================
@@ -168,22 +183,59 @@ function versosEmSlides(r) {
 
 const sobrescrito = n => String(n).replace(/\d/g, d => '⁰¹²³⁴⁵⁶⁷⁸⁹'[d]);
 
-// Divide um texto corrido em pedaços de até `cap` caracteres, preferindo cortar no fim de uma frase
-function quebrarLongo(texto, cap) {
-  const out = [];
-  let atual = '';
+// Texto longo (um parágrafo de leitura) em pedaços de até `cap` caracteres:
+// 1) usa o MENOR número de slides possível; 2) corta de preferência no fim de uma frase, depois numa vírgula,
+// e só em último caso no meio da frase; 3) reparte por igual. Referências entre parênteses "(cf. Jo 17,21)" nunca se partem.
+const ABREVIACOES = /^(cf|Cf|S|Sto|Sta|Sr|Sra|Pe|Dom|Fr|Ir|Mons|Pr|n|nº|p|pp|v|vv|cap|ex|etc|séc)\.$/;
+function unidadesTexto(texto) {
+  const tam = s => s.replace(/<\/?[biu]>/gi, '').length;
+  // palavras; o que está entre parênteses (até ~40 letras) vira uma palavra só
+  const palavras = [];
+  let grupo = null;
   for (const p of texto.split(/\s+/).filter(Boolean)) {
-    if (atual && atual.length + 1 + p.length > cap) {
-      const m = atual.match(/^(.*[.;:!?])\s+(\S.*)$/);
-      if (m && m[1].length >= cap * 0.6) { out.push(m[1]); atual = m[2] + ' ' + p; }
-      else { out.push(atual); atual = p; }
-    } else atual = atual ? atual + ' ' + p : p;
+    if (grupo !== null) {
+      grupo += ' ' + p;
+      if (p.includes(')') || tam(grupo) > 40) { palavras.push(grupo); grupo = null; }
+    } else if (p.includes('(') && !p.includes(')')) grupo = p;
+    else palavras.push(p);
   }
-  if (atual) out.push(atual);
-  // sobra curta no fim ("Senhor:", "Amém.") volta para o pedaço anterior
-  if (out.length > 1 && out[out.length - 1].length < cap * 0.35 && out[out.length - 2].length + out[out.length - 1].length <= cap * 1.35) {
-    out[out.length - 2] += ' ' + out.pop();
+  if (grupo !== null) palavras.push(grupo);
+  // tipo do corte DEPOIS de cada palavra: 0 = fim de frase, 1 = vírgula/pausa, 2 = meio da frase (ou dentro de aspas)
+  let aspas = 0;
+  return palavras.map(p => {
+    const limpo = p.replace(/<\/?[biu]>/gi, '');
+    aspas += (limpo.match(/[“«]/g) || []).length - (limpo.match(/[”»]/g) || []).length;
+    const fim = /[.!?…;:]["”’»)]*$/.test(limpo) && !ABREVIACOES.test(limpo.replace(/^\(/, ''));
+    return { t: p, n: tam(p), corte: aspas > 0 ? 2 : fim ? 0 : (/[,—–]["”’»)]*$/.test(limpo) ? 1 : 2) };
+  });
+}
+
+function quebrarLongo(texto, cap) {
+  const u = unidadesTexto(texto);
+  if (!u.length) return [texto];
+  const N = u.length;
+  // comprimento do pedaço u[i..j-1]
+  const pre = [0];
+  u.forEach((x, k) => pre.push(pre[k] + x.n + (k ? 1 : 0)));
+  const comp = (i, j) => pre[j] - pre[i] - (i ? 1 : 0);
+  const MULTA = [0, 0.15, 0.6];      // preferências de corte
+  // melhor[j] = { n: nº de slides, custo } para os primeiros j itens (menos slides primeiro, depois menor custo)
+  const melhor = Array(N + 1).fill(null);
+  melhor[0] = { n: 0, custo: 0, de: -1 };
+  for (let j = 1; j <= N; j++) {
+    for (let i = j - 1; i >= 0; i--) {
+      const c = comp(i, j);
+      if (c > cap && j - i > 1) break;
+      if (!melhor[i]) continue;
+      const folga = Math.max(0, cap - c) / cap;
+      const custo = melhor[i].custo + folga * folga + (j < N ? MULTA[u[j - 1].corte] : 0);
+      const cand = { n: melhor[i].n + 1, custo, de: i };
+      const b = melhor[j];
+      if (!b || cand.n < b.n || (cand.n === b.n && cand.custo < b.custo)) melhor[j] = cand;
+    }
   }
+  const out = [];
+  for (let j = N; j > 0; j = melhor[j].de) out.unshift(u.slice(melhor[j].de, j).map(x => x.t).join(' '));
   return out;
 }
 
@@ -202,26 +254,55 @@ function limitarSlide(s) {
   const texto = s.versos
     ? s.versos.map(v => (S.config.numerarVersos ? sobrescrito(v.n) + ' ' : '') + v.t).join(' ')
     : s.texto;
-  const pedacos = [];
-  let atual = [], uso = 0, povo = false;
-  const fechar = () => { if (atual.length) pedacos.push(atual); atual = []; uso = 0; };
-  // quando a fala do povo continua no slide seguinte, repete o "—" para manter o negrito
-  const marcar = l => povo && !/^\s*—/.test(l) && !RX_QUEM.test(l) ? '— ' + l : l;
-  for (let linha of texto.split('\n')) {
-    const marcada = RX_QUEM.test(linha) || /^\s*—/.test(linha);
-    const visuais = Math.max(1, Math.ceil(linha.length / C));
-    if (visuais > L) {
-      fechar();
+  const tam = l => l.replace(/<\/?[biu]>/gi, '').length;      // negrito/itálico/sublinhado não ocupam espaço
+  const visuaisDe = l => Math.max(1, Math.ceil(tam(l) / C));
+  // Empacota as linhas em slides de no máximo `lim` linhas visuais. Com `n` (nº de slides desejado), reparte por igual:
+  // cada slide recebe mais ou menos (linhas que faltam ÷ slides que faltam).
+  const linhasTexto = texto.split('\n');
+  const empacotar = (lim, n = 0) => {
+    const pedacos = [];
+    let atual = [], uso = 0, povo = false;
+    let restante = linhasTexto.reduce((s, l) => s + visuaisDe(l), 0), alvo = lim;
+    const fechar = () => { if (atual.length) pedacos.push(atual); atual = []; uso = 0; };
+    // tamanho do slide que começa agora: o que falta dividido pelos slides que faltam (sem passar do limite)
+    const medir = () => { alvo = n ? Math.min(lim, Math.ceil(restante / Math.max(1, n - pedacos.length))) : lim; };
+    // quando a fala do povo continua no slide seguinte, repete o "—" para manter o negrito
+    const marcar = l => povo && !/^\s*—/.test(l) && !RX_QUEM.test(l) ? '— ' + l : l;
+    for (let linha of linhasTexto) {
+      const marcada = RX_QUEM.test(linha) || /^\s*—/.test(linha);
+      const visuais = visuaisDe(linha);
+      if (visuais > lim) {
+        fechar();
+        if (marcada) povo = povoDaLinha(linha, povo);
+        quebrarLongo(linha, lim * C).forEach((p, i) => pedacos.push([i > 0 ? marcar(p) : p]));
+        restante -= visuais;
+        continue;
+      }
       if (marcada) povo = povoDaLinha(linha, povo);
-      quebrarLongo(linha, L * C).forEach((p, i) => pedacos.push([i > 0 ? marcar(p) : p]));
-      continue;
+      if (!atual.length) medir();
+      else if (uso + visuais > alvo) { fechar(); linha = marcar(linha); medir(); }
+      atual.push(linha);
+      uso += visuais;
+      restante -= visuais;
     }
-    if (marcada) povo = povoDaLinha(linha, povo);
-    if (uso + visuais > L) { fechar(); linha = marcar(linha); }
-    atual.push(linha);
-    uso += visuais;
+    fechar();
+    return pedacos;
+  };
+  // Sobra de UMA linha só: fica no slide de cima (ex.: estrofe de 5 linhas com limite 4 = um slide de 5; a letra diminui um
+  // pouco). Sobra de mais de uma: equilibra, com o MESMO número de slides e o menor limite possível (4+2 vira 3+3).
+  let pedacos = empacotar(L), limMax = L;
+  if (pedacos.length > 1) {
+    const total = texto.split('\n').reduce((s, l) => s + visuaisDe(l), 0);
+    if (total <= (pedacos.length - 1) * L + 1) {
+      const p = empacotar(L + 1);
+      if (p.length === pedacos.length - 1) { pedacos = p; limMax = L + 1; }
+    }
+    // mesmo número de slides, repartido por igual (10 linhas: 4+3+3; 13 linhas com sobra de 1: 5+4+4)
+    if (pedacos.length > 1) {
+      const p = empacotar(limMax, pedacos.length);
+      if (p.length === pedacos.length) pedacos = p;
+    }
   }
-  fechar();
   // resposta do povo curta sozinha num slide ("— Senhor, escutai a nossa prece.") gruda no texto a que responde
   const ehPovo = l => /^\s*(—|T\.\s)/.test(l);
   for (let k = pedacos.length - 1; k > 0; k--) {
@@ -489,7 +570,9 @@ function htmlCartao(s) {
     const quem = m ? `<b class="quem">${m[1]}.</b> ` : '';
     if (m) l = l.slice(m[0].length);
     return quem + (povo ? `<b>${l}</b>` : l);
-  }).join('<br>');
+  }).join('<br>')
+    .replace(/&lt;(\/?)(b|i|u)&gt;/gi, '<$1$2>')     // negrito/itálico/sublinhado (botões N I S)
+    .replace(/\(([^()<>]{0,40}\d[^()<>]{0,40})\)/g, (_, r) => '(' + r.replace(/ /g, ' ').replace(/-/g, '‑') + ')');
   return s.refrao ? `<b>${html}</b>` : html;
 }
 
@@ -1456,7 +1539,7 @@ function ligarEventos() {
   // (a troca de módulos fica em menus.js)
 
   // Topo e controles
-  $('#btnProjecao').addEventListener('click', abrirProjecao);
+  $('#btnProjecao').addEventListener('click', alternarProjecao);
   $('#btnProx').addEventListener('click', proximo);
   $('#btnAnt').addEventListener('click', anterior);
   $('#btnPreto').addEventListener('click', alternarPreto);
@@ -1794,6 +1877,12 @@ function renderControles() {
 async function iniciar() {
   const cfg = await DB.obter('config', 'geral');
   if (cfg) Object.assign(S.config, cfg.valor);
+  // (uma vez) o padrão do telão passou a ser "justificado e centralizado": quem estava no centralizado antigo muda junto
+  if (!S.config.alinhamentoNovo) {
+    if (S.config.alinhamento === 'center') S.config.alinhamento = 'justify-center';
+    S.config.alinhamentoNovo = true;
+    salvarConfig();
+  }
   aplicarTemaApp();
   statusAbertura(ligadaSync() ? 'Sincronizando com a nuvem…' : 'Carregando…');
 
@@ -1841,6 +1930,9 @@ async function iniciar() {
   ligarTemas();
   ligarFolhetosOnline();
   ligarSincronia();
+  ligarAtualizacao();
+  ligarFormatacao();
+  ligarCowabunga();
   lerPastaMidia('video'); lerPastaMidia('audio');     // pastas deste computador (os roteiros apontam para os arquivos delas)
   mostrarAba('roteiros', false);    // sempre abre nos Roteiros, com os cards das celebrações
   renderLiturgia();
@@ -1851,7 +1943,7 @@ async function iniciar() {
   renderBiblia();
   renderCabecalho();
   renderEstadoProj();
-  $('#versaoApp').textContent = NO_APP ? 'Versão 1.2 · aplicativo para Windows' : 'Versão 1.2 · no navegador';
+  $('#versaoApp').textContent = NO_APP ? 'Versão 1.3 · aplicativo para Windows' : 'Versão 1.3 · no navegador';
   // pede armazenamento permanente (o navegador não apaga os dados para liberar espaço)
   try { navigator.storage?.persist?.(); } catch (_) {}
   enviarConfigTelao(); renderTemasRapidos();

@@ -49,6 +49,23 @@ const Folheto = (() => {
     if (/[A-Za-zÀ-ÿ]-$/.test(a) && !CLITICOS.test(b)) return a.slice(0, -1) + b;
     return a + ' ' + b;
   }
+  // Fim de linha de verso (" / "): se a linha terminou com sílaba partida ("transfor-"), junta a palavra em vez de quebrar o verso
+  const juntarVerso = (a, b) => /[A-Za-zÀ-ÿ]-$/.test(a) && /^[a-zà-ÿ]/.test(b) && !CLITICOS.test(b) ? juntar(a, b) : a + ' / ' + b;
+
+  // Hifenização que sobrou no texto: "transfor- mação" → "transformação"; e a palavra repetida com o pedaço
+  // ("transformação -mação" / "transformação- mação", quando o PDF já trazia a palavra inteira) → "transformação"
+  const LETRA = 'A-Za-zÀ-ÿ';
+  function limparHifens(s) {
+    if (!s) return s;
+    return s
+      .replace(new RegExp(`([${LETRA}]+)\\s*-\\s*([a-zà-ÿ]{2,})\\b`, 'g'), (m, a, b) => a.length > b.length && a.toLowerCase().endsWith(b) ? a : m)
+      .replace(new RegExp(`([${LETRA}]{2,})-(?:\\s*/\\s*|\\s+)([a-zà-ÿ]{2,})`, 'g'), (m, a, b) => CLITICOS.test(b) ? m : a + b);
+  }
+  const limparItem = it => {
+    const out = { ...it };
+    for (const k of ['texto', 'refrao', 'convite', 'conclusao', 'resposta']) if (typeof out[k] === 'string') out[k] = limparHifens(out[k]);
+    return out;
+  };
 
   async function lerRuns(pdf) {
     const runs = [], paginasDaFonte = {};
@@ -199,7 +216,7 @@ const Folheto = (() => {
         par = { rotulo: m[1] ? m[1].toUpperCase() : m[2] ? 'REFRAO' : 'N', estilo: l.estilo, texto: t.slice(m[0].length) };
         parte.pars.push(par);
       } else if (par && par.estilo === l.estilo && !l.novoPar) {
-        par.texto = l.quebra ? par.texto + ' / ' + t : juntar(par.texto, t);
+        par.texto = l.quebra ? juntarVerso(par.texto, t) : juntar(par.texto, t);
       } else {
         par = { rotulo: '', estilo: l.estilo, texto: t, novo: !!l.novoPar, quebra: !!l.quebra };
         parte.pars.push(par);
@@ -227,7 +244,7 @@ const Folheto = (() => {
         const blocos = [];
         for (const p of pt.pars) {
           if (p.rotulo || !blocos.length || p.novo) blocos.push({ ...p });   // novo: depois de linha em branco (.docx/.txt)
-          else blocos[blocos.length - 1].texto += (p.quebra ? ' / ' : ' ') + p.texto;
+          else { const ult = blocos[blocos.length - 1]; ult.texto = p.quebra ? juntarVerso(ult.texto, p.texto) : juntar(ult.texto, p.texto); }
         }
         const refrao = blocos.filter(b => b.rotulo === 'REFRAO').map(b => versos(b.texto))[0] || '';
         const estrofes = blocos.filter(b => b.rotulo !== 'REFRAO').map(b => versos(b.texto)).filter(Boolean);
@@ -246,7 +263,7 @@ const Folheto = (() => {
         }
       }
       return { tipo: 'texto', titulo: nome + (ref ? ` (${ref})` : ''), texto: textoCorrido(pt.pars) };
-    });
+    }).map(limparItem);
   }
 
   // Texto corrido; as falas do povo viram "— ..." (negrito) e ficam no mesmo slide da fala anterior

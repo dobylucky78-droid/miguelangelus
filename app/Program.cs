@@ -365,6 +365,23 @@ namespace MiguelAngelus
                         using (var d = new FolderBrowserDialog { Description = deVideo ? "Pasta dos vídeos neste computador (as subpastas viram pastas no MiguelAngelus)" : "Pasta dos áudios neste computador (as subpastas viram pastas no MiguelAngelus)", ShowNewFolderButton = false })
                             Responder(id, new { ok = true, pasta = d.ShowDialog(this) == DialogResult.OK ? d.SelectedPath : null });
                         return;
+                    // ----- atualização automática (Atualizacao.cs) -----
+                    case "atualizacaoVerificar":
+                        Responder(id, await Atualizacao.Verificar()); return;
+                    case "atualizacaoInstalar":
+                    {
+                        var baixado = await Atualizacao.BaixarEConferir(Convert.ToString(m["url"]), (f, t) => Progresso(id, f, t));
+                        Responder(id, new { ok = true, teste = Atualizacao.Teste });
+                        if (!Atualizacao.Teste)
+                        {
+                            Atualizacao.Instalar(baixado);     // o instalador espera o programa fechar e reabre no fim
+                            podeFechar = true;
+                            var t = new Timer { Interval = 800 };
+                            t.Tick += (s2, e2) => { t.Stop(); Close(); };
+                            t.Start();
+                        }
+                        return;
+                    }
                     case "midiaSugerir":   // pasta padrão do Holyrics (X:\Holyrics\Holyrics\files\media\video|audio), se existir
                         var sub = Convert.ToString(m["tipoMidia"]) == "audio" ? "audio" : "video";
                         string achada = null;

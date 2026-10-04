@@ -84,7 +84,11 @@ function renderCardsRoteiros() {
   if (!S.modoCards) return;
   const termo = semAcento($('#buscaRoteiro')?.value.trim() || '');
   const hoje = isoData(new Date());
-  const lista = S.roteiros.filter(r => !termo || semAcento(r.nome).includes(termo)).map(r => ({ r, inf: infoRoteiro(r) }));
+  const todos = S.roteiros.filter(r => !termo || semAcento(r.nome).includes(termo)).map(r => ({ r, inf: infoRoteiro(r) }));
+  // Filtro por comunidade (Matriz, capelas): cada computador lembra o seu ("" = todas; "-" = sem local definido)
+  const capela = filtroCapela();
+  const lista = todos.filter(x => !capela || (capela === '-' ? !localDe(x.inf.localId) : x.inf.localId === capela));
+  const chips = htmlFiltroCapelas(todos, capela);
   const proximas = lista.filter(x => x.inf.iso && x.inf.iso >= hoje)
     .sort((a, b) => (a.inf.iso + a.inf.hora).localeCompare(b.inf.iso + b.inf.hora));
   const semData = lista.filter(x => !x.inf.iso).sort((a, b) => b.r.atualizado - a.r.atualizado);
@@ -119,13 +123,33 @@ function renderCardsRoteiros() {
       <span class="espaco"></span>
       <button data-recolher-tudo="1" title="Recolher todos os dias">▸ Recolher tudo</button>
       <button data-recolher-tudo="0" title="Expandir todos os dias">▾ Expandir tudo</button></div>
+    ${chips}
     <div class="cards-grade">
       <button class="card-novo" data-card-novo><span>＋</span>Novo roteiro</button>
       <button class="card-novo" data-card-folheto><span>📄</span>Do folheto (PDF, Word, TXT)</button>
       <button class="card-novo" data-card-agenda><span>📅</span>Pela Agenda</button>
     </div>
     ${secao('Próximas', proximas)}${secao('Sem data', semData)}${secao('Anteriores', anteriores, true)}
-    ${!lista.length && termo ? '<p class="vazio">Nenhum roteiro encontrado.</p>' : ''}`;
+    ${!lista.length && (termo || capela) ? `<p class="vazio">Nenhum roteiro${capela ? ' desta comunidade' : ''} encontrado.</p>` : ''}`;
+}
+
+// ---------- filtro por comunidade nos cards ----------
+function filtroCapela() {
+  let f = '';
+  try { f = localStorage.getItem('lumen.filtroCapela') || ''; } catch {}
+  return f && f !== '-' && !localDe(f) ? '' : f;     // comunidade apagada: volta para "Todas"
+}
+function htmlFiltroCapelas(todos, sel) {
+  const locais = [...Agenda.dados.locais].sort((a, b) => TIPOS_LOCAL.indexOf(a.tipo) - TIPOS_LOCAL.indexOf(b.tipo) || a.nome.localeCompare(b.nome, 'pt-BR'));
+  if (locais.length < 2) return '';
+  const conta = id => todos.filter(x => id === '-' ? !localDe(x.inf.localId) : x.inf.localId === id).length;
+  const semLocal = conta('-');
+  const chip = (id, nome, cor, n) => `<button class="capela-chip ${sel === id ? 'sel' : ''}" data-capela="${id}" ${cor ? `style="--cor-capela:${cor}"` : ''}>` +
+    `${cor ? '<i></i>' : ''}${esc(nome)}<span class="n">${n}</span></button>`;
+  return `<div class="capelas-filtro" title="Mostrar só os roteiros de uma comunidade (este computador lembra a escolha)">` +
+    chip('', 'Todas', '', todos.length) +
+    locais.map(l => chip(l.id, nomeCurtoLocal(l), l.cor, conta(l.id))).join('') +
+    (semLocal ? chip('-', 'Sem local', '#888', semLocal) : '') + '</div>';
 }
 
 // Campos de preparação do roteiro aberto (coluna da esquerda)
@@ -156,6 +180,8 @@ function ligarRoteiros() {
     if (e.target.closest('[data-card-novo]')) return $('#btnNovoRoteiro').click();
     if (e.target.closest('[data-card-folheto]')) return $('#arqFolheto').click();
     if (e.target.closest('[data-card-agenda]')) return abrirAgenda('calendario');
+    const cap = e.target.closest('[data-capela]');
+    if (cap) { try { localStorage.setItem('lumen.filtroCapela', cap.dataset.capela); } catch {} return renderCardsRoteiros(); }
     const rec = e.target.closest('[data-recolher]');
     if (rec) { Recolher.alternar(rec.dataset.recolher, !!rec.dataset.padrao); return renderCardsRoteiros(); }
     const tudo = e.target.closest('[data-recolher-tudo]');
