@@ -23,6 +23,7 @@ const CONFIG_PADRAO = {
   temaApp: 'escuro',                                // aparência do próprio aplicativo: 'escuro' ou 'claro'
   atualizarAuto: true, versaoIgnorada: '',          // atualização automática (atualizacao.js)
   mostrarRotulos: true, corRotulo: '#ff5a4f',     // letra de quem fala (P., T., L.) colorida no telão
+  espacoResposta: true,                          // espaço entre as falas: a resposta do povo fica separada
   // transmissão (NDI): faixa de letras para o OBS
   ndiLigado: false, ndiNome: 'MiguelAngelus Letras', faixaTamanho: 4.6, faixaOpacidade: 0.6,
   faixaCantos: true, faixaRespostas: true, faixaLeituras: true, faixaAvisos: true,
@@ -1943,7 +1944,7 @@ async function iniciar() {
   renderBiblia();
   renderCabecalho();
   renderEstadoProj();
-  $('#versaoApp').textContent = NO_APP ? 'Versão 1.3 · aplicativo para Windows' : 'Versão 1.3 · no navegador';
+  $('#versaoApp').textContent = NO_APP ? 'Versão 1.3.1 · aplicativo para Windows' : 'Versão 1.3.1 · no navegador';
   // pede armazenamento permanente (o navegador não apaga os dados para liberar espaço)
   try { navigator.storage?.persist?.(); } catch (_) {}
   enviarConfigTelao(); renderTemasRapidos();

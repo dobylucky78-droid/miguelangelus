@@ -7,25 +7,57 @@
 const Formato = { alvo: null, timer: 0 };
 const TAGS = { negrito: 'b', italico: 'i', sublinhado: 'u' };
 
+// Liga/desliga como no Word: se o trecho selecionado já está todo formatado, tira; senão, formata o trecho inteiro.
+// O texto é lido letra por letra ("esta letra está em negrito?") e as marcas são reescritas do zero, então nunca
+// sobram marcas repetidas ou vazias. As marcas fecham no fim de cada linha (uma linha pode ir para outro slide).
 function aplicarFormato(ta, tag) {
-  const ini = ta.selectionStart, fim = ta.selectionEnd, v = ta.value;
+  const v = ta.value, ini = ta.selectionStart, fim = ta.selectionEnd;
   const abre = `<${tag}>`, fecha = `</${tag}>`;
-  const sel = v.slice(ini, fim);
   ta.focus();
-  if (v.slice(ini - abre.length, ini) === abre && v.slice(fim, fim + fecha.length) === fecha) {
-    // já formatado em volta da seleção: tira
-    ta.setRangeText(sel, ini - abre.length, fim + fecha.length, 'select');
-  } else if (sel.startsWith(abre) && sel.endsWith(fecha) && sel.length >= abre.length + fecha.length) {
-    ta.setRangeText(sel.slice(abre.length, sel.length - fecha.length), ini, fim, 'select');
-  } else if (ini === fim) {
-    ta.setRangeText(abre + fecha, ini, fim, 'end');
-    ta.selectionStart = ta.selectionEnd = ini + abre.length;   // cursor no meio, para digitar já formatado
-  } else {
-    // não formata o espaço/quebra de linha das pontas da seleção
-    const esq = sel.match(/^\s*/)[0].length, dir = sel.match(/\s*$/)[0].length;
-    const miolo = sel.slice(esq, sel.length - dir);
-    ta.setRangeText(sel.slice(0, esq) + abre + miolo + fecha + sel.slice(sel.length - dir), ini, fim, 'select');
+  // cursor sem seleção: "<b></b>" vazio onde está o cursor some; senão, cria um para digitar já formatado
+  if (ini === fim) {
+    if (v.slice(ini - abre.length, ini) === abre && v.slice(ini, ini + fecha.length) === fecha) {
+      ta.setRangeText('', ini - abre.length, ini + fecha.length, 'end');
+    } else {
+      ta.setRangeText(abre + fecha, ini, fim, 'end');
+      ta.selectionStart = ta.selectionEnd = ini + abre.length;
+    }
+    ta.dispatchEvent(new Event('input', { bubbles: true }));
+    return;
   }
+  // letras (sem as marcas desta formatação) e se cada uma está formatada
+  const letras = [], marcado = [];
+  let nivel = 0, a = -1, b = -1;
+  for (let p = 0; p <= v.length;) {
+    if (p === ini && a < 0) a = letras.length;
+    if (p === fim && b < 0) b = letras.length;
+    if (p === v.length) break;
+    if (v.startsWith(abre, p)) { nivel++; p += abre.length; continue; }
+    if (v.startsWith(fecha, p)) { nivel = Math.max(0, nivel - 1); p += fecha.length; continue; }
+    if (v[p] === '\n') nivel = 0;
+    letras.push(v[p]); marcado.push(nivel > 0); p++;
+  }
+  // não formata espaço/quebra de linha das pontas da seleção
+  while (a < b && /\s/.test(letras[a])) a++;
+  while (b > a && /\s/.test(letras[b - 1])) b--;
+  if (a >= b) return;
+  const tudo = marcado.slice(a, b).every((m, k) => m || /\s/.test(letras[a + k]));
+  for (let k = a; k < b; k++) marcado[k] = !tudo;
+  // reescreve o texto com as marcas certas
+  let out = '', ligado = false, selIni = 0, selFim = 0;
+  for (let k = 0; k <= letras.length; k++) {
+    const quer = k < letras.length && letras[k] !== '\n' && marcado[k];
+    // espaço solto entre dois trechos formatados fica dentro (não fecha e reabre por causa dele)
+    const ponte = !quer && ligado && k < letras.length && letras[k] === ' ' && marcado[k + 1] && letras[k + 1] !== '\n';
+    if (k === b) selFim = out.length;
+    if (ligado && !quer && !ponte) { out += fecha; ligado = false; }
+    if (k === letras.length) break;
+    if (!ligado && quer) { out += abre; ligado = true; }
+    if (k === a) selIni = out.length;
+    out += letras[k];
+  }
+  ta.setRangeText(out, 0, v.length, 'preserve');
+  ta.setSelectionRange(selIni, selFim);
   ta.dispatchEvent(new Event('input', { bubbles: true }));    // salva como se tivesse digitado
 }
 

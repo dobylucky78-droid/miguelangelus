@@ -329,6 +329,7 @@ button.cards-sec:hover, button.cards-dia:hover { border-bottom-color: var(--bord
 .splash-nome b { color: #f0c75e; }
 .splash-sub { opacity: .85; font-size: clamp(13px, 2.4vw, 17px); margin-top: 2px; }
 .splash-info { position: absolute; right: 6%; bottom: 9%; text-align: right; color: #1d2230; font-size: clamp(11px, 2vw, 14px); line-height: 1.55; }
+.splash-gratis { font-size: 1.2em; color: #1a7f37; margin-bottom: 2px; }
 .splash-status { position: absolute; left: 7%; bottom: 8%; display: flex; align-items: center; gap: 9px; font-size: clamp(11px, 2vw, 14px); opacity: .95; max-width: 52%; }
 .splash-pontos { display: inline-flex; gap: 4px; }
 .splash-pontos i { width: 6px; height: 6px; border-radius: 50%; background: #f0c75e; animation: splashPonto 1.1s infinite ease-in-out; }
