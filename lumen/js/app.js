@@ -24,6 +24,7 @@ const CONFIG_PADRAO = {
   atualizarAuto: true, versaoIgnorada: '',          // atualização automática (atualizacao.js)
   mostrarRotulos: true, corRotulo: '#ff5a4f',     // letra de quem fala (P., T., L.) colorida no telão
   espacoResposta: true,                          // espaço entre as falas: a resposta do povo fica separada
+  salmoCorrido: true,                            // salmo: versos de cada estrofe em texto corrido (não quebra a cada vírgula)
   // transmissão (NDI): faixa de letras para o OBS
   ndiLigado: false, ndiNome: 'MiguelAngelus Letras', faixaTamanho: 4.6, faixaOpacidade: 0.6,
   faixaCantos: true, faixaRespostas: true, faixaLeituras: true, faixaAvisos: true,
@@ -426,12 +427,16 @@ function gerarSlidesBase(item) {
     case 'salmo': {
       const rodape = [item.titulo, item.ref].filter(Boolean).join(' — ');
       if (item.rotulo === 'Canto') return comRefrao(item.refrao, item.texto, rodape);   // aclamação e cantos do folheto
-      // Salmo responsorial, como no folheto: "T." no refrão e o número de cada estrofe em vermelho
-      const r = (item.refrao || '').trim().replace(/^(T\.|R\.|—)\s*/, '');
+      // Salmo responsorial, como no folheto: "T." no refrão e o número de cada estrofe em vermelho.
+      // Texto corrido (padrão): os versos de cada estrofe viram um parágrafo só — no telão, verso que não cabe numa
+      // linha quebrava duas vezes ("…sua cerca," sozinho); a divisão em slides continua no fim das frases/vírgulas.
+      const corrido = S.config.salmoCorrido !== false;
+      const juntar = t => corrido ? t.split('\n').map(l => l.trim()).filter(Boolean).join(' ') : t;
+      const r = juntar((item.refrao || '').trim()).replace(/^(T\.|R\.|—)\s*/, '');
       const R = r ? { texto: 'T. ' + r, rodape, refrao: true } : null;
       const out = R ? [{ ...R }] : [];
       dividir(item.texto).forEach((e, i) => {
-        out.push({ texto: `${i + 1}. ${e.replace(/^\s*\d+\s*[.)–-]\s*/, '')}`, rodape, numerado: true });
+        out.push({ texto: `${i + 1}. ${juntar(e).replace(/^\s*\d+\s*[.)–-]\s*/, '')}`, rodape, numerado: true });
         if (R) out.push({ ...R });
       });
       return out;
@@ -1491,7 +1496,7 @@ function ligarAjustes() {
       salvarConfig();
       if (k === 'temaApp') return aplicarTemaApp();     // só o aplicativo; o telão não muda
       enviarConfigTelao(); renderTemasRapidos();
-      if (['versosPorSlide', 'numerarVersos', 'quebraAuto', 'linhasPorSlide', 'caracteresPorLinha', 'quebraCantos'].includes(k)) atualizarSlides();
+      if (['versosPorSlide', 'numerarVersos', 'quebraAuto', 'linhasPorSlide', 'caracteresPorLinha', 'quebraCantos', 'salmoCorrido'].includes(k)) atualizarSlides();
     });
   }
 }
@@ -1934,6 +1939,7 @@ async function iniciar() {
   ligarAtualizacao();
   ligarFormatacao();
   ligarCowabunga();
+  ligarCelular();
   lerPastaMidia('video'); lerPastaMidia('audio');     // pastas deste computador (os roteiros apontam para os arquivos delas)
   mostrarAba('roteiros', false);    // sempre abre nos Roteiros, com os cards das celebrações
   renderLiturgia();
@@ -1944,7 +1950,7 @@ async function iniciar() {
   renderBiblia();
   renderCabecalho();
   renderEstadoProj();
-  $('#versaoApp').textContent = NO_APP ? 'Versão 1.3.1 · aplicativo para Windows' : 'Versão 1.3.1 · no navegador';
+  $('#versaoApp').textContent = NO_APP ? 'Versão 1.4 · aplicativo para Windows' : 'Versão 1.4 · no navegador';
   // pede armazenamento permanente (o navegador não apaga os dados para liberar espaço)
   try { navigator.storage?.persist?.(); } catch (_) {}
   enviarConfigTelao(); renderTemasRapidos();

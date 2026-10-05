@@ -1,0 +1,448 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#0f1420">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="MiguelAngelus">
+<title>MiguelAngelus</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icone.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icone-180.png">
+<style>
+  :root { --bg: #0f1420; --painel: #18202f; --painel2: #222c3f; --borda: #2f3a50; --texto: #eef1f6; --sutil: #9aa6ba;
+    --acento: #d4a93a; --acento-esc: #2a2210; --vivo: #e0463c; --ok: #3fb950; --cor-quem: #ff5a4f;
+    --seg-baixo: env(safe-area-inset-bottom, 0px); }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--texto); font: 16px/1.4 -apple-system, "Segoe UI", Roboto, Arial, sans-serif; }
+  body { display: flex; flex-direction: column; overscroll-behavior: none; -webkit-user-select: none; user-select: none; }
+  button { font: inherit; color: inherit; background: var(--painel2); border: 1px solid var(--borda); border-radius: 12px; padding: 12px 10px; touch-action: manipulation; }
+  button:active { transform: scale(.97); filter: brightness(1.2); }
+  button.ligado { background: var(--vivo); border-color: var(--vivo); color: #fff; }
+  input, textarea { font: inherit; color: var(--texto); background: var(--painel2); border: 1px solid var(--borda); border-radius: 10px; padding: 12px; width: 100%; -webkit-user-select: text; user-select: text; }
+  [hidden] { display: none !important; }
+  .topo { display: flex; align-items: center; gap: 8px; padding: calc(10px + env(safe-area-inset-top, 0px)) 14px 8px; background: var(--painel); border-bottom: 1px solid var(--borda); }
+  .topo .pt { width: 10px; height: 10px; border-radius: 50%; background: var(--sutil); flex: none; }
+  .topo .pt.on { background: var(--ok); }
+  .topo .nome { flex: 1; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .selo { font-size: 12px; padding: 3px 8px; border-radius: 20px; background: var(--painel2); color: var(--sutil); white-space: nowrap; }
+  .selo.vivo { background: var(--vivo); color: #fff; }
+  .faixa { background: #7a5b00; color: #fff; text-align: center; font-size: 14px; padding: 6px; }
+  main { flex: 1; overflow-y: auto; padding: 12px 12px 8px; -webkit-overflow-scrolling: touch; }
+  .rot { font-size: 12px; color: var(--sutil); text-transform: uppercase; letter-spacing: .06em; margin: 10px 2px 6px; display: flex; justify-content: space-between; gap: 8px; }
+  .rot b { color: var(--texto); text-transform: none; letter-spacing: 0; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tela { background: #000; color: #fff; border-radius: 12px; padding: 14px 12px; min-height: 120px; display: flex; align-items: center; justify-content: center;
+    text-align: center; font-size: 17px; line-height: 1.35; border: 2px solid var(--vivo); }
+  .tela.prox { border: 1px solid var(--borda); background: #0a0d14; color: #c9d1de; min-height: 70px; font-size: 14px; }
+  .tela .vazia { color: #777; font-size: 14px; }
+  .tela .quem { color: var(--cor-quem); font-weight: 700; }
+  .tela .resp { font-weight: 700; }
+  .tela .entre { display: block; height: .4em; }
+  .tela sup { font-size: .6em; opacity: .7; }
+  .tela .aviso-img { color: var(--sutil); font-size: 13px; }
+  .tira { display: flex; gap: 8px; overflow-x: auto; padding: 2px 2px 8px; scroll-snap-type: x proximity; }
+  .tira .sl { flex: none; width: 150px; height: 92px; overflow: hidden; background: #000; color: #ddd; border: 1px solid var(--borda); border-radius: 10px;
+    padding: 8px; font-size: 11px; line-height: 1.3; text-align: left; position: relative; scroll-snap-align: start; }
+  .tira .sl.vivo { border: 2px solid var(--vivo); }
+  .tira .sl.foco { box-shadow: 0 0 0 2px var(--acento) inset; }
+  .tira .sl .n { position: absolute; right: 6px; bottom: 4px; font-size: 10px; color: var(--sutil); }
+  .tira .sl .quem { color: var(--cor-quem); font-weight: 700; }
+  .grade { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 8px; }
+  .grade button { padding: 12px 4px; font-size: 14px; }
+  .nav { position: sticky; bottom: 0; padding: 8px 12px; background: var(--bg); }
+  .setas { display: grid; grid-template-columns: 1fr 1.5fr; gap: 10px; }
+  .setas button { padding: 22px 8px; font-size: 19px; font-weight: 600; border-radius: 16px; }
+  .setas .prox-bt { background: var(--acento); border-color: var(--acento); color: #1b1503; }
+  .abas { display: grid; grid-template-columns: repeat(3, 1fr); background: var(--painel); border-top: 1px solid var(--borda); padding-bottom: var(--seg-baixo); }
+  .abas button { background: none; border: 0; border-radius: 0; padding: 10px 0 9px; font-size: 13px; color: var(--sutil); }
+  .abas button.sel { color: var(--acento); }
+  .abas i { display: block; font-style: normal; font-size: 20px; line-height: 1.1; }
+  .lista { display: flex; flex-direction: column; gap: 6px; }
+  .it { display: flex; align-items: center; gap: 10px; padding: 12px; border-radius: 12px; background: var(--painel); border: 1px solid var(--borda); text-align: left; width: 100%; }
+  .it.sel { border-color: var(--acento); background: var(--acento-esc); }
+  .it .tag { font-size: 11px; padding: 2px 7px; border-radius: 6px; background: var(--painel2); color: var(--sutil); flex: none; text-transform: uppercase; }
+  .it .tit { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .it .noar { width: 10px; height: 10px; border-radius: 50%; background: var(--vivo); flex: none; }
+  .cartao { background: var(--painel); border: 1px solid var(--borda); border-radius: 12px; padding: 12px; margin-bottom: 10px; }
+  .cartao h3 { margin: 0 0 8px; font-size: 15px; }
+  .linha { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .linha > button { flex: 1; }
+  .toc { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .toc .nm { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .toc .t { font-size: 12px; color: var(--sutil); font-variant-numeric: tabular-nums; }
+  .toc button { padding: 10px 14px; }
+  .temas { display: flex; gap: 8px; flex-wrap: wrap; }
+  .temas button { width: 72px; height: 62px; padding: 4px 2px; font-weight: 700; font-size: 18px; line-height: 1.1; }
+  .temas small { display: block; font-size: 10px; font-weight: 400; opacity: .85; margin-top: 3px; }
+  .temas button.sel { outline: 3px solid var(--acento); outline-offset: 2px; }
+  input[type=range] { padding: 0; height: 36px; background: none; border: 0; accent-color: var(--acento); }
+  .check { display: flex; gap: 10px; align-items: center; padding: 6px 0; }
+  .check input { width: 24px; height: 24px; accent-color: var(--acento); }
+  .sutil { color: var(--sutil); font-size: 13px; }
+  .tela-cheia { position: fixed; inset: 0; background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px; text-align: center; gap: 14px; z-index: 10; }
+  .tela-cheia img { width: 84px; height: 84px; }
+  .tela-cheia h1 { margin: 0; font-size: 24px; } .tela-cheia h1 b { color: var(--acento); }
+  .tela-cheia .codigo { font: 700 34px/1 Consolas, monospace; letter-spacing: 10px; text-align: center; max-width: 220px; }
+  .tela-cheia .acao { background: var(--acento); color: #1b1503; border: 0; font-weight: 700; padding: 15px; width: 100%; max-width: 320px; font-size: 17px; }
+  .tela-cheia .campo { width: 100%; max-width: 320px; text-align: left; }
+  .tela-cheia label { font-size: 13px; color: var(--sutil); display: block; margin-bottom: 4px; }
+  .erro { color: #ff8a80; min-height: 1.3em; font-size: 14px; }
+  .folha { position: fixed; inset: 0; background: rgba(0,0,0,.6); display: flex; align-items: flex-end; z-index: 9; }
+  .folha > div { background: var(--painel); width: 100%; border-radius: 18px 18px 0 0; padding: 16px 14px calc(16px + var(--seg-baixo)); max-height: 85%; overflow-y: auto; }
+  .folha h3 { margin: 0 0 10px; }
+  .folha .rec { display: block; width: 100%; text-align: left; margin-bottom: 6px; font-size: 14px; }
+  .aviso-ativo { background: #5c1414; border: 1px solid #a33; border-radius: 12px; padding: 10px; margin-bottom: 10px; font-size: 14px; }
+  .toast { position: fixed; left: 50%; bottom: calc(150px + var(--seg-baixo)); transform: translateX(-50%); background: #333c; color: #fff; padding: 9px 16px; border-radius: 20px; font-size: 14px; z-index: 20; pointer-events: none; transition: opacity .3s; }
+  #acordado { position: fixed; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+  /* Tablet: conteúdo centralizado numa coluna confortável, letra e miniaturas maiores */
+  @media (min-width: 700px) {
+    main > section, .nav .setas, .folha > div { max-width: 760px; margin-left: auto; margin-right: auto; }
+    .tela { font-size: 22px; min-height: 170px; }
+    .tela.prox { font-size: 17px; min-height: 90px; }
+    .tira .sl { width: 190px; height: 112px; font-size: 13px; }
+    .abas { justify-content: center; grid-template-columns: repeat(3, minmax(0, 200px)); }
+  }
+</style>
+</head>
+<body>
+
+<!-- Pareamento -->
+<div id="par" class="tela-cheia" hidden>
+  <img src="icone.svg" alt="">
+  <h1><b>Miguel</b>Angelus</h1>
+  <div class="sutil">Controle pelo celular</div>
+  <div class="campo"><label for="parCod">Código que aparece no computador</label>
+    <input id="parCod" class="codigo" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="0000"></div>
+  <div class="campo"><label for="parNome">Nome deste celular</label>
+    <input id="parNome" maxlength="40" placeholder="Celular da PASCOM"></div>
+  <button id="parOk" class="acao">Conectar</button>
+  <div id="parErro" class="erro"></div>
+  <div class="sutil">No computador: Ferramentas → Ajustes → 📱 Controle pelo celular</div>
+</div>
+
+<!-- Desligado / sem conexão por muito tempo -->
+<div id="fora" class="tela-cheia" hidden>
+  <img src="icone.svg" alt="">
+  <h1 id="foraTit">Sem conexão</h1>
+  <div id="foraTxt" class="sutil"></div>
+  <button id="foraTentar" class="acao">Tentar de novo</button>
+</div>
+
+<div class="topo">
+  <span id="pt" class="pt" title="Conexão"></span>
+  <span id="nomeRoteiro" class="nome">MiguelAngelus</span>
+  <span id="selo" class="selo">—</span>
+</div>
+<div id="faixa" class="faixa" hidden>Reconectando…</div>
+
+<main>
+  <!-- CONTROLE -->
+  <section data-aba="controle">
+    <div id="avisoAtivo" class="aviso-ativo" hidden></div>
+    <div class="rot"><span>No telão</span><b id="noArTit"></b></div>
+    <div id="noAr" class="tela"><span class="vazia">Nada no ar</span></div>
+    <div class="rot"><span id="proxRot">Próximo</span><b id="proxTit"></b></div>
+    <div id="prox" class="tela prox"><span class="vazia">—</span></div>
+    <div class="rot"><span>Slides do item aberto</span><b id="abertoTit"></b></div>
+    <div id="tira" class="tira"></div>
+    <div class="grade">
+      <button data-cmd="preto" id="btPreto">Tela preta</button>
+      <button data-cmd="limpar">Limpar</button>
+      <button data-cmd="altar" id="btAltar">Altar</button>
+      <button id="btAviso">Aviso</button>
+    </div>
+    <button data-cmd="projecao" id="btProjecao" style="width:100%;margin-top:8px">Abrir o telão</button>
+  </section>
+
+  <!-- ROTEIRO -->
+  <section data-aba="roteiro" hidden>
+    <div class="rot"><span>Roteiro</span><b id="rotNome"></b></div>
+    <div id="listaRoteiro" class="lista"></div>
+    <p class="sutil">Toque num item para abri-lo. Para projetar, use <b>Próximo</b> ou toque num slide.</p>
+  </section>
+
+  <!-- MÍDIA -->
+  <section data-aba="midia" hidden>
+    <div class="cartao" id="cxAberta" hidden></div>
+    <div class="cartao"><h3>Tocando agora</h3><div id="tocando"><p class="sutil">Nada tocando.</p></div>
+      <div class="linha"><span class="sutil">Volume</span><input type="range" id="vol" min="0" max="1" step="0.05" style="flex:1"></div></div>
+    <div class="cartao" id="cxCameras" hidden><h3>Câmeras</h3><div id="cameras" class="lista"></div>
+      <label class="check"><input type="checkbox" id="letra"> Letra por cima da câmera</label></div>
+    <div class="cartao"><h3>Tema do telão</h3><div id="temas" class="temas"></div></div>
+  </section>
+</main>
+
+<div class="nav" id="nav">
+  <div class="setas">
+    <button data-cmd="anterior">◀ Anterior</button>
+    <button data-cmd="proximo" class="prox-bt">Próximo ▶</button>
+  </div>
+</div>
+<nav class="abas">
+  <button data-ir="controle" class="sel"><i>▶</i>Controle</button>
+  <button data-ir="roteiro"><i>☰</i>Roteiro</button>
+  <button data-ir="midia"><i>🎬</i>Mídia</button>
+</nav>
+
+<!-- Aviso -->
+<div id="folhaAviso" class="folha" hidden>
+  <div>
+    <h3>📢 Aviso na tela</h3>
+    <textarea id="avTexto" rows="3" maxlength="300" placeholder="Ex.: Atenção, proprietário do veículo placa ABC1D23: favor comparecer à porta da igreja."></textarea>
+    <div class="linha" style="margin:10px 0"><button id="avMostrar" style="background:var(--acento);color:#1b1503;border:0;font-weight:700">Mostrar no telão</button><button id="avFechar">Fechar</button></div>
+    <div id="avRecentes"></div>
+  </div>
+</div>
+
+<div id="toast" class="toast" style="opacity:0"></div>
+<video id="acordado" src="acordado.mp4" muted loop playsinline webkit-playsinline preload="auto"></video>
+
+<script>
+'use strict';
+const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const CHAVE = 'mgl.celular.token';
+let token = ''; try { token = localStorage.getItem(CHAVE) || ''; } catch (_) {}
+let est = null, fonte = null, vivoEm = 0, aba = 'controle';
+
+// ---------- utilidades ----------
+let tt = 0;
+function toast(t) { const el = $('#toast'); el.textContent = t; el.style.opacity = 1; clearTimeout(tt); tt = setTimeout(() => el.style.opacity = 0, 2200); }
+const vibrar = () => { try { navigator.vibrate?.(12); } catch (_) {} };
+const fmt = s => { s = Math.max(0, Math.floor(s || 0)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
+function nomePadrao() {
+  const u = navigator.userAgent;
+  if (/iPhone/i.test(u)) return 'iPhone'; if (/iPad/i.test(u)) return 'iPad';
+  const m = /Android[^;]*;\s*([^;)]+?)(?:\s+Build|\))/.exec(u);
+  return m ? m[1].trim().slice(0, 40) : 'Celular';
+}
+
+// ---------- texto do slide (igual ao telão: P./T. coloridos, resposta do povo em negrito) ----------
+function htmlSlide(s, curto) {
+  if (!s) return '';
+  if (s.versos) return '<div>' + s.versos.map(v => `<sup>${esc(v.n)}</sup>${esc(v.t)}`).join(' ') + '</div>';
+  const cfg = est?.cfg || {};
+  let povo = false;
+  const trocas = [];
+  const linhas = esc(s.texto).split('\n').map((l, i) => {
+    const num = i === 0 && s.numerado ? /^\s*(\d+)\.\s+/.exec(l) : null;
+    if (num) return (cfg.mostrarRotulos === false ? '' : `<span class="quem">${num[1]}.</span> `) + l.slice(num[0].length);
+    const m = /^\s*([PTLCD])\.\s+/.exec(l), antes = povo;
+    let quem = '';
+    if (m) { povo = m[1] === 'T'; if (cfg.mostrarRotulos !== false) quem = `<span class="quem">${m[1]}.</span> `; l = l.slice(m[0].length); }
+    else if (/^\s*(—|R\.)/.test(l)) povo = true;
+    if (i > 0 && povo !== antes) trocas[i] = true;
+    return quem + (povo ? `<span class="resp">${l}</span>` : l);
+  });
+  const separar = !curto && cfg.espacoResposta !== false;
+  let html = linhas.map((l, i) => i === 0 ? l : (separar && trocas[i] ? '<span class="entre"></span>' : '<br>') + l).join('')
+    .replace(/&lt;(\/?)(b|i|u)&gt;/gi, '<$1$2>');
+  if (s.refrao) html = `<span class="resp">${html}</span>`;
+  if (s.img && !s.texto) html = '<span class="aviso-img">🖼 Imagem</span>';
+  return `<div>${html}</div>`;      // um bloco só (a caixa do telão centraliza com flex)
+}
+
+// ---------- desenho ----------
+function render() {
+  if (!est) return;
+  document.documentElement.style.setProperty('--cor-quem', est.cfg?.corRotulo || '#ff5a4f');
+  $('#nomeRoteiro').textContent = est.roteiro || 'MiguelAngelus';
+  const selo = $('#selo');
+  selo.textContent = est.preto ? 'Tela preta' : est.altar ? 'Altar' : est.camera ? 'Câmera' : est.noAr.slide ? 'Ao vivo' : est.tocando.some(t => t.tipo === 'video' && !t.pausado) ? 'Vídeo' : 'Livre';
+  selo.classList.toggle('vivo', !!(est.preto || est.altar || est.noAr.slide || est.camera));
+  if (!est.projecao) selo.textContent += ' · telão fechado';
+
+  // aviso
+  const av = $('#avisoAtivo');
+  av.hidden = !est.aviso;
+  if (est.aviso) av.innerHTML = `📢 <b>Aviso na tela:</b> ${esc(est.aviso.texto)}<div class="linha" style="margin-top:8px"><button data-cmd="avisoRepetir">↻ Repetir</button><button data-cmd="avisoRetirar">✕ Retirar</button></div>`;
+
+  // no ar
+  const n = est.noAr;
+  $('#noArTit').textContent = n.tit ? n.tit + (n.idx >= 0 ? ` · ${n.idx + 1}/${n.total}` : '') : '';
+  const telaNoAr = $('#noAr');
+  telaNoAr.innerHTML = est.preto ? '<span class="vazia">■ Tela preta</span>' : est.camera ? '<span class="vazia">📷 Câmera no telão</span>' :
+    n.slide ? htmlSlide(n.slide) : est.tocando.some(t => t.tipo === 'video') ? '<span class="vazia">🎬 Vídeo no telão</span>' : '<span class="vazia">Nada no ar</span>';
+
+  // próximo
+  const p = est.prox;
+  $('#proxRot').textContent = p?.abre ? 'Próximo item (abre)' : 'Próximo';
+  $('#proxTit').textContent = p?.tit || '';
+  $('#prox').innerHTML = p ? (p.slide ? htmlSlide(p.slide, true) : `<span class="vazia">${esc(p.tit || '—')}</span>`) : '<span class="vazia">Fim do roteiro</span>';
+
+  // slides do item aberto
+  const a = est.aberto;
+  $('#abertoTit').textContent = a ? a.tit : '';
+  const vivoAqui = a && n.tit && a.rIdx === est.vivoIdx;
+  $('#tira').innerHTML = !a ? '<span class="sutil">Abra um item no Roteiro.</span>' : a.midia ? `<span class="sutil">${a.midia.tipo === 'video' ? '🎬 Vídeo' : '🎵 Áudio'}: ${esc(a.midia.nome)} — controles na aba Mídia.</span>` :
+    !a.slides.length ? '<span class="sutil">Item sem slides.</span>' :
+    a.slides.map((s, i) => `<button class="sl ${vivoAqui && n.idx === i ? 'vivo' : ''} ${a.idx === i ? 'foco' : ''}" data-slide="${i}">${htmlSlide(s, true)}<span class="n">${i + 1}</span></button>`).join('');
+  const f = $('#tira .foco'); if (f) f.scrollIntoView({ block: 'nearest', inline: 'center' });
+
+  $('#btProjecao').textContent = est.projecao ? '✕ Fechar o telão' : '▣ Abrir o telão';
+  $('#btProjecao').classList.toggle('ligado', !!est.projecao);
+  $('#btPreto').classList.toggle('ligado', !!est.preto);
+  $('#btAltar').classList.toggle('ligado', !!est.altar);
+
+  // roteiro
+  $('#rotNome').textContent = est.roteiro;
+  $('#listaRoteiro').innerHTML = est.itens.length ? est.itens.map((it, i) => `
+    <button class="it ${a && a.rIdx === i ? 'sel' : ''}" data-item="${i}"><span class="tag">${esc(it.rot)}</span><span class="tit">${esc(it.tit || '—')}</span>${est.vivoIdx === i ? '<span class="noar"></span>' : ''}</button>`).join('')
+    : '<p class="sutil">Roteiro vazio.</p>';
+
+  // mídia
+  const cx = $('#cxAberta');
+  cx.hidden = !a?.midia;
+  if (a?.midia) {
+    const tocandoEsta = est.tocando.find(t => t.id === a.midia.id);
+    cx.innerHTML = `<h3>${a.midia.tipo === 'video' ? '🎬' : '🎵'} ${esc(a.midia.nome)}</h3><div class="linha">
+      <button data-midia="${esc(a.midia.id)}" data-macao="midiaTocar" style="background:var(--acento);color:#1b1503;border:0;font-weight:700">${tocandoEsta ? (tocandoEsta.pausado ? '▶ Continuar' : '❚❚ Pausar') : a.midia.tipo === 'video' ? '▶ Tocar no telão' : '▶ Tocar'}</button>
+      ${tocandoEsta ? `<button data-midia="${esc(a.midia.id)}" data-macao="midiaParar">■ Parar</button>` : ''}</div>`;
+  }
+  $('#tocando').innerHTML = est.tocando.length ? est.tocando.map(t => `<div class="toc"><span>${t.tipo === 'video' ? '🎬' : '🎵'}</span><span class="nm">${esc(t.nome)}</span>
+      <span class="t">${fmt(t.t)} / ${fmt(t.dur)}</span>
+      <button data-midia="${esc(t.id)}" data-macao="midiaTocar">${t.pausado ? '▶' : '❚❚'}</button><button data-midia="${esc(t.id)}" data-macao="midiaParar">■</button></div>`).join('')
+    : '<p class="sutil">Nada tocando.</p>';
+  if (document.activeElement !== $('#vol')) $('#vol').value = est.volume;
+  $('#cxCameras').hidden = !est.cameras.length;
+  $('#cameras').innerHTML = est.cameras.map(c => `<button class="it ${est.camera === c.id ? 'sel' : ''}" data-camera="${esc(c.id)}"><span class="tit">📷 ${esc(c.nome)}</span>${est.camera === c.id ? '<span class="noar"></span>' : ''}</button>`).join('') +
+    (est.camera ? '<button data-camera="" class="it"><span class="tit">✕ Tirar a câmera do telão</span></button>' : '');
+  $('#letra').checked = !!est.letra;
+  $('#temas').innerHTML = est.temas.map(t => `<button class="${est.tema === t.id ? 'sel' : ''}" data-tema="${esc(t.id)}" style="background:${esc(t.fundo)};color:${esc(t.texto)}" title="${esc(t.nome)}">Aa<small>${esc(t.nome)}</small></button>`).join('');
+
+  // recentes do aviso
+  $('#avRecentes').innerHTML = est.recentes.length ? '<div class="sutil" style="margin-bottom:6px">Recentes</div>' +
+    est.recentes.map((r, i) => `<button class="rec" data-rec="${i}">📢 ${esc(r)}</button>`).join('') : '';
+}
+
+function irAba(nome) {
+  aba = nome;
+  $$('[data-aba]').forEach(s => s.hidden = s.dataset.aba !== nome);
+  $$('[data-ir]').forEach(b => b.classList.toggle('sel', b.dataset.ir === nome));
+  $('#nav').hidden = nome === 'midia';
+  $('main').scrollTop = 0;
+}
+
+// ---------- conexão ----------
+function conectado(sim) {
+  $('#pt').classList.toggle('on', sim);
+  $('#faixa').hidden = sim;
+  if (sim) { vivoEm = Date.now(); $('#fora').hidden = true; }
+}
+
+function conectar() {
+  if (fonte) fonte.close();
+  if (!token) { mostrarPareamento(); return; }
+  fonte = new EventSource('/api/eventos?t=' + encodeURIComponent(token));
+  fonte.onmessage = e => {
+    conectado(true);
+    try { est = JSON.parse(e.data); } catch (_) { return; }
+    if (est && est.itens) render();
+  };
+  fonte.onopen = () => conectado(true);
+  fonte.onerror = () => {
+    conectado(false);
+    if (fonte.readyState === EventSource.CLOSED) setTimeout(verificar, 1500);   // servidor recusou: pode ter sido desligado ou o celular tirado
+  };
+}
+
+async function verificar() {
+  try {
+    const r = await (await fetch('/api/ping?t=' + encodeURIComponent(token), { cache: 'no-store' })).json();
+    if (!r.ok && r.motivo === 'pareamento') { esquecer(); return mostrarPareamento('Este celular foi desconectado no computador. Pareie de novo.'); }
+    conectar();
+  } catch (_) {
+    // computador fora do ar / controle desligado / outro Wi-Fi
+    if (Date.now() - vivoEm > 20000) mostrarFora();
+    setTimeout(verificar, 3000);
+  }
+}
+
+function mostrarFora() {
+  $('#foraTit').textContent = 'Sem conexão com o computador';
+  $('#foraTxt').innerHTML = 'Confira se o celular está no <b>mesmo Wi-Fi</b> do computador e se o MiguelAngelus está aberto, com o controle pelo celular ligado.';
+  $('#fora').hidden = false;
+}
+
+function esquecer() { token = ''; try { localStorage.removeItem(CHAVE); } catch (_) {} if (fonte) fonte.close(); }
+
+function mostrarPareamento(msg) {
+  $('#par').hidden = false;
+  $('#parErro').textContent = msg || '';
+  if (!$('#parNome').value) $('#parNome').value = nomePadrao();
+  const c = new URLSearchParams(location.search).get('c');
+  if (c && !$('#parCod').value) $('#parCod').value = c;
+}
+
+async function parear() {
+  const codigo = $('#parCod').value.replace(/\D/g, ''), nome = $('#parNome').value.trim() || nomePadrao();
+  if (codigo.length !== 4) { $('#parErro').textContent = 'Digite os 4 números do código.'; return; }
+  $('#parOk').disabled = true;
+  try {
+    const r = await fetch('/api/parear', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ codigo, nome }) });
+    const j = await r.json();
+    if (r.status === 429) { $('#parErro').textContent = 'Muitas tentativas erradas. Espere 1 minuto e use o código novo que aparece no computador.'; return; }
+    if (!j.ok) { $('#parErro').textContent = 'Código errado ou vencido. Confira o código que aparece agora no computador.'; return; }
+    token = j.token;
+    try { localStorage.setItem(CHAVE, token); } catch (_) {}
+    history.replaceState(null, '', '/');          // tira o código do endereço (ele não vale mais)
+    $('#par').hidden = true;
+    conectar();
+  } catch (_) {
+    $('#parErro').textContent = 'Não consegui falar com o computador. Confira o Wi-Fi.';
+  } finally { $('#parOk').disabled = false; }
+}
+
+async function cmd(acao, dados) {
+  vibrar();
+  try {
+    const r = await fetch('/api/comando?t=' + encodeURIComponent(token), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ acao, ...dados }) });
+    if (r.status === 401) { esquecer(); mostrarPareamento('Este celular foi desconectado no computador. Pareie de novo.'); }
+  } catch (_) { toast('Sem conexão — o comando não chegou'); }
+}
+
+// ---------- tela sempre acesa ----------
+let acordou = false;
+async function manterAcesa() {
+  if (acordou) return;
+  try { if ('wakeLock' in navigator) { await navigator.wakeLock.request('screen'); acordou = true; return; } } catch (_) {}
+  try { await $('#acordado').play(); acordou = true; } catch (_) {}      // sem HTTPS: um vídeo mudo em repetição mantém a tela ligada
+}
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { acordou = false; if (token) verificar(); } });
+
+// ---------- eventos ----------
+document.addEventListener('click', e => {
+  manterAcesa();
+  const b = e.target.closest('button');
+  if (!b) return;
+  if (b.dataset.cmd) return cmd(b.dataset.cmd);
+  if (b.dataset.ir) return irAba(b.dataset.ir);
+  if (b.dataset.slide) return cmd('slide', { i: +b.dataset.slide });
+  if (b.dataset.item) { cmd('item', { i: +b.dataset.item }); return irAba('controle'); }
+  if (b.dataset.macao) return cmd(b.dataset.macao, { id: b.dataset.midia });
+  if (b.dataset.camera !== undefined) return cmd('camera', { id: b.dataset.camera });
+  if (b.dataset.tema) return cmd('tema', { id: b.dataset.tema });
+  if (b.dataset.rec) { cmd('avisoRecente', { i: +b.dataset.rec }); $('#folhaAviso').hidden = true; return toast('Aviso no telão'); }
+});
+$('#btAviso').addEventListener('click', () => { $('#folhaAviso').hidden = false; $('#avTexto').value = ''; });
+$('#avFechar').addEventListener('click', () => $('#folhaAviso').hidden = true);
+$('#folhaAviso').addEventListener('click', e => { if (e.target.id === 'folhaAviso') $('#folhaAviso').hidden = true; });
+$('#avMostrar').addEventListener('click', () => {
+  const t = $('#avTexto').value.trim();
+  if (!t) return toast('Escreva o aviso');
+  cmd('aviso', { texto: t }); $('#folhaAviso').hidden = true; toast('Aviso no telão');
+});
+$('#vol').addEventListener('change', e => cmd('volume', { v: +e.target.value }));
+$('#letra').addEventListener('change', e => cmd('letra', { on: e.target.checked }));
+$('#parOk').addEventListener('click', parear);
+$('#parCod').addEventListener('keydown', e => { if (e.key === 'Enter') parear(); });
+$('#foraTentar').addEventListener('click', () => { $('#fora').hidden = true; verificar(); });
+
+// início: com token, conecta; com ?c= no endereço (QR code), já preenche o código
+if (token) conectar(); else mostrarPareamento();
+</script>
+</body>
+</html>

@@ -274,7 +274,7 @@ namespace MiguelAngelus
                 catch (Exception ex) { Program.Erro("iniciar o MiguelAngelus", ex); Close(); }
             };
             relogioNdi.Tick += (s, e) => InformarNdi();
-            FormClosed += (s, e) => { relogioNdi.Stop(); ndi?.Dispose(); };
+            FormClosed += (s, e) => { relogioNdi.Stop(); ndi?.Dispose(); celular?.Dispose(); };
         }
 
         // Mensagens da página: {tipo:'ndi', ligar, nome} e {tipo:'faixa', linhas, negrito, fonte, tamanho, opacidade, corTexto}
@@ -298,8 +298,40 @@ namespace MiguelAngelus
                 // a página abriu a confirmação de fechar: a trava passa a 15 min (a pessoa está decidindo ou enviando)
                 else if (tipo == "segurarFechar") { relogioFechar?.Stop(); relogioFechar = new Timer { Interval = 15 * 60 * 1000 }; relogioFechar.Tick += (s2, e2) => { relogioFechar.Stop(); podeFechar = true; Close(); }; relogioFechar.Start(); }
                 else if (tipo == "cancelarFechar") { relogioFechar?.Stop(); avisouFechamento = false; }
+                else if (tipo == "celular") MensagemCelular(m);
             }
             catch (Exception ex) { erroNdi = ex.Message; InformarNdi(); }
+        }
+
+        // ---------- Controle pelo celular (Celular.cs) ----------
+        // A página manda {tipo:'celular', acao:'ligar'|'desligar'|'info'|'tirar'|'estado'}; recebe {tipo:'celularInfo', …}
+        // e os comandos dos celulares como {tipo:'celularComando', comando:{acao, …}}
+        ServidorCelular celular;
+        ServidorCelular Celular => celular ?? (celular = new ServidorCelular(
+            cmd => NaTela(() => Web.CoreWebView2?.PostWebMessageAsJson("{\"tipo\":\"celularComando\",\"comando\":" + cmd + "}")),
+            () => NaTela(InformarCelular)));
+
+        void NaTela(Action acao)
+        {
+            if (IsDisposed || !IsHandleCreated) return;
+            try { BeginInvoke(new Action(() => { try { acao(); } catch { } })); } catch { }
+        }
+
+        void InformarCelular()
+        {
+            try { Web.CoreWebView2?.PostWebMessageAsJson(json.Serialize(Celular.Info())); } catch { }
+        }
+
+        void MensagemCelular(System.Collections.Generic.Dictionary<string, object> m)
+        {
+            switch (m.TryGetValue("acao", out var a) ? a as string : "")
+            {
+                case "ligar": Celular.Ligar(); InformarCelular(); break;
+                case "desligar": Celular.Desligar(); InformarCelular(); break;
+                case "info": InformarCelular(); break;
+                case "tirar": Celular.Tirar(m.TryGetValue("id", out var i) ? Convert.ToString(i) : null); InformarCelular(); break;
+                case "estado": if (celular != null && celular.Ligado && m.TryGetValue("estado", out var e)) celular.Atualizar(json.Serialize(e)); break;
+            }
         }
 
         // ---------- Pasta de sincronização (Google Drive para computador, OneDrive…) ----------

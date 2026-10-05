@@ -133,13 +133,24 @@ function acabamento(html) {
 
 // Com limite de linhas: a letra é calculada para caber exatamente N linhas de ~C caracteres.
 // Sem limite: começa no tamanho máximo e diminui até o texto caber.
+// Tamanho de partida da letra para uma área de texto (com limite de linhas: N linhas na altura). Texto sozinho numa área
+// estreitada pelos cantos: a letra diminui na mesma proporção da largura perdida (senão sobram poucas palavras por linha e
+// o justificado abre buracos); na largura normal, nada muda.
+function tamanhoLetra(larg, alt, soTexto) {
+  const maxPx = (+cfg.fonteMax || 9) * window.innerHeight / 100;
+  if (!cfg.quebraAuto) return maxPx;
+  const L = +cfg.linhasPorSlide || 4;
+  let f = Math.min(maxPx, alt / (L * 1.22));
+  if (soTexto) f = Math.min(f, maxPx * larg / (window.innerWidth * .9));
+  return f;
+}
+
 function ajustar() {
   const texto = $('texto'), area = $('area');
-  const maxPx = (+cfg.fonteMax || 9) * window.innerHeight / 100;
-  let f = maxPx;
+  let f = (+cfg.fonteMax || 9) * window.innerHeight / 100;
   if (cfg.quebraAuto) {
-    const L = +cfg.linhasPorSlide || 4, C = +cfg.caracteresPorLinha || 40;
-    f = Math.min(maxPx, area.clientHeight / (L * 1.22));
+    const C = +cfg.caracteresPorLinha || 40;
+    f = tamanhoLetra(area.clientWidth, area.clientHeight, !slide?.img || slide.layout === 'fundo' || document.body.classList.contains('camera'));
     texto.style.maxWidth = `min(100%, ${(C * 0.55).toFixed(1)}em)`;
   } else {
     texto.style.maxWidth = '100%';
@@ -172,8 +183,8 @@ const CAIXAS = {   // em fração da tela: [esquerda, topo, direita, base]
 function harmonizar(lay) {
   const img = $('imgSlide'), area = $('area');
   const limpar = () => { for (const p of ['left', 'top', 'right', 'bottom', 'width', 'height']) { img.style[p] = ''; area.style[p] = ''; } };
-  const cx = CAIXAS[lay];
-  if (!cx || document.body.classList.contains('camera')) return limpar();
+  if (document.body.classList.contains('camera') || lay === 'so') return limpar();
+  const cx = CAIXAS[lay] || { area: [.05, .05, .95, .88] };     // texto comum (e imagem de fundo): também desvia dos cantos
   const W = innerWidth, H = innerHeight, folga = H * .02;
   const cantos = [...document.querySelectorAll('.canto.on')].filter(c => c.naturalWidth).map(c => c.getBoundingClientRect());
   const encaixar = (fr, encolher) => {
@@ -190,13 +201,32 @@ function harmonizar(lay) {
     }
     return [l, t, r, b];
   };
-  const [il, it, ir, ib] = encaixar(cx.img, .05);
-  Object.assign(img.style, { left: il + 'px', top: it + 'px', width: (ir - il) + 'px', height: (ib - it) + 'px', right: 'auto', bottom: 'auto' });
-  const [al, at, ar, ab] = encaixar(cx.area, 0);
+  let al, at, ar, ab;
+  if (cx.img) {
+    const [il, it, ir, ib] = encaixar(cx.img, .05);
+    Object.assign(img.style, { left: il + 'px', top: it + 'px', width: (ir - il) + 'px', height: (ib - it) + 'px', right: 'auto', bottom: 'auto' });
+    [al, at, ar, ab] = encaixar(cx.area, 0);
+  } else {
+    // Texto sozinho: para os cantos de cima e os de baixo, desvia por cima/baixo OU pelos lados (margem igual dos dois lados,
+    // para continuar centralizado). Fica a combinação que deixa a letra maior (ver ajustar).
+    for (const p of ['left', 'top', 'right', 'bottom', 'width', 'height']) img.style[p] = '';
+    const base = cx.area.map((v, i) => v * (i % 2 ? H : W));
+    const bate = cantos.filter(c => !(c.right <= base[0] || c.left >= base[2] || c.bottom <= base[1] || c.top >= base[3]));
+    const cima = bate.filter(c => c.top < H / 2), baixo = bate.filter(c => c.top >= H / 2);
+    const margem = cs => cs.reduce((m, c) => Math.max(m, c.left < W / 2 ? c.right + folga : W - c.left + folga), base[0]);
+    const opcoes = [];
+    for (const vCima of [true, false]) for (const vBaixo of [true, false]) {
+      const m = margem([...(vCima ? [] : cima), ...(vBaixo ? [] : baixo)]);
+      opcoes.push([m, vCima ? cima.reduce((t, c) => Math.max(t, c.bottom + folga), base[1]) : base[1],
+        W - m, vBaixo ? baixo.reduce((b, c) => Math.min(b, c.top - folga), base[3]) : base[3]]);
+    }
+    const nota = q => (q[2] - q[0]) < W * .3 || (q[3] - q[1]) < H * .2 ? 0 : tamanhoLetra(q[2] - q[0], q[3] - q[1], true);
+    [al, at, ar, ab] = opcoes.sort((x, y) => nota(y) - nota(x))[0];
+  }
   Object.assign(area.style, { left: al + 'px', top: at + 'px', right: (W - ar) + 'px', bottom: (H - ab) + 'px' });
 }
 // as imagens dos cantos chegam depois: refaz o encaixe quando carregam (e quando a janela muda de tamanho)
-document.querySelectorAll('.canto').forEach(c => c.addEventListener('load', () => { if (slide?.img) { desenharImagem(); ajustar(); } }));
+document.querySelectorAll('.canto').forEach(c => c.addEventListener('load', () => { desenharImagem(); ajustar(); }));
 
 function desenhar() {
   desenharImagem();
@@ -314,7 +344,7 @@ async function camera(m) {
     $('cam').srcObject = camStream;
     b.classList.add('camera');
     b.classList.toggle('com-letra', !!m.letra); b.classList.toggle('sem-letra', !m.letra);
-    ajustar();
+    desenharImagem(); ajustar();
   } catch (e) {
     if (alvo && alvo !== window) try { alvo.postMessage({ app: 'lumen', tipo: 'cameraStatus', preview: PREVIEW, erro: e.message }, '*'); } catch (_) {}
   }
@@ -323,7 +353,7 @@ function pararCam() {
   if (camStream) { camStream.getTracks().forEach(t => t.stop()); camStream = null; }
   $('cam').srcObject = null;
   document.body.classList.remove('camera', 'com-letra', 'sem-letra');
-  ajustar();
+  desenharImagem(); ajustar();
 }
 
 // ---------- Aviso (placa de carro, criança…) ----------
@@ -356,7 +386,7 @@ window.addEventListener('message', e => {
       if (x) { if (el.src !== x.src) el.src = x.src; el.style.height = x.tam + 'vh'; }
       else el.removeAttribute('src');
     }
-    if (slide?.img) { desenharImagem(); ajustar(); }
+    desenharImagem(); ajustar();
   }
   else if (m.tipo === 'midia') midia(m);
   else if (m.tipo === 'slide') {
@@ -372,7 +402,7 @@ window.addEventListener('message', e => {
   }
 });
 
-window.addEventListener('resize', () => { if (slide?.img) desenharImagem(); ajustar(); });
+window.addEventListener('resize', () => { desenharImagem(); ajustar(); });
 
 // Avisa o painel que esta janela está pronta (e continua avisando, caso o painel seja recarregado)
 function ola(primeiro) {

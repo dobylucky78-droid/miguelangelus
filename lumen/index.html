@@ -21,7 +21,7 @@
     </div>
     <div class="splash-info">
       <div class="splash-gratis"><b>Gratuito · uso livre</b></div>
-      <div>Versão 1.3.1</div>
+      <div>Versão 1.4</div>
       <div>© 2026 · PASCOM</div>
       <div><b>Paróquia São José Operário</b></div>
     </div>
@@ -107,8 +107,9 @@
         <button data-menu="folhetoOnline">🌐 Baixar folheto da Arquidiocese…</button>
         <button data-menu="liturgiaDia">📖 Liturgia diária automática (Paulus)…</button>
         <hr>
+        <button data-menu="celular">📱 Controle pelo celular…</button>
+        <hr>
         <button disabled>Temas por tempo litúrgico <span class="em-breve">em breve</span></button>
-        <button disabled>Controle pelo celular <span class="em-breve">em breve</span></button>
       </div>
     </div>
     <div class="menu"><button class="menu-titulo">Ajuda</button>
@@ -350,6 +351,7 @@
         <button type="button" data-ajsec="biblia">📖 Bíblia</button>
         <button type="button" data-ajsec="altar">⛪ Botão Altar</button>
         <button type="button" data-ajsec="ndi">📡 Transmissão (OBS)</button>
+        <button type="button" data-ajsec="celular">📱 Controle pelo celular</button>
         <button type="button" data-ajsec="sync">☁ Sincronização</button>
         <button type="button" data-ajsec="backup">💾 Backup</button>
       </nav>
@@ -432,6 +434,7 @@
             <label class="campo">Cor <input type="color" data-cfg="corRotulo"></label>
           </div>
           <label class="check" title="Um pequeno espaço antes e depois da linha do povo (T.), separando a resposta do que o padre diz"><input type="checkbox" data-cfg="espacoResposta"> Espaço entre as falas (separa a resposta do povo)</label>
+          <label class="check" title="Junta os versos de cada estrofe do salmo num parágrafo, em vez de uma linha por verso como no folheto"><input type="checkbox" data-cfg="salmoCorrido"> Salmo em texto corrido (não quebra a linha a cada verso)</label>
           <p class="sutil pequeno">As imagens dos cantos da tela (brasão, padroeiro…) ficam em <b>Agenda → Paróquia</b>, para cada comunidade.</p>
         </section>
 
@@ -481,6 +484,14 @@
           <p id="ndiInfo" class="status"></p>
           <p class="sutil pequeno">No OBS (com o plugin <b>DistroAV</b>): <b>+ → Fonte NDI™</b> → escolha "MiguelAngelus Letras" e coloque
             <b>por cima da câmera</b>. Só a faixa aparece; o resto é transparente. Tela preta e Limpar esvaziam a faixa.</p>
+        </section>
+
+        <section data-ajpainel="celular">
+          <h3>📱 Controle pelo celular</h3>
+          <p class="sutil pequeno">Para a equipe da PASCOM controlar o telão andando pela igreja. O celular precisa estar no
+            <b>mesmo Wi-Fi</b> deste computador. Não precisa instalar nada: abre no navegador e pode virar um ícone na tela inicial.</p>
+          <label class="check"><input type="checkbox" id="celLigado"> Ligar o controle pelo celular</label>
+          <div id="celPainel"></div>
         </section>
 
         <section data-ajpainel="sync">
@@ -779,7 +790,7 @@
       <figure><img src="img/brasao-paroquia.webp" alt="Brasão da Paróquia São José Operário"><figcaption>Paróquia São José Operário (RJ)</figcaption></figure>
       <figure><img src="img/brasao-pascom.webp" alt="Logotipo da PASCOM"><figcaption>PASCOM</figcaption></figure>
     </div>
-    <p class="sutil pequeno" id="versaoApp">Versão 1.3.1</p>
+    <p class="sutil pequeno" id="versaoApp">Versão 1.4</p>
     <div class="linha"><span class="espaco"></span><button value="ok" class="primario">OK</button></div>
   </form>
 </dialog>
@@ -981,6 +992,8 @@
 <script src="js/atualizacao.js"></script>
 <script src="js/formatacao.js"></script>
 <script src="js/cowabunga.js"></script>
+<script src="lib/qrcode/qrcode.min.js"></script>
+<script src="js/celular.js"></script>
 <script src="js/menus.js"></script>
 <script src="js/app.js"></script>
 </body>

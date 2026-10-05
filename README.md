@@ -17,6 +17,7 @@ Site: https://pascom-sjo.github.io/
 - Vídeos e áudios das pastas do computador (inclusive a pasta de mídias do Holyrics), apresentações e câmeras ao vivo.
 - Temas e imagens de cada comunidade no telão, aviso na tela, botão "Altar".
 - Faixa com as letras para o OBS por NDI.
+- Controle pelo celular na rede local (página servida pelo próprio app, pareada por QR code e código de 4 dígitos).
 - Sincronização opcional entre computadores pelo Google Drive da própria paróquia (escopo `drive.file`).
 
 ## Como o código está organizado

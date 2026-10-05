@@ -1,0 +1,15 @@
+{
+  "name": "MiguelAngelus — Controle",
+  "short_name": "MiguelAngelus",
+  "description": "Controle do telão do MiguelAngelus pelo celular (PASCOM)",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0f1420",
+  "theme_color": "#0f1420",
+  "icons": [
+    { "src": "icone-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icone-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icone.svg", "sizes": "any", "type": "image/svg+xml" }
+  ]
+}

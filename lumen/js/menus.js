@@ -96,6 +96,7 @@ function acaoMenu(acao) {
     case 'aviso': return abrirAviso();
     case 'retirarAviso': return retirarAviso();
     case 'ajustes': return abrirAjustes();
+    case 'celular': return abrirAjustes('celular');
     case 'folhetoOnline': return abrirFolhetosOnline();
     case 'liturgiaDia': return abrirLiturgiaDoDia();
     case 'agenda-calendario': return abrirAgenda('calendario');
