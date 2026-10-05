@@ -342,6 +342,21 @@ button.cards-sec:hover, button.cards-dia:hover { border-bottom-color: var(--bord
 /* barrinha N I S ao editar textos (formatacao.js) */
 .barra-formato { position: fixed; z-index: 120; display: flex; gap: 2px; padding: 2px; background: var(--painel); border: 1px solid var(--borda); border-radius: 7px; box-shadow: 0 4px 14px rgba(0,0,0,.35); }
 .barra-formato button { width: 28px; height: 24px; padding: 0; font-size: 14px; border-radius: 5px; }
+/* Cantos: favoritos e cifras */
+.visao-cantos { display: flex; gap: 6px; margin: 6px 0 4px; flex-wrap: wrap; }
+.visao-cantos button { padding: 4px 10px; border-radius: 16px; font-size: 12.5px; }
+.visao-cantos button.sel { background: var(--acento); border-color: var(--acento); color: #1b1503; font-weight: 600; }
+.visao-cantos .n { opacity: .7; margin-left: 3px; }
+.lista .it .estrela { background: none; border: 0; padding: 0 2px; font-size: 15px; line-height: 1; color: var(--sutil, #888); cursor: pointer; flex: none; }
+.lista .it .estrela.on { color: var(--acento); }
+.lista .it .tit .ficha { display: block; font-size: 11px; color: var(--sutil, #888); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sep-acervo { font-size: 12px; color: var(--sutil, #888); margin: 10px 2px 4px; padding-top: 6px; border-top: 1px dashed var(--borda); }
+.cx-cifra { border: 1px solid var(--borda); border-radius: 8px; padding: 6px 10px; margin: 6px 0; }
+.cx-cifra summary { cursor: pointer; font-weight: 600; }
+.cifra-edit { font: 13px/1.35 Consolas, "Courier New", monospace; white-space: pre; overflow-x: auto; width: 100%; margin: 8px 0; tab-size: 4; }
+.cab-cifra { margin-top: 4px; }
+.estrela-bt { font-size: 17px; padding: 2px 9px; line-height: 1.2; }
+.estrela-bt.on { color: var(--acento); border-color: var(--acento); }
 /* Controle pelo celular (Ajustes) */
 .cel-par { display: flex; gap: 16px; align-items: flex-start; margin: 10px 0 12px; flex-wrap: wrap; }
 .cel-qr { width: 190px; height: 190px; background: #fff; border-radius: 10px; padding: 4px; flex: none; }

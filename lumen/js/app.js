@@ -373,7 +373,9 @@ function gerarSlidesBase(item) {
   switch (item.tipo) {
     case 'canto': {
       const c = S.cantos.find(c => c.id === item.cantoId);
-      return c ? comRefrao(c.refrao, c.letra, c.titulo) : [];
+      if (c) return comRefrao(c.refrao, c.letra, c.titulo);
+      // sem canto escolhido: o texto rezado do folheto (ex.: Santo tirado da Oração Eucarística)
+      return item.textoRezado ? dividir(item.textoRezado).map(t => ({ texto: t, rodape: item.momento || '' })) : [];
     }
     case 'texto':
       return dividir(item.texto).map(t => ({ texto: t, rodape: item.titulo || '' }));
@@ -620,11 +622,25 @@ function renderSlides() {
   if (f) f.scrollIntoView({ block: 'nearest' });
 }
 
-function opcoesCantos(momento, sel) {
-  let h = '<option value="">— escolher canto —</option>';
+function opcoesCantos(momento, sel, soFav = false, rezado = false) {
+  let h = rezado ? '<option value="">— rezado (texto do folheto) —</option>' : '<option value="">— escolher canto —</option>';
+  const ficha = c => fichaCanto(c) ? ` — ${esc(fichaCanto(c))}` : '';
+  const opFav = c => `<option value="${c.id}" ${c.id === sel ? 'selected' : ''}>⭐ ${esc(c.titulo)}${ficha(c)}${c.cifra ? ' 🎸' : ''}</option>`;
+  // "⭐ só favoritos": só os favoritos do momento deste item (Santo → só os Santos); o canto já escolhido continua na lista
+  if (soFav) {
+    const l = S.cantos.filter(c => c.favorito && (c.momento || 'Outros') === momento).sort(porTitulo);
+    h += l.length ? `<optgroup label="⭐ ${esc(momento)}">${l.map(opFav).join('')}</optgroup>`
+      : `<option disabled>(nenhum favorito de ${esc(momento)} — desmarque “⭐ só favoritos” para ver o acervo)</option>`;
+    const atual = S.cantos.find(c => c.id === sel);
+    if (atual && !l.includes(atual)) h += `<optgroup label="Escolhido${atual.favorito ? ` (favorito de ${esc(atual.momento || 'Outros')})` : ' (não é favorito)'}"><option value="${atual.id}" selected>${esc(atual.titulo)}</option></optgroup>`;
+    return h;
+  }
+  // ⭐ favoritos deste momento primeiro (o acervo inteiro continua logo abaixo)
+  const fav = S.cantos.filter(c => c.favorito && (c.momento || 'Outros') === momento).sort(porTitulo);
+  if (fav.length) h += `<optgroup label="⭐ Favoritos — ${esc(momento)}">${fav.map(opFav).join('')}</optgroup>`;
   for (const m of [momento, ...MOMENTOS.filter(x => x !== momento)]) {
     const lista = S.cantos.filter(c => (c.momento || 'Outros') === m).sort(porTitulo);
-    if (lista.length) h += `<optgroup label="${esc(m)}">${lista.map(c => `<option value="${c.id}" ${c.id === sel ? 'selected' : ''}>${esc(c.titulo)}</option>`).join('')}</optgroup>`;
+    if (lista.length) h += `<optgroup label="${esc(m)}">${lista.map(c => `<option value="${c.id}" ${c.id === sel ? 'selected' : ''}>${esc(c.titulo)}${ficha(c)}</option>`).join('')}</optgroup>`;
   }
   return h;
 }
@@ -655,9 +671,12 @@ function renderCabecalho() {
       h = noRoteiro
         ? `<div class="cab-linha"><span class="tag t-canto">Canto</span>
              <select data-campo="momento" class="estreito">${MOMENTOS.map(m => `<option ${m === it.momento ? 'selected' : ''}>${m}</option>`).join('')}</select>
-             <select data-campo="cantoId">${opcoesCantos(it.momento, it.cantoId)}</select>
+             <select data-campo="cantoId" title="${it.textoRezado ? 'Deixe “rezado” para usar o texto do folheto, ou escolha um canto' : ''}">${opcoesCantos(it.momento, it.cantoId, soFavoritosNoRoteiro(), !!it.textoRezado)}</select>
+             ${temFavoritos() ? `<label class="check" title="A lista mostra só os cantos favoritos, separados por momento"><input type="checkbox" data-sofav ${soFavoritosNoRoteiro() ? 'checked' : ''}> ⭐ só favoritos</label>` : ''}
+             ${c ? `<button data-cmd="favoritarCanto" class="estrela-bt ${c.favorito ? 'on' : ''}" title="${c.favorito ? 'Tirar dos favoritos' : 'Marcar este canto como favorito'}">${c.favorito ? '★' : '☆'}</button>` : ''}
              <button data-cmd="editarCanto" ${c ? '' : 'disabled'}>Editar</button>
-             <button data-cmd="novoCanto">Novo canto</button></div>`
+             <button data-cmd="novoCanto">Novo canto</button></div>
+           ${htmlEscolhaCifra(it, c)}`
         : `<div class="cab-linha"><span class="tag t-canto">${esc(c?.momento || 'Canto')}</span>
              <h2>${esc(c?.titulo || '')}</h2><span class="sutil">${esc(c?.autor || '')}</span>
              <span class="espaco"></span><button data-cmd="editarCanto">Editar</button>${btnAdd}</div>`;
@@ -794,7 +813,7 @@ function resumoItem(it) {
   switch (it.tipo) {
     case 'canto': {
       const c = S.cantos.find(c => c.id === it.cantoId);
-      return { rot: it.momento || 'Canto', tit: c ? c.titulo : 'escolher canto…', vazio: !c };
+      return { rot: it.momento || 'Canto', tit: c ? c.titulo : it.textoRezado ? `${it.momento || 'Canto'} (rezado)` : 'escolher canto…', vazio: !c && !it.textoRezado };
     }
     case 'leitura': return { rot: it.titulo || 'Leitura', tit: it.ref || 'informar referência…', vazio: !it.ref };
     case 'salmo': {
@@ -926,11 +945,18 @@ function itemParaRoteiro(it) {
 function renderCantos() {
   const termo = semAcento($('#buscaCanto').value.trim());
   const mom = $('#filtroMomento').value;
+  // Visão: ⭐ Favoritos (os que a paróquia usa) ou Acervo completo (fonte de consulta) — cifras.js
+  const visao = visaoCantos(), nFav = S.cantos.filter(c => c.favorito).length;
+  $('#visaoCantos').innerHTML = nFav ? `<button data-visao="favoritos" class="${visao === 'favoritos' ? 'sel' : ''}">⭐ Favoritos <span class="n">${nFav}</span></button>` +
+    `<button data-visao="acervo" class="${visao === 'acervo' ? 'sel' : ''}">📚 Acervo completo <span class="n">${S.cantos.length}</span></button>`
+    : '<span class="sutil pequeno">Dica: marque ☆ nos cantos que a paróquia usa — eles ficam em "Favoritos", fáceis de achar.</span>';
+  const soFav = visao === 'favoritos';
   const lista = S.cantos
+    .filter(c => !soFav || c.favorito)
     .filter(c => !mom || (c.momento || 'Outros') === mom)
     .filter(c => !termo || (/^\d+[a-z]?$/.test(termo.replace(/^n[ºo°]?\s*/, '').replace('-', ''))
       ? String(c.numero || '').replace('-', '').toLowerCase() === termo.replace(/^n[ºo°]?\s*/, '').replace('-', '')   // "150" ou "nº 150" = número do cancioneiro
-      : semAcento(`${c.titulo} ${c.autor} ${c.refrao || ''} ${c.letra}`).includes(termo)))
+      : semAcento(`${c.titulo} ${c.autor} ${c.cd || ''} ${c.refrao || ''} ${c.letra}`).includes(termo)))
     .sort(porTitulo);
   const el = $('#listaCantos');
   const bruto = $('#buscaCanto').value.trim();
@@ -944,14 +970,24 @@ function renderCantos() {
   if (!S.cantos.length && !bruto) { el.innerHTML = '<p class="vazio">Nenhum canto ainda. Digite o nome de um canto acima, clique em <b>Novo</b> ou importe um folheto.</p>'; return; }
   const selId = S.atual && S.atual.rIdx < 0 && S.atual.item.tipo === 'canto' ? S.atual.item.cantoId : null;
   const linha = (c, tag = true) => `<div class="it ${c.id === selId ? 'sel' : ''}" data-id="${c.id}" title="Duplo clique para editar">
-      ${tag ? `<span class="tag t-canto">${esc(c.momento || 'Outros')}</span>` : ''}<span class="tit">${esc(c.titulo)}</span>${c.numero ? `<span class="sutil pequeno" title="${esc(c.fonte || '')}">nº ${esc(c.numero)}</span>` : ''}</div>`;
-  if (termo || mom) { el.innerHTML = lista.map(c => linha(c)).join('') + web; return; }
+      <button class="estrela ${c.favorito ? 'on' : ''}" data-fav="${c.id}" title="${c.favorito ? 'Tirar dos favoritos' : 'Marcar como favorito'}">${c.favorito ? '★' : '☆'}</button>
+      ${tag ? `<span class="tag t-canto">${esc(c.momento || 'Outros')}</span>` : ''}<span class="tit">${esc(c.titulo)}${fichaCanto(c) ? `<small class="ficha">${esc(fichaCanto(c))}</small>` : ''}</span>${c.cifra ? '<span class="sutil pequeno" title="Tem cifra para os músicos">🎸</span>' : ''}${c.numero ? `<span class="sutil pequeno" title="${esc(c.fonte || '')}">nº ${esc(c.numero)}</span>` : ''}</div>`;
+  // Nos favoritos, a busca mostra também o que há no acervo (abaixo)
+  const doAcervo = soFav && termo ? S.cantos.filter(c => !c.favorito && (!mom || (c.momento || 'Outros') === mom) &&
+    semAcento(`${c.titulo} ${c.autor} ${c.cd || ''} ${c.refrao || ''} ${c.letra}`).includes(termo)).sort(porTitulo) : [];
+  if (termo || mom) {
+    el.innerHTML = lista.map(c => linha(c)).join('') +
+      (doAcervo.length ? `<div class="sep-acervo">📚 No acervo completo (${doAcervo.length})</div>` + doAcervo.slice(0, 80).map(c => linha(c)).join('') : '') +
+      (soFav && !lista.length && !doAcervo.length && !bruto ? '<p class="vazio">Nenhum favorito neste momento da Missa.</p>' : '') + web;
+    return;
+  }
   // Sem busca nem filtro: uma pasta por momento da Missa (começam fechadas; clique abre/fecha)
   el.innerHTML = [...MOMENTOS, ...new Set(lista.map(c => c.momento || 'Outros'))].filter((m, i, a) => a.indexOf(m) === i).map(m => {
     const l = lista.filter(c => (c.momento || 'Outros') === m);
     if (!l.length) return '';
-    const f = Recolher.fechado('canto:' + m, true);
-    return `<button class="pasta" data-pasta="${esc(m)}"><span class="seta">${f ? '▸' : '▾'}</span>📁 ${esc(m)}<span class="n">${l.length}</span></button>
+    const chave = (soFav ? 'fav:' : 'canto:') + m;        // nos favoritos, as pastas começam abertas
+    const f = Recolher.fechado(chave, !soFav);
+    return `<button class="pasta" data-pasta="${esc(m)}" data-chave="${esc(chave)}"><span class="seta">${f ? '▸' : '▾'}</span>📁 ${esc(m)}<span class="n">${l.length}</span></button>
       ${f ? '' : `<div class="pasta-itens">${l.map(c => linha(c, false)).join('')}</div>`}`;
   }).join('');
 }
@@ -1011,6 +1047,11 @@ function abrirEditorCanto(canto, momento, aoSalvar) {
   f.momento.value = c.momento || 'Outros';
   f.refrao.value = c.refrao || '';
   f.letra.value = c.letra || '';
+  f.favorito.checked = !!c.favorito;
+  f.cd.value = c.cd || '';
+  f.tom.value = c.tom || '';
+  f.cifra.value = c.cifra || '';
+  $('#cxCifra').open = !!c.cifra;
   $('#btnExcluirCanto').hidden = !c.id;
   aoSalvarCanto = aoSalvar || null;
   const dlg = $('#dlgCanto');
@@ -1021,13 +1062,19 @@ function abrirEditorCanto(canto, momento, aoSalvar) {
 
 async function salvarCantoDoEditor() {
   const f = $('#formCanto');
+  const antigo = S.cantos.find(x => x.id === f.dataset.id) || {};
   const c = {
+    ...antigo,                      // mantém o que o editor não mostra (nº e fonte do cancioneiro, origem…)
     id: f.dataset.id || uid(),
     titulo: f.titulo.value.trim(),
     autor: f.autor.value.trim(),
     momento: f.momento.value,
     refrao: f.refrao.value.replace(/\r/g, '').trim(),
     letra: f.letra.value.replace(/\r/g, '').trim(),
+    favorito: f.favorito.checked,
+    cd: f.cd.value.trim(),
+    tom: f.tom.value.trim(),
+    cifra: f.cifra.value.replace(/\r/g, '').replace(/\s+$/, ''),
   };
   await DB.salvar('cantos', c);
   const i = S.cantos.findIndex(x => x.id === c.id);
@@ -1264,7 +1311,52 @@ async function salvarCantosDoFolheto(itens, creditos) {
     }
     saida.push({ tipo: 'canto', momento, cantoId: c.id });
   }
-  return { itens: saida, novos, existentes, cantosNovos };
+  return { itens: separarSanto(saida) || saida, novos, existentes, cantosNovos };
+}
+
+// O folheto traz o Santo no meio do texto da Oração Eucarística ("…a uma só voz:\nT. Santo, Santo, Santo, …").
+// Ele vira um item próprio, de canto: fica "rezado" (o texto do folheto) até alguém escolher um canto para ele.
+// A Oração Eucarística fica em duas partes: Diálogo e Prefácio | Santo | a oração.
+const RX_SANTO = /^\s*(?:T\.\s*|—\s*)?Santo,?\s+Santo\b/i;
+function separarSanto(itens) {
+  if (itens.some(i => (i.tipo === 'canto' && i.momento === 'Santo') || (i.tipo === 'ordinario' && i.parte === 'santo'))) return null;
+  const k = itens.findIndex(i => i.tipo === 'texto' && /eucar/i.test(i.titulo || '') && (i.texto || '').split('\n').some(l => RX_SANTO.test(l)));
+  if (k < 0) return null;
+  const it = itens[k], linhas = it.texto.split('\n');
+  const a = linhas.findIndex(l => RX_SANTO.test(l));
+  let b = a;
+  while (b + 1 < linhas.length && linhas[b + 1].trim()) b++;           // o Santo vai até a linha em branco
+  const antes = linhas.slice(0, a).join('\n').trim();
+  const santo = desfazerHifens(linhas.slice(a, b + 1).join('\n').trim());
+  const depois = linhas.slice(b + 1).join('\n').trim();
+  const novos = [];
+  if (antes) novos.push({ ...it, id: uid(), titulo: 'Diálogo e Prefácio', texto: antes });
+  novos.push({ id: uid(), tipo: 'canto', momento: 'Santo', cantoId: '', textoRezado: santo });
+  if (depois) novos.push({ ...it, texto: depois });
+  return [...itens.slice(0, k), ...novos, ...itens.slice(k + 1)];
+}
+
+// Sílaba partida que sobrou do PDF com espaço depois do hífen ("Hosa- na", "peregri- nação", "Apósto- los") → junta.
+// Pronome de verbo ("Ensinai- nos", "amá- lo") fica como está.
+function desfazerHifens(t) {
+  return (t || '').replace(/(\p{L}{2,})- (\p{Ll}{2,})/gu, (m, a, b) =>
+    /^(nos|vos|lhes?|se|me|te)$/.test(b) || (/^(lo|la|los|las|no|na)$/.test(b) && /[áâéêíóôú]$/i.test(a)) ? m : a + b);
+}
+
+// Uma vez: separa o Santo nos roteiros que já existiam (vai para a nuvem como qualquer mudança de roteiro)
+async function separarSantoNosRoteiros() {
+  if (S.config.santoSeparado) return;
+  let n = 0;
+  for (const r of S.roteiros) {
+    const novos = separarSanto(r.itens);
+    if (!novos) continue;
+    r.itens = novos;
+    await DB.salvar('roteiros', r);
+    n++;
+  }
+  S.config.santoSeparado = true;
+  salvarConfig();
+  if (n) console.info(`Santo separado da Oração Eucarística em ${n} roteiro(s).`);
 }
 
 // Slide de abertura (ideia do Miguel): a ilustração da capa do folheto + o nome da Missa e a data,
@@ -1604,6 +1696,8 @@ function ligarEventos() {
     if (cmd === 'editarCanto') {
       const c = S.cantos.find(c => c.id === it.cantoId);
       if (c) abrirEditorCanto(c);
+    } else if (cmd === 'favoritarCanto') {
+      alternarFavorito(it.cantoId);
     } else if (cmd === 'novoCanto') {
       abrirEditorCanto(null, it.momento, c => { it.cantoId = c.id; if (S.atual.rIdx >= 0) salvarRoteiro(); });
     } else if (cmd === 'editarEuc') {
@@ -1742,7 +1836,7 @@ function ligarEventos() {
   $('#btnNovoCanto').addEventListener('click', () => abrirEditorCanto(null, $('#filtroMomento').value || 'Outros', c => abrirItem({ tipo: 'canto', cantoId: c.id })));
   $('#listaCantos').addEventListener('click', e => {
     const pasta = e.target.closest('[data-pasta]');
-    if (pasta) { Recolher.alternar('canto:' + pasta.dataset.pasta, true); return renderCantos(); }
+    if (pasta) { const k = pasta.dataset.chave || 'canto:' + pasta.dataset.pasta; Recolher.alternar(k, k.startsWith('canto:')); return renderCantos(); }
     const cmd = e.target.closest('[data-cmd]')?.dataset.cmd;
     const termo = $('#buscaCanto').value.trim();
     if (cmd === 'buscarWeb') {
@@ -1805,7 +1899,31 @@ function ligarEventos() {
     if (r.titulo && !f.titulo.value.trim()) f.titulo.value = r.titulo;
     toast(`Organizado: ${dividir(r.letra).length} estrofe(s)${r.refrao ? ' + refrão' : ''}${r.autor ? ' · autor encontrado' : ''}. Confira antes de salvar.`);
   });
-  $('#formCanto').addEventListener('submit', e => { if (e.submitter?.value === 'salvar') salvarCantoDoEditor(); });
+  $('#formCanto').addEventListener('submit', e => {
+    if (e.submitter?.value !== 'salvar') return;
+    const f = $('#formCanto');
+    // canto NOVO com a letra parecida com um que já existe: oferece abrir o existente em vez de criar outro (cifras.js)
+    if (!f.dataset.id) {
+      const p = cantoParecido({ id: '', momento: f.momento.value, refrao: f.refrao.value, letra: f.letra.value });
+      if (p && confirm(`Já existe um canto com a letra parecida:\n\n"${p.titulo}"${fichaCanto(p) ? '\n' + fichaCanto(p) : ''}\n` +
+        `(${p.momento || 'Outros'}${p.favorito ? ' · favorito' : ''}${p.cifra ? ' · com cifra' : ''})\n\n` +
+        'OK = abrir esse canto (não cria outro)\nCancelar = salvar este como um canto novo')) {
+        e.preventDefault();
+        const digitado = { cifra: f.cifra.value.trim(), tom: f.tom.value.trim(), autor: f.autor.value.trim(), cd: f.cd.value.trim(), favorito: f.favorito.checked };
+        const depois = aoSalvarCanto;
+        $('#dlgCanto').close();
+        abrirEditorCanto(p, null, depois);
+        // o que foi digitado no novo (cifra, tom, ficha, favorito) vai para os campos vazios do existente
+        let levou = false;
+        for (const k of ['cifra', 'tom', 'autor', 'cd']) if (digitado[k] && !f[k].value.trim()) { f[k].value = digitado[k]; levou = true; }
+        if (digitado.favorito && !f.favorito.checked) { f.favorito.checked = true; levou = true; }
+        if (f.cifra.value) $('#cxCifra').open = true;
+        if (levou) toast('O que você digitou (cifra, tom, ficha) foi levado para este canto. Confira e salve.');
+        return;
+      }
+    }
+    salvarCantoDoEditor();
+  });
   $('#btnExcluirCanto').addEventListener('click', async () => {
     const id = $('#formCanto').dataset.id;
     if (!id || !confirm('Excluir este canto? Os roteiros que o usam ficarão com o espaço vazio.')) return;
@@ -1909,6 +2027,7 @@ async function iniciar() {
   S.roteiro = S.roteiros.find(r => r.id === S.config.roteiroAtivo)
     || [...S.roteiros].sort((a, b) => b.atualizado - a.atualizado)[0];
   if (!S.roteiro) { S.roteiro = novoRoteiro(); S.roteiros.push(S.roteiro); DB.salvar('roteiros', S.roteiro); }
+  await separarSantoNosRoteiros();     // (uma vez) Santo que veio dentro do texto da Oração Eucarística vira item próprio
 
   const opcoesMomento = MOMENTOS.map(m => `<option>${m}</option>`).join('');
   $('#filtroMomento').innerHTML = '<option value="">Todos os momentos</option>' + opcoesMomento;
@@ -1939,6 +2058,7 @@ async function iniciar() {
   ligarAtualizacao();
   ligarFormatacao();
   ligarCowabunga();
+  ligarCifras();
   ligarCelular();
   lerPastaMidia('video'); lerPastaMidia('audio');     // pastas deste computador (os roteiros apontam para os arquivos delas)
   mostrarAba('roteiros', false);    // sempre abre nos Roteiros, com os cards das celebrações
@@ -1950,7 +2070,7 @@ async function iniciar() {
   renderBiblia();
   renderCabecalho();
   renderEstadoProj();
-  $('#versaoApp').textContent = NO_APP ? 'Versão 1.4 · aplicativo para Windows' : 'Versão 1.4 · no navegador';
+  $('#versaoApp').textContent = NO_APP ? 'Versão 1.5 · aplicativo para Windows' : 'Versão 1.5 · no navegador';
   // pede armazenamento permanente (o navegador não apaga os dados para liberar espaço)
   try { navigator.storage?.persist?.(); } catch (_) {}
   enviarConfigTelao(); renderTemasRapidos();

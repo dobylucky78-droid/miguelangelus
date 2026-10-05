@@ -56,7 +56,7 @@
   .setas { display: grid; grid-template-columns: 1fr 1.5fr; gap: 10px; }
   .setas button { padding: 22px 8px; font-size: 19px; font-weight: 600; border-radius: 16px; }
   .setas .prox-bt { background: var(--acento); border-color: var(--acento); color: #1b1503; }
-  .abas { display: grid; grid-template-columns: repeat(3, 1fr); background: var(--painel); border-top: 1px solid var(--borda); padding-bottom: var(--seg-baixo); }
+  .abas { display: grid; grid-template-columns: repeat(4, 1fr); background: var(--painel); border-top: 1px solid var(--borda); padding-bottom: var(--seg-baixo); }
   .abas button { background: none; border: 0; border-radius: 0; padding: 10px 0 9px; font-size: 13px; color: var(--sutil); }
   .abas button.sel { color: var(--acento); }
   .abas i { display: block; font-style: normal; font-size: 20px; line-height: 1.1; }
@@ -96,6 +96,51 @@
   .folha .rec { display: block; width: 100%; text-align: left; margin-bottom: 6px; font-size: 14px; }
   .aviso-ativo { background: #5c1414; border: 1px solid #a33; border-radius: 12px; padding: 10px; margin-bottom: 10px; font-size: 14px; }
   .toast { position: fixed; left: 50%; bottom: calc(150px + var(--seg-baixo)); transform: translateX(-50%); background: #333c; color: #fff; padding: 9px 16px; border-radius: 20px; font-size: 14px; z-index: 20; pointer-events: none; transition: opacity .3s; }
+  .rot-atual { display: flex; align-items: center; gap: 10px; }
+  .rot-atual .ra-txt { flex: 1; min-width: 0; }
+  .rot-atual b { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .rot-atual button { flex: none; padding: 12px 16px; font-weight: 600; }
+  .rot-atual button.sel { background: var(--acento); border-color: var(--acento); color: #1b1503; }
+  .chips { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 8px; }
+  .chips button { flex: none; padding: 7px 12px; border-radius: 20px; font-size: 13px; display: flex; align-items: center; gap: 6px; }
+  .chips button.sel { background: var(--acento-esc); border-color: var(--acento); color: var(--acento); }
+  .chips i { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+  .dia { font-size: 13px; font-weight: 600; color: var(--sutil); margin: 14px 2px 6px; }
+  .grupo { font-size: 12px; color: var(--acento); text-transform: uppercase; letter-spacing: .06em; margin: 16px 2px 2px; }
+  .rc { display: block; width: 100%; text-align: left; padding: 0; overflow: hidden; margin-bottom: 8px; border-radius: 12px; }
+  .rc .faixa-lit { background: var(--cor-lit, #5a606b); color: var(--cor-txt, #fff); font-size: 11px; padding: 4px 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .rc .corpo { padding: 9px 10px 10px; }
+  .rc .nm { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .rc .ln { font-size: 13px; color: var(--sutil); margin-top: 3px; display: flex; gap: 8px; align-items: center; }
+  .rc .ln i { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+  .rc.aberto { border-color: var(--acento); }
+  .rc .ab { color: var(--acento); font-weight: 600; margin-left: auto; }
+  .papeis { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .papeis button { padding: 10px 6px; font-size: 14px; }
+  .papeis button small { display: block; font-size: 11px; color: var(--sutil); margin-top: 2px; }
+  .papeis button.sel { border-color: var(--acento); background: var(--acento-esc); color: var(--acento); }
+  /* modo músico */
+  body.musico .abas, body.musico #nav { display: none !important; }
+  .m-barra { position: sticky; top: -12px; z-index: 2; background: var(--bg); display: flex; gap: 8px; align-items: center; padding: 6px 0 8px; }
+  .m-barra button { padding: 8px 14px; font-weight: 700; }
+  .m-seguir { margin-left: auto; font-size: 14px; }
+  .mc { background: var(--painel); border: 1px solid var(--borda); border-radius: 12px; margin-bottom: 12px; overflow: hidden; }
+  .mc.vivo { border: 2px solid var(--vivo); }
+  .mc-cab { display: flex; align-items: center; gap: 8px; padding: 10px 12px; background: var(--painel2); }
+  .mc-cab .mom { font-size: 11px; text-transform: uppercase; color: var(--acento); letter-spacing: .05em; }
+  .mc-cab .tt { font-weight: 600; flex: 1; min-width: 0; }
+  .mc-cab .noar { font-size: 11px; background: var(--vivo); color: #fff; border-radius: 10px; padding: 2px 8px; flex: none; }
+  .mc-tom { display: flex; align-items: center; gap: 4px; flex: none; }
+  .mc-tom button { padding: 4px 10px; font-weight: 700; }
+  .mc-tom b { min-width: 34px; text-align: center; color: var(--acento); }
+  .cifra { margin: 0; padding: 10px 12px 14px; font: var(--tam-cifra, 15px)/1.35 Consolas, "Roboto Mono", Menlo, monospace; white-space: pre; overflow-x: auto; }
+  .cifra .ac { color: var(--acento); font-weight: 700; }
+  .cifra .tb { color: var(--sutil); font-size: .8em; }
+  .cifra .sec { color: #8fb8ff; }
+  .cifra .agora { background: rgba(224, 70, 60, .22); border-radius: 4px; }
+  .mc .sem { padding: 10px 12px 14px; font-size: var(--tam-cifra, 15px); white-space: pre-wrap; color: #c9d1de; }
+  .mc .sem .agora { background: rgba(224, 70, 60, .22); }
+  .mc .cc { margin: 0 12px 12px; display: inline-block; text-decoration: none; color: #1b1503; background: var(--acento); padding: 9px 12px; border-radius: 10px; font-weight: 600; font-size: 14px; }
   #acordado { position: fixed; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
   /* Tablet: conteúdo centralizado numa coluna confortável, letra e miniaturas maiores */
   @media (min-width: 700px) {
@@ -103,7 +148,7 @@
     .tela { font-size: 22px; min-height: 170px; }
     .tela.prox { font-size: 17px; min-height: 90px; }
     .tira .sl { width: 190px; height: 112px; font-size: 13px; }
-    .abas { justify-content: center; grid-template-columns: repeat(3, minmax(0, 200px)); }
+    .abas { justify-content: center; grid-template-columns: repeat(4, minmax(0, 180px)); }
   }
 </style>
 </head>
@@ -118,6 +163,9 @@
     <input id="parCod" class="codigo" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="0000"></div>
   <div class="campo"><label for="parNome">Nome deste celular</label>
     <input id="parNome" maxlength="40" placeholder="Celular da PASCOM"></div>
+  <div class="campo"><label>Este aparelho é para</label>
+    <div class="papeis"><button id="papelControle" class="sel" type="button">📱 Controle do telão<small>PASCOM</small></button>
+      <button id="papelMusico" type="button">🎸 Músico<small>só ver as cifras</small></button></div></div>
   <button id="parOk" class="acao">Conectar</button>
   <div id="parErro" class="erro"></div>
   <div class="sutil">No computador: Ferramentas → Ajustes → 📱 Controle pelo celular</div>
@@ -159,9 +207,27 @@
 
   <!-- ROTEIRO -->
   <section data-aba="roteiro" hidden>
-    <div class="rot"><span>Roteiro</span><b id="rotNome"></b></div>
-    <div id="listaRoteiro" class="lista"></div>
-    <p class="sutil">Toque num item para abri-lo. Para projetar, use <b>Próximo</b> ou toque num slide.</p>
+    <div class="cartao rot-atual">
+      <div class="ra-txt"><div class="sutil">Roteiro aberto</div><b id="rotNome"></b><div id="rotInfo" class="sutil"></div></div>
+      <button id="btTrocar">Trocar</button>
+    </div>
+    <div id="vistaItens">
+      <div id="listaRoteiro" class="lista"></div>
+      <p class="sutil">Toque num item para abri-lo. Para projetar, use <b>Próximo</b> ou toque num slide.</p>
+    </div>
+    <div id="vistaRoteiros" hidden>
+      <div id="chipsCapela" class="chips"></div>
+      <div id="listaRoteiros"></div>
+    </div>
+  </section>
+
+  <!-- MÚSICOS: cantos do roteiro com as cifras, acompanhando o telão -->
+  <section data-aba="musico" hidden>
+    <div class="m-barra">
+      <button id="mMenor" title="Letra menor">A−</button><button id="mMaior" title="Letra maior">A+</button>
+      <label class="check m-seguir"><input type="checkbox" id="mSeguir" checked> Seguir o telão</label>
+    </div>
+    <div id="mCantos"></div>
   </section>
 
   <!-- MÍDIA -->
@@ -185,6 +251,7 @@
   <button data-ir="controle" class="sel"><i>▶</i>Controle</button>
   <button data-ir="roteiro"><i>☰</i>Roteiro</button>
   <button data-ir="midia"><i>🎬</i>Mídia</button>
+  <button data-ir="musico"><i>🎸</i>Cifras</button>
 </nav>
 
 <!-- Aviso -->
@@ -254,6 +321,7 @@ function render() {
   selo.textContent = est.preto ? 'Tela preta' : est.altar ? 'Altar' : est.camera ? 'Câmera' : est.noAr.slide ? 'Ao vivo' : est.tocando.some(t => t.tipo === 'video' && !t.pausado) ? 'Vídeo' : 'Livre';
   selo.classList.toggle('vivo', !!(est.preto || est.altar || est.noAr.slide || est.camera));
   if (!est.projecao) selo.textContent += ' · telão fechado';
+  if (papel === 'musico') return renderMusico();      // músico: só as cifras
 
   // aviso
   const av = $('#avisoAtivo');
@@ -288,7 +356,8 @@ function render() {
   $('#btAltar').classList.toggle('ligado', !!est.altar);
 
   // roteiro
-  $('#rotNome').textContent = est.roteiro;
+  renderRoteiros();
+  if (aba === 'musico') renderMusico();
   $('#listaRoteiro').innerHTML = est.itens.length ? est.itens.map((it, i) => `
     <button class="it ${a && a.rIdx === i ? 'sel' : ''}" data-item="${i}"><span class="tag">${esc(it.rot)}</span><span class="tit">${esc(it.tit || '—')}</span>${est.vivoIdx === i ? '<span class="noar"></span>' : ''}</button>`).join('')
     : '<p class="sutil">Roteiro vazio.</p>';
@@ -318,12 +387,159 @@ function render() {
     est.recentes.map((r, i) => `<button class="rec" data-rec="${i}">📢 ${esc(r)}</button>`).join('') : '';
 }
 
+// ---------- modo músico: cifras dos cantos do roteiro, acompanhando o telão ----------
+let papel = ''; try { papel = localStorage.getItem('mgl.celular.papel') || ''; } catch (_) {}
+let papelEscolhido = 'controle', musica = [], chaveMusica = '';
+const ultimaLinha = {};                               // por canto: última linha destacada (o refrão se repete; segue em frente)
+let transp = {}; try { transp = JSON.parse(localStorage.getItem('mgl.celular.transp') || '{}'); } catch (_) {}
+let tamCifra = 15; try { tamCifra = +localStorage.getItem('mgl.celular.tamCifra') || 15; } catch (_) {}
+const RX_AC = /^[A-G][#b]?(?:m|M|maj|min|sus|dim|aug|add|°|º|\+)?\d*(?:M|\+|°|º|maj\d*)?(?:\([^)]*\))?(?:[+\-]\d+)?(?:\/[A-G][#b]?\d*)?$/;
+const ehAcordes = l => {
+  let s = l.trim();
+  if (/^\(.*\)$/.test(s)) s = s.slice(1, -1);
+  const p = s.replace(/\|/g, ' ').split(/\s+/).filter(Boolean);
+  return p.length > 0 && p.every(x => RX_AC.test(x) || /^[-–.x:|]+$/i.test(x) || RX_AC.test(x.replace(/^\(|\)$/g, '')));
+};
+const NS = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'], NB = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'];
+const nota = (n, p, b) => { let i = NS.indexOf(n); if (i < 0) i = NB.indexOf(n); return i < 0 ? n : (b ? NB : NS)[((i + p) % 12 + 12) % 12]; };
+const transpAcorde = (a, p) => { if (!p) return a; const b = /^[A-G]b/.test(a); return a.replace(/^([A-G][#b]?)/, n => nota(n, p, b)).replace(/\/([A-G][#b]?)/, (_, n) => '/' + nota(n, p, b)); };
+function transpLinha(l, p) {
+  if (!p) return l;
+  let out = '', falta = 0;
+  for (const m of l.matchAll(/(\S+)|(\s+)/g)) {
+    if (m[2]) { out += ' '.repeat(Math.max(1, m[2].length - falta)); falta = Math.max(0, falta - m[2].length + 1); continue; }
+    const t = m[1].replace(/[()]/g, ''), novo = RX_AC.test(t) ? m[1].replace(t, transpAcorde(t, p)) : m[1];
+    falta += novo.length - m[1].length; out += novo;
+  }
+  return out;
+}
+const palavras = t => (t || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/<\/?[biu]>/g, '').replace(/^\s*([ptlcd]\.|\d+\.|—)\s*/, '').replace(/[^a-z ]+/g, ' ').split(/\s+/).filter(w => w.length > 1);
+
+function htmlCifra(m, passos) {
+  return m.cifra.split('\n').map((l, k) => {
+    let cls = '', txt = l;
+    if (/^\s*[EBGDAe]\|/.test(l)) cls = 'tb';
+    else if (/^\s*\[[^\]]*\]/.test(l)) { cls = 'sec'; txt = l.replace(/(\][^\n]*)/, s => transpLinha(s, passos)); }
+    else if (ehAcordes(l)) { cls = 'ac'; txt = transpLinha(l, passos); }
+    return `<span class="l ${cls}" data-k="${k}">${esc(txt) || ' '}</span>`;
+  }).join('\n');
+}
+
+function renderMusico(refazer) {
+  if (papel !== 'musico' && aba !== 'musico') return;    // controle: só quando a aba 🎸 Cifras está aberta
+  document.documentElement.style.setProperty('--tam-cifra', tamCifra + 'px');
+  const vivo = est?.vivoIdx ?? -1;
+  const chave = JSON.stringify(musica) + JSON.stringify(transp);
+  if (refazer || chave !== chaveMusica) {
+    chaveMusica = chave;
+    $('#mCantos').innerHTML = musica.length ? musica.map(m => {
+      const p = transp[m.titulo] || 0;
+      const tom = m.tom ? transpAcorde(m.tom, p) : (p ? (p > 0 ? '+' : '') + p : '—');
+      return `<div class="mc" data-i="${m.i}">
+        <div class="mc-cab"><div class="tt"><div class="mom">${esc(m.momento)}</div>${esc(m.titulo)}${m.autor ? `<div class="sutil">${esc(m.autor)}</div>` : ''}${m.deOutro ? `<div class="sutil">cifra de: ${esc(m.deOutro)}</div>` : ''}</div>
+          <span class="noar" hidden>no telão</span>
+          ${m.cifra ? `<div class="mc-tom"><button data-tr="${esc(m.titulo)}" data-p="-1">−</button><b title="Tom">${esc(tom)}</b><button data-tr="${esc(m.titulo)}" data-p="1">+</button></div>` : ''}</div>
+        ${m.cifra ? `<pre class="cifra">${htmlCifra(m, p)}</pre>`
+          : `<div class="sem">${(m.letra || 'Sem letra.').split('\n').map((l, k) => `<span class="l" data-k="${k}">${esc(l) || ' '}</span>`).join('\n')}</div>
+             ${m.rezado ? '' : `<a class="cc" href="https://www.cifraclub.com.br/?q=${encodeURIComponent(m.titulo)}" target="_blank" rel="noopener">🔎 Abrir no Cifra Club</a>`}`}
+      </div>`;
+    }).join('') : '<p class="sutil">Nenhum canto no roteiro aberto.</p>';
+  }
+  // o canto que está no telão: borda vermelha e a linha cantada agora destacada
+  $$('#mCantos .mc').forEach(c => { const v = +c.dataset.i === vivo; c.classList.toggle('vivo', v); c.querySelector('.noar').hidden = !v; });
+  $$('#mCantos .agora').forEach(x => x.classList.remove('agora'));
+  const card = $(`#mCantos .mc[data-i="${vivo}"]`);
+  if (!card) return;
+  const slide = est?.noAr?.slide;
+  // mesmo slide de antes (o estado chega várias vezes): repete o destaque, sem avançar nem rolar a tela
+  const chaveSlide = vivo + '|' + (est?.noAr?.idx ?? '') + '|' + (slide?.texto || '');
+  if (chaveSlide === renderMusico.ultimo) {
+    const el = card.querySelector(`.l[data-k="${ultimaLinha[vivo]}"]`);
+    if (el) { el.classList.add('agora'); const a = el.previousElementSibling; if (a?.classList.contains('ac')) a.classList.add('agora'); }
+    return;
+  }
+  const mudou = chaveSlide !== renderMusico.ultimo;
+  renderMusico.ultimo = chaveSlide;
+  // começo da 1ª linha do slide (no slide a frase pode vir inteira; na cifra, quebrada em linhas curtas)
+  const alvo = palavras((slide?.texto || '').split('\n').find(l => palavras(l).length) || '').slice(0, 6);
+  let marcada = null;
+  if (alvo.length) {
+    const linhas = [...card.querySelectorAll('.l:not(.ac):not(.tb):not(.sec)')];
+    const cand = linhas.map(el => {
+      const w = palavras(el.textContent).slice(0, 6);
+      if (w.length < 2) return { el, nota: 0 };
+      let seguidas = 0;                                       // palavras iguais na mesma ordem, a partir do início
+      while (seguidas < Math.min(w.length, alvo.length) && w[seguidas] === alvo[seguidas]) seguidas++;
+      const set = new Set(w), comum = alvo.filter(x => set.has(x)).length;
+      return { el, nota: Math.max(seguidas, comum * 0.8) / Math.min(w.length, alvo.length) };
+    }).filter(x => x.nota >= 0.6);
+    const ult = ultimaLinha[vivo] ?? -1;
+    const esc1 = cand.find(x => +x.el.dataset.k > ult) || cand.sort((a, b) => b.nota - a.nota)[0];
+    if (esc1) {
+      marcada = esc1.el; marcada.classList.add('agora');
+      const ant = marcada.previousElementSibling;
+      if (ant && ant.classList.contains('ac')) ant.classList.add('agora');
+      ultimaLinha[vivo] = +marcada.dataset.k;
+    }
+  }
+  if (mudou && $('#mSeguir').checked) (marcada || card).scrollIntoView({ block: marcada ? 'center' : 'start', behavior: 'smooth' });
+}
+
+function aplicarPapel() {
+  document.body.classList.toggle('musico', papel === 'musico');
+  if (papel === 'musico') irAba('musico');
+}
+
+// ---------- trocar de roteiro (lista como os cards do computador) ----------
+let trocando = false;
+let filtroCap = ''; try { filtroCap = localStorage.getItem('mgl.celular.capela') || ''; } catch (_) {}
+const DIAS = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+function nomeDia(iso, hoje) {
+  const d = new Date(iso + 'T12:00:00'), h = new Date(hoje + 'T12:00:00');
+  const dif = Math.round((d - h) / 864e5);
+  const data = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`;
+  return dif === 0 ? `Hoje · ${DIAS[d.getDay()]}, ${data}` : dif === 1 ? `Amanhã · ${DIAS[d.getDay()]}, ${data}` : `${DIAS[d.getDay()]}, ${data}`;
+}
+
+function renderRoteiros() {
+  const R = est.roteiros || { lista: [], locais: [] };
+  const atual = R.lista.find(x => x.id === est.roteiroId);
+  $('#rotNome').textContent = est.roteiro || '—';
+  $('#rotInfo').innerHTML = atual ? `${esc(atual.quando)}${atual.local ? ` · <span style="color:${esc(atual.corLocal)}">●</span> ${esc(atual.local)}` : ''}` : '';
+  $('#btTrocar').textContent = trocando ? 'Voltar' : 'Trocar';
+  $('#btTrocar').classList.toggle('sel', trocando);
+  $('#vistaItens').hidden = trocando;
+  $('#vistaRoteiros').hidden = !trocando;
+  $('#nav').hidden = aba === 'midia' || trocando;      // escolhendo o roteiro: mais espaço para a lista
+  if (!trocando) return;
+  if (filtroCap && filtroCap !== '-' && !R.locais.some(l => l.id === filtroCap)) filtroCap = '';
+  $('#chipsCapela').innerHTML = R.locais.length < 2 ? '' :
+    `<button data-cap="" class="${!filtroCap ? 'sel' : ''}">Todas</button>` +
+    R.locais.map(l => `<button data-cap="${esc(l.id)}" class="${filtroCap === l.id ? 'sel' : ''}"><i style="background:${esc(l.cor)}"></i>${esc(l.nome)}</button>`).join('');
+  const lista = R.lista.filter(x => !filtroCap || x.localId === filtroCap);
+  const NOMES = { proximas: 'Próximas', semdata: 'Sem data', anteriores: 'Anteriores' };
+  let h = '', grupo = '', dia = '';
+  for (const x of lista) {
+    if (x.grupo !== grupo) { grupo = x.grupo; dia = ''; h += `<div class="grupo">${NOMES[grupo]}</div>`; }
+    if (x.iso && x.iso !== dia) { dia = x.iso; h += `<div class="dia">${esc(nomeDia(x.iso, R.hoje))}</div>`; }
+    const ab = x.id === est.roteiroId;
+    h += `<button class="rc ${ab ? 'aberto' : ''}" data-rot="${esc(x.id)}" style="--cor-lit:${esc(x.cor)};--cor-txt:${esc(x.corTxt || '#fff')}">
+      <div class="faixa-lit">${esc(x.lit || 'Sem data definida')}</div>
+      <div class="corpo"><div class="nm">${esc(x.nome)}</div>
+        <div class="ln"><span>${esc(x.quando)}</span>${x.local ? `<span><i style="background:${esc(x.corLocal)}"></i> ${esc(x.local)}</span>` : ''}
+          ${ab ? '<span class="ab">aberto</span>' : `<span style="margin-left:auto">${x.itens} itens</span>`}</div></div></button>`;
+  }
+  $('#listaRoteiros').innerHTML = h || '<p class="sutil">Nenhum roteiro.</p>';
+}
+
 function irAba(nome) {
+  if (nome !== 'roteiro') trocando = false;
   aba = nome;
   $$('[data-aba]').forEach(s => s.hidden = s.dataset.aba !== nome);
   $$('[data-ir]').forEach(b => b.classList.toggle('sel', b.dataset.ir === nome));
-  $('#nav').hidden = nome === 'midia';
+  $('#nav').hidden = nome === 'midia' || (nome === 'roteiro' && trocando);
   $('main').scrollTop = 0;
+  if (nome === 'musico') { renderMusico.ultimo = ''; renderMusico(true); }
 }
 
 // ---------- conexão ----------
@@ -342,6 +558,7 @@ function conectar() {
     try { est = JSON.parse(e.data); } catch (_) { return; }
     if (est && est.itens) render();
   };
+  fonte.addEventListener('musica', e => { try { musica = JSON.parse(e.data) || []; } catch (_) { return; } renderMusico(true); });
   fonte.onopen = () => conectado(true);
   fonte.onerror = () => {
     conectado(false);
@@ -353,6 +570,7 @@ async function verificar() {
   try {
     const r = await (await fetch('/api/ping?t=' + encodeURIComponent(token), { cache: 'no-store' })).json();
     if (!r.ok && r.motivo === 'pareamento') { esquecer(); return mostrarPareamento('Este celular foi desconectado no computador. Pareie de novo.'); }
+    if (r.papel && r.papel !== papel) { papel = r.papel; try { localStorage.setItem('mgl.celular.papel', papel); } catch (_) {} aplicarPapel(); }
     conectar();
   } catch (_) {
     // computador fora do ar / controle desligado / outro Wi-Fi
@@ -382,12 +600,14 @@ async function parear() {
   if (codigo.length !== 4) { $('#parErro').textContent = 'Digite os 4 números do código.'; return; }
   $('#parOk').disabled = true;
   try {
-    const r = await fetch('/api/parear', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ codigo, nome }) });
+    const r = await fetch('/api/parear', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ codigo, nome, papel: papelEscolhido }) });
     const j = await r.json();
     if (r.status === 429) { $('#parErro').textContent = 'Muitas tentativas erradas. Espere 1 minuto e use o código novo que aparece no computador.'; return; }
     if (!j.ok) { $('#parErro').textContent = 'Código errado ou vencido. Confira o código que aparece agora no computador.'; return; }
     token = j.token;
-    try { localStorage.setItem(CHAVE, token); } catch (_) {}
+    papel = j.papel || papelEscolhido;
+    try { localStorage.setItem(CHAVE, token); localStorage.setItem('mgl.celular.papel', papel); } catch (_) {}
+    aplicarPapel();
     history.replaceState(null, '', '/');          // tira o código do endereço (ele não vale mais)
     $('#par').hidden = true;
     conectar();
@@ -425,6 +645,22 @@ document.addEventListener('click', e => {
   if (b.dataset.macao) return cmd(b.dataset.macao, { id: b.dataset.midia });
   if (b.dataset.camera !== undefined) return cmd('camera', { id: b.dataset.camera });
   if (b.dataset.tema) return cmd('tema', { id: b.dataset.tema });
+  if (b.id === 'papelControle' || b.id === 'papelMusico') {
+    papelEscolhido = b.id === 'papelMusico' ? 'musico' : 'controle';
+    $('#papelControle').classList.toggle('sel', papelEscolhido === 'controle');
+    $('#papelMusico').classList.toggle('sel', papelEscolhido === 'musico');
+    return;
+  }
+  if (b.dataset.tr) { transp[b.dataset.tr] = (transp[b.dataset.tr] || 0) + +b.dataset.p; try { localStorage.setItem('mgl.celular.transp', JSON.stringify(transp)); } catch (_) {} return renderMusico(true); }
+  if (b.id === 'mMenor' || b.id === 'mMaior') { tamCifra = Math.max(10, Math.min(28, tamCifra + (b.id === 'mMaior' ? 1 : -1))); try { localStorage.setItem('mgl.celular.tamCifra', tamCifra); } catch (_) {} return renderMusico(); }
+  if (b.id === 'btTrocar') { trocando = !trocando; renderRoteiros(); $('main').scrollTop = 0; return; }
+  if (b.dataset.cap !== undefined) { filtroCap = b.dataset.cap; try { localStorage.setItem('mgl.celular.capela', filtroCap); } catch (_) {} return renderRoteiros(); }
+  if (b.dataset.rot) {
+    if (b.dataset.rot === est?.roteiroId) { trocando = false; return renderRoteiros(); }
+    const nome = b.querySelector('.nm')?.textContent || 'este roteiro';
+    if (!confirm(`Abrir "${nome}" no computador?`)) return;
+    cmd('roteiro', { id: b.dataset.rot }); trocando = false; renderRoteiros(); return toast('Roteiro aberto');
+  }
   if (b.dataset.rec) { cmd('avisoRecente', { i: +b.dataset.rec }); $('#folhaAviso').hidden = true; return toast('Aviso no telão'); }
 });
 $('#btAviso').addEventListener('click', () => { $('#folhaAviso').hidden = false; $('#avTexto').value = ''; });
@@ -442,7 +678,8 @@ $('#parCod').addEventListener('keydown', e => { if (e.key === 'Enter') parear();
 $('#foraTentar').addEventListener('click', () => { $('#fora').hidden = true; verificar(); });
 
 // início: com token, conecta; com ?c= no endereço (QR code), já preenche o código
-if (token) conectar(); else mostrarPareamento();
+if (new URLSearchParams(location.search).get('papel') === 'musico') { papelEscolhido = 'musico'; $('#papelControle').classList.remove('sel'); $('#papelMusico').classList.add('sel'); }
+if (token) { aplicarPapel(); conectar(); } else mostrarPareamento();
 </script>
 </body>
 </html>

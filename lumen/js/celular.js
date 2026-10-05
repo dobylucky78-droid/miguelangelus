@@ -25,6 +25,30 @@ function tituloItem(it) {
   try { return it ? resumoItem(it).tit || '' : ''; } catch (_) { return ''; }
 }
 
+// Roteiros para o celular trocar (como os cards): próximas, sem data e as anteriores mais recentes.
+// Guardado em cache: só refaz quando algum roteiro muda (o estado vai para o celular várias vezes por segundo).
+function roteirosCelular() {
+  const hoje = isoData(new Date());
+  const chave = S.roteiros.map(r => r.id + ':' + r.atualizado).join() + '|' + hoje;
+  if (Cel.cacheRot?.chave === chave) return Cel.cacheRot.dados;
+  const todos = S.roteiros.map(r => {
+    const inf = infoRoteiro(r), lit = liturgiaDoRoteiro(r, inf), loc = localDe(inf.localId);
+    const quando = inf.data ? `${DIAS_CURTOS[inf.data.getDay()]} ${String(inf.data.getDate()).padStart(2, '0')}/${String(inf.data.getMonth() + 1).padStart(2, '0')}${inf.hora ? ' · ' + inf.hora : ''}` : 'sem data';
+    return { id: r.id, nome: r.nome, iso: inf.iso || '', hora: inf.hora || '', quando, lit: lit.titulo || '', cor: lit.corHex, corTxt: lit.cor === 'branco' ? '#2a2a2a' : '#fff',
+      local: loc ? nomeCurtoLocal(loc) : '', localId: loc ? loc.id : '', corLocal: loc?.cor || '', itens: r.itens.length, atualizado: r.atualizado };
+  });
+  const ord = (a, b) => (a.iso + a.hora).localeCompare(b.iso + b.hora);
+  const lista = [
+    ...todos.filter(x => x.iso && x.iso >= hoje).sort(ord).slice(0, 60).map(x => ({ ...x, grupo: 'proximas' })),
+    ...todos.filter(x => !x.iso).sort((a, b) => b.atualizado - a.atualizado).slice(0, 10).map(x => ({ ...x, grupo: 'semdata' })),
+    ...todos.filter(x => x.iso && x.iso < hoje).sort((a, b) => ord(b, a)).slice(0, 15).map(x => ({ ...x, grupo: 'anteriores' })),
+  ].map(({ atualizado, ...x }) => x);
+  const locais = [...new Map(lista.filter(x => x.localId).map(x => [x.localId, { id: x.localId, nome: x.local, cor: x.corLocal }])).values()];
+  const dados = { lista, locais, hoje };
+  Cel.cacheRot = { chave, dados };
+  return dados;
+}
+
 function estadoCelular() {
   const a = S.atual, live = S.live || {}, itens = S.roteiro?.itens || [];
   const vivoIdx = live.item ? itens.indexOf(live.item) : -1;
@@ -43,7 +67,7 @@ function estadoCelular() {
   const mAberta = a && ehPlayer(a.item) ? midiaDe(a.item) : null;
   const cfg = configTelao();
   return {
-    roteiro: S.roteiro?.nome || '',
+    roteiro: S.roteiro?.nome || '', roteiroId: S.roteiro?.id || '', roteiros: roteirosCelular(),
     itens: itens.map(it => { let r = { rot: '', tit: '' }; try { r = resumoItem(it); } catch (_) {} return { rot: r.rot, tit: r.tit, tipo: it.tipo }; }),
     vivoIdx,
     aberto: a ? {
@@ -76,6 +100,11 @@ function agendarEstadoCelular() {
   Cel.timer = setTimeout(() => {
     let e;
     try { e = estadoCelular(); } catch (err) { console.warn('estado do celular', err); return; }
+    // cantos com cifra do roteiro (app dos músicos): separado e só quando muda
+    try {
+      const mu = musicaCelular(), jm = JSON.stringify(mu);
+      if (jm !== Cel.ultimaMusica) { Cel.ultimaMusica = jm; postarApp({ tipo: 'celular', acao: 'musica', musica: mu }); }
+    } catch (err) { console.warn('cifras do celular', err); }
     const j = JSON.stringify(e);
     if (j === Cel.ultimo) return;
     Cel.ultimo = j;
@@ -93,6 +122,11 @@ function comandoCelular(c) {
     case 'item': {        // abre o item do roteiro (como clicar nele no computador); projetar continua sendo no Próximo / no slide
       const it = S.roteiro.itens[+c.i];
       if (it) abrirItem(it, +c.i);
+      break;
+    }
+    case 'roteiro': {     // trocar de roteiro (como clicar no card no computador)
+      const r = S.roteiros.find(x => x.id === c.id);
+      if (r && r !== S.roteiro) { trocarRoteiro(r); toast(`📱 Roteiro aberto pelo celular: ${r.nome}`); }
       break;
     }
     case 'slide': if (a && +c.i >= 0 && +c.i < a.slides.length && !ehPlayer(a.item)) projetar(+c.i); break;
@@ -161,6 +195,7 @@ function renderCelular() {
         <p><b>2.</b> Aponte a câmera do celular para o QR code (ou digite no navegador):</p>
         <p class="cel-end">${esc(i.ips[0])}:${i.porta}</p>
         <p>Código: <span class="cel-cod">${esc(i.codigo.split('').join(' '))}</span></p>
+        <p class="sutil pequeno">🎸 <b>Músicos</b>: o mesmo QR; no celular, escolham <b>Músico</b> — veem só as cifras dos cantos, acompanhando o telão.</p>
         <p class="sutil pequeno">Cada código serve para um celular; depois de usado, aparece outro.
           ${i.ips.length > 1 ? `Outros endereços deste computador: ${i.ips.slice(1).map(esc).join(', ')}.` : ''}</p>
       </div>
@@ -168,7 +203,7 @@ function renderCelular() {
     <div class="campo">Celulares pareados</div>
     ${i.aparelhos.length ? `<div class="cel-lista">${i.aparelhos.map(p => `
       <div class="cel-ap"><span class="cel-pt ${p.online ? 'on' : ''}" title="${p.online ? 'Conectado agora' : 'Desconectado'}"></span>
-        <span class="cel-nome">📱 ${esc(p.nome)}</span>
+        <span class="cel-nome">${p.papel === 'musico' ? '🎸' : '📱'} ${esc(p.nome)} <span class="sutil pequeno">${p.papel === 'musico' ? 'músico (só vê as cifras)' : 'controle'}</span></span>
         <span class="sutil pequeno">${p.online ? 'conectado' : 'desde ' + new Date(p.desde).toLocaleDateString('pt-BR')}</span>
         <button type="button" data-cel-tirar="${esc(p.id)}" title="Este celular não controla mais o telão (precisa parear de novo)">Tirar</button></div>`).join('')}</div>`
       : '<p class="sutil pequeno">Nenhum ainda.</p>'}
@@ -180,7 +215,7 @@ function ligarCelular() {
   $('#celLigado').addEventListener('change', e => {
     S.config.celularLigado = e.target.checked;
     salvarConfig();
-    Cel.info = null; Cel.ultimo = '';
+    Cel.info = null; Cel.ultimo = ''; Cel.ultimaMusica = '';
     postarApp({ tipo: 'celular', acao: e.target.checked ? 'ligar' : 'desligar' });
     renderCelular();
   });
@@ -196,6 +231,7 @@ function ligarCelular() {
         const ligouAgora = m.ligado && !Cel.info?.ligado;
         Cel.info = m;
         renderCelular();
+        if (ligouAgora) Cel.ultimaMusica = '';
         if (ligouAgora || m.aparelhos?.some(p => p.online)) { Cel.ultimo = ''; agendarEstadoCelular(); }   // quem acabou de entrar recebe o estado
       } else if (m?.tipo === 'celularComando' && m.comando) {
         try { comandoCelular(m.comando); } catch (err) { console.warn('comando do celular', err); }

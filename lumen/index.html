@@ -21,7 +21,7 @@
     </div>
     <div class="splash-info">
       <div class="splash-gratis"><b>Gratuito · uso livre</b></div>
-      <div>Versão 1.4</div>
+      <div>Versão 1.5</div>
       <div>© 2026 · PASCOM</div>
       <div><b>Paróquia São José Operário</b></div>
     </div>
@@ -200,8 +200,14 @@
         <button id="btnImportarTxt" title="Importar letras de arquivos .txt (um canto por arquivo)">Importar .txt</button>
       </div>
       <button id="btnFolhetosLote" title="Selecione vários folhetos (PDF, .docx ou .txt): guarda os cantos e as orações eucarísticas (não cria roteiros)">📄 Ler folhetos antigos (cantos e orações)…</button>
+      <div class="linha">
+        <button id="btnImportarCantos" title="Trazer cantos (com cifras e favoritos) de um arquivo .json exportado por outro MiguelAngelus">⤓ Importar cantos…</button>
+        <button id="btnExportarFav" title="Salvar os favoritos e os cantos com cifra num arquivo .json (para outro computador ou paróquia)">⤒ Exportar favoritos</button>
+      </div>
       <input type="file" id="arqFolhetosLote" accept=".pdf,.docx,.txt" multiple hidden>
       <input type="file" id="arqTxt" accept=".txt" multiple hidden>
+      <input type="file" id="arqCantos" accept=".json" hidden>
+      <div id="visaoCantos" class="visao-cantos"></div>
       <div id="listaCantos" class="lista"></div>
     </section>
 
@@ -790,7 +796,7 @@
       <figure><img src="img/brasao-paroquia.webp" alt="Brasão da Paróquia São José Operário"><figcaption>Paróquia São José Operário (RJ)</figcaption></figure>
       <figure><img src="img/brasao-pascom.webp" alt="Logotipo da PASCOM"><figcaption>PASCOM</figcaption></figure>
     </div>
-    <p class="sutil pequeno" id="versaoApp">Versão 1.4</p>
+    <p class="sutil pequeno" id="versaoApp">Versão 1.5</p>
     <div class="linha"><span class="espaco"></span><button value="ok" class="primario">OK</button></div>
   </form>
 </dialog>
@@ -803,8 +809,11 @@
       <span class="linha"><input name="titulo" required><button type="button" id="btnProcurarNome" title="Pesquisar o nome da música na internet pela primeira linha da letra">Procurar nome</button></span>
     </label>
     <div class="linha">
-      <label class="campo">Autor <input name="autor"></label>
+      <label class="campo">Autor <input name="autor" placeholder="Ex.: Comunidade Shalom"></label>
+      <label class="campo">CD / álbum <input name="cd" placeholder="Ex.: Na Dança da Vida"></label>
       <label class="campo">Momento da Missa <select name="momento"></select></label>
+      <label class="campo estreito" style="max-width:80px">Tom <input name="tom" placeholder="G"></label>
+      <label class="check" title="Os favoritos aparecem primeiro na aba Cantos e na escolha do canto do roteiro"><input type="checkbox" name="favorito"> ⭐ Favorito</label>
     </div>
     <div class="dica-colar">
       <span>Copiou a letra da internet ou do Holyrics? Cole tudo em <b>Estrofes</b> e clique em
@@ -817,6 +826,12 @@
     <label class="campo">Estrofes / letra <small class="sutil">— deixe uma linha em branco entre um slide e outro</small>
       <textarea name="letra" rows="14"></textarea>
     </label>
+    <details id="cxCifra" class="cx-cifra">
+      <summary>🎸 Cifra para os músicos <small class="sutil">— acordes em cima da letra; aparece no app dos músicos</small></summary>
+      <textarea name="cifra" rows="14" class="cifra-edit" spellcheck="false" placeholder="Cole aqui a cifra (acordes em cima da letra), por exemplo:&#10;&#10;G          D/F#      Em&#10;Santo, Santo, Santo é o Senhor"></textarea>
+      <div class="linha"><button type="button" id="btnLetraDaCifra" title="Monta o refrão e as estrofes (para o telão) a partir da letra que está na cifra">Montar a letra a partir da cifra</button>
+        <span class="sutil pequeno">Use quando o canto ainda não tem letra, ou a letra cantada é diferente.</span></div>
+    </details>
     <div class="linha">
       <button type="button" id="btnExcluirCanto" class="perigo">Excluir</button>
       <span class="espaco"></span>
@@ -992,6 +1007,7 @@
 <script src="js/atualizacao.js"></script>
 <script src="js/formatacao.js"></script>
 <script src="js/cowabunga.js"></script>
+<script src="js/cifras.js"></script>
 <script src="lib/qrcode/qrcode.min.js"></script>
 <script src="js/celular.js"></script>
 <script src="js/menus.js"></script>

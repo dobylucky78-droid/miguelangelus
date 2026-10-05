@@ -59,7 +59,9 @@ const Folheto = (() => {
     if (!s) return s;
     return s
       .replace(new RegExp(`([${LETRA}]+)\\s*-\\s*([a-zà-ÿ]{2,})\\b`, 'g'), (m, a, b) => a.length > b.length && a.toLowerCase().endsWith(b) ? a : m)
-      .replace(new RegExp(`([${LETRA}]{2,})-(?:\\s*/\\s*|\\s+)([a-zà-ÿ]{2,})`, 'g'), (m, a, b) => CLITICOS.test(b) ? m : a + b);
+      // "Hosa- na", "Apósto- los": sílaba partida (junta). Pronome de verbo fica: "Ensinai- nos", "amá- lo" (o/a/lo/la… só depois de vogal acentuada)
+      .replace(new RegExp(`([${LETRA}]{2,})-(?:\\s*/\\s*|\\s+)([a-zà-ÿ]{2,})`, 'g'), (m, a, b) =>
+        /^(nos|vos|lhes?|se|me|te)$/.test(b) || (/^(o|a|os|as|lo|la|los|las|no|na)$/.test(b) && /[áâéêíóôú]$/i.test(a)) ? m : a + b);
   }
   const limparItem = it => {
     const out = { ...it };

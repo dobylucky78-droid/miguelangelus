@@ -30,7 +30,7 @@ namespace MiguelAngelus
         readonly Dictionary<string, Aparelho> aparelhos = new Dictionary<string, Aparelho>();
         TcpListener escuta;
         Timer pulso;
-        string estado = "{}";
+        string estado = "{}", musica = "[]";
         int erros;
         DateTime travadoAte = DateTime.MinValue;
 
@@ -39,7 +39,7 @@ namespace MiguelAngelus
         internal string Erro { get; private set; }
 
         sealed class Cliente { public string Token; public Stream Fluxo; public TcpClient Tcp; public readonly SemaphoreSlim Vez = new SemaphoreSlim(1); }
-        sealed class Aparelho { public string Nome; public long Desde; }
+        sealed class Aparelho { public string Nome; public long Desde; public string Papel = "controle"; }   // "controle" ou "musico" (só vê as cifras)
 
         static string Arq => Path.Combine(Program.PastaDados, "celulares.json");
 
@@ -51,7 +51,8 @@ namespace MiguelAngelus
             {
                 if (File.Exists(Arq))
                     foreach (var kv in json.Deserialize<Dictionary<string, Dictionary<string, object>>>(File.ReadAllText(Arq)))
-                        aparelhos[kv.Key] = new Aparelho { Nome = Convert.ToString(kv.Value["nome"]), Desde = Convert.ToInt64(kv.Value["desde"]) };
+                        aparelhos[kv.Key] = new Aparelho { Nome = Convert.ToString(kv.Value["nome"]), Desde = Convert.ToInt64(kv.Value["desde"]),
+                            Papel = kv.Value.TryGetValue("papel", out var p) && Convert.ToString(p) == "musico" ? "musico" : "controle" };
             }
             catch { }
         }
@@ -61,7 +62,7 @@ namespace MiguelAngelus
             try
             {
                 Dictionary<string, object> d;
-                lock (trava) d = aparelhos.ToDictionary(kv => kv.Key, kv => (object)new { nome = kv.Value.Nome, desde = kv.Value.Desde });
+                lock (trava) d = aparelhos.ToDictionary(kv => kv.Key, kv => (object)new { nome = kv.Value.Nome, desde = kv.Value.Desde, papel = kv.Value.Papel });
                 File.WriteAllText(Arq, json.Serialize(d));
             }
             catch (Exception ex) { Program.Erro("gravar os celulares pareados", ex); }
@@ -123,13 +124,20 @@ namespace MiguelAngelus
             Enviar("data: " + estadoJson + "\n\n", null);
         }
 
+        // Cantos do roteiro com as cifras (app dos músicos): vai separado, só quando muda (é maior que o estado)
+        internal void AtualizarMusica(string musicaJson)
+        {
+            musica = musicaJson;
+            Enviar("event: musica\ndata: " + musicaJson + "\n\n", null);
+        }
+
         internal object Info()
         {
             HashSet<string> online;
             lock (trava) online = new HashSet<string>(clientes.Select(c => c.Token));
             List<object> lista;
             lock (trava) lista = aparelhos.OrderBy(kv => kv.Value.Desde)
-                .Select(kv => (object)new { id = kv.Key.Substring(0, 8), nome = kv.Value.Nome, desde = kv.Value.Desde, online = online.Contains(kv.Key) }).ToList();
+                .Select(kv => (object)new { id = kv.Key.Substring(0, 8), nome = kv.Value.Nome, desde = kv.Value.Desde, papel = kv.Value.Papel, online = online.Contains(kv.Key) }).ToList();
             return new { tipo = "celularInfo", ligado = Ligado, erro = Erro, porta = Porta, codigo = Codigo, ips = Ips(), aparelhos = lista };
         }
 
@@ -202,7 +210,7 @@ namespace MiguelAngelus
                 {
                     if (!Valido(token)) { await Responder(fluxo, 401, "application/json", "{\"ok\":false,\"motivo\":\"pareamento\"}"); return; }
                     var inicio = Encoding.UTF8.GetBytes("HTTP/1.1 200 OK\r\nContent-Type: text/event-stream; charset=utf-8\r\nCache-Control: no-cache\r\n" +
-                        "Connection: keep-alive\r\nX-Accel-Buffering: no\r\n\r\nretry: 2000\n\ndata: " + estado + "\n\n");
+                        "Connection: keep-alive\r\nX-Accel-Buffering: no\r\n\r\nretry: 2000\n\nevent: musica\ndata: " + musica + "\n\ndata: " + estado + "\n\n");
                     await fluxo.WriteAsync(inicio, 0, inicio.Length);
                     var c = new Cliente { Token = token, Fluxo = fluxo, Tcp = tcp };
                     lock (trava) clientes.Add(c);
@@ -224,19 +232,24 @@ namespace MiguelAngelus
                     }
                     var nome = d.TryGetValue("nome", out var n) ? (Convert.ToString(n) ?? "").Trim() : "";
                     if (nome.Length > 40) nome = nome.Substring(0, 40);
+                    var papel = d.TryGetValue("papel", out var pp) && Convert.ToString(pp) == "musico" ? "musico" : "controle";
                     var b = new byte[24];
                     using (var r = RandomNumberGenerator.Create()) r.GetBytes(b);
                     var novo = BitConverter.ToString(b).Replace("-", "").ToLowerInvariant();
-                    lock (trava) aparelhos[novo] = new Aparelho { Nome = nome == "" ? "Celular" : nome, Desde = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() };
+                    lock (trava) aparelhos[novo] = new Aparelho { Nome = nome == "" ? "Celular" : nome, Desde = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), Papel = papel };
                     Salvar();
                     NovoCodigo();       // cada código serve para um celular só
                     aoMudar();
-                    await Responder(fluxo, 200, "application/json", json.Serialize(new { ok = true, token = novo }));
+                    await Responder(fluxo, 200, "application/json", json.Serialize(new { ok = true, token = novo, papel }));
                     return;
                 }
                 if (caminho == "/api/comando" && metodo == "POST")
                 {
                     if (!Valido(token)) { await Responder(fluxo, 401, "application/json", "{\"ok\":false,\"motivo\":\"pareamento\"}"); return; }
+                    // aparelho de músico só acompanha: não mexe no telão
+                    bool soVe;
+                    lock (trava) soVe = aparelhos.TryGetValue(token, out var apx) && apx.Papel == "musico";
+                    if (soVe) { await Responder(fluxo, 403, "application/json", "{\"ok\":false,\"motivo\":\"musico\"}"); return; }
                     var d = LerJson(corpo);
                     if (d == null || !d.ContainsKey("acao")) { await Responder(fluxo, 400, "application/json", "{\"ok\":false}"); return; }
                     lock (trava) if (aparelhos.TryGetValue(token, out var ap)) d["aparelho"] = ap.Nome;
@@ -246,7 +259,9 @@ namespace MiguelAngelus
                 }
                 if (caminho == "/api/ping")
                 {
-                    await Responder(fluxo, 200, "application/json", Valido(token) ? "{\"ok\":true}" : "{\"ok\":false,\"motivo\":\"pareamento\"}");
+                    string papelPing = null;
+                    if (!string.IsNullOrEmpty(token)) lock (trava) if (aparelhos.TryGetValue(token, out var apP)) papelPing = apP.Papel;
+                    await Responder(fluxo, 200, "application/json", papelPing != null ? json.Serialize(new { ok = true, papel = papelPing }) : "{\"ok\":false,\"motivo\":\"pareamento\"}");
                     return;
                 }
                 if (metodo == "GET") { await Arquivo(fluxo, caminho); return; }
