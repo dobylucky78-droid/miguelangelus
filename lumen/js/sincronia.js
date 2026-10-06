@@ -190,6 +190,7 @@ async function recarregarDadosDaNuvem() {
     const ativo = S.roteiro?.id;
     S.roteiros = roteiros;
     S.roteiro = S.roteiros.find(r => r.id === ativo) || S.roteiros[0];
+    if (typeof separarCantaveisNosRoteiros === 'function') await separarCantaveisNosRoteiros();
   }
   Oracoes.lista = await DB.todos('oracoes');
   Midia.lista = await DB.todos('midias');

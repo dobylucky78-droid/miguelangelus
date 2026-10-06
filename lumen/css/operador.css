@@ -663,6 +663,7 @@ button.cards-sec:hover, button.cards-dia:hover { border-bottom-color: var(--bord
 .cam-lista { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 4px; }
 .cam-bt { font-size: 12.5px; padding: 6px 8px; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .cam-bt.ativa { background: var(--vivo); border-color: var(--vivo); color: #fff; font-weight: 600; }
+.cam-joy { margin-left: 6px; padding: 0 5px; border-radius: 8px; background: #ffd54f; color: #3e2723; font-size: 11px; }
 .camera-ativa .check { font-size: 12px; color: var(--texto); }
 
 /* Mídia: os três botões de adicionar quebram de linha na coluna estreita (nenhum fica escondido) */

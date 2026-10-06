@@ -6,7 +6,7 @@
  * As posições são gravadas NA PRÓPRIA CÂMERA (presets VISCA 1, 2, 3…); aqui só guardamos os nomes.
  * Usa S, Midia, Camera, DB, toast, esc, renderCameraAtiva, renderSlides… (em tempo de execução).
  */
-const PTZ = { mov: '', parada: 0, pad: null, padEstado: '', padTempo: 0, padZoom: 0, padBotoes: [] };
+const PTZ = { mov: '', parada: 0, pad: null, padEstado: '', padTempo: 0, padZoom: 0, padBotoes: [], alvo: null };
 
 const temPtz = c => !!(c && c.tipo === 'camera' && c.ptz?.ip);
 const PORTAS_PTZ = { 'visca-ip': 52381, udp: 1259, tcp: 5678 };
@@ -43,10 +43,24 @@ function ptzMoverPorUmTempo(c, dx, dy, forca, ms = 700) {
   PTZ.parada = setTimeout(() => { ptzParar(c); PTZ.mov = ''; }, ms);
 }
 
-// Câmera que o joystick/os atalhos controlam: a que está no telão; senão a aberta no centro; senão a primeira com PTZ
+// Câmera que o joystick controla: a escolhida no Select; senão a que está no telão; senão a aberta no centro; senão a primeira com PTZ
 function cameraPtzAlvo() {
   const lista = Midia.lista.filter(temPtz);
-  return lista.find(c => c.id === Camera.ativa) || lista.find(c => S.atual?.item && midiaDe(S.atual.item) === c) || lista[0] || null;
+  return lista.find(c => c.id === PTZ.alvo) || lista.find(c => c.id === Camera.ativa) || lista.find(c => S.atual?.item && midiaDe(S.atual.item) === c) || lista[0] || null;
+}
+
+// Select/Back do joystick: passa para a próxima câmera PTZ (para ajustar a próxima antes de pô-la no telão).
+// Ao pôr uma câmera no telão, o joystick volta a seguir o telão (mostrarCamera zera PTZ.alvo).
+function trocarCameraJoystick() {
+  const lista = Midia.lista.filter(temPtz).sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+  if (!lista.length) return;
+  const atual = cameraPtzAlvo();
+  if (atual) { ptzParar(atual); ptzZoom(atual, 0); }
+  PTZ.padEstado = ''; PTZ.padZoom = 0;
+  const prox = lista[(lista.indexOf(atual) + 1) % lista.length];
+  PTZ.alvo = prox.id;
+  toast(`🎮 Controlando: ${prox.nome}${prox.id === Camera.ativa ? ' (no telão)' : ''}`);
+  renderCameraAtiva();
 }
 
 async function salvarCameraPtz(c) {
@@ -110,16 +124,19 @@ function htmlPtz(c) {
 
 // ---------- Joystick / controle USB (Gamepad API) ----------
 // Analógico esquerdo (ou setas do D-pad) = mover · L1/R1 ou L2/R2 = zoom · botões 1–4 (□ × ○ △ / A B X Y) = posições 1–4
+// Select/Back = trocar a câmera controlada (marcada com 🎮 no quadro "Câmeras")
 function lerJoystick() {
   const pads = navigator.getGamepads ? [...navigator.getGamepads()].filter(Boolean) : [];
   const gp = pads[0];
-  if (!gp) { PTZ.pad = null; return; }
+  if (!gp) { PTZ.pad = null; renderCameraAtiva(); return; }
   requestAnimationFrame(lerJoystick);
+  const b = i => !!gp.buttons[i]?.pressed;
+  if (b(8) && !PTZ.padSelect) trocarCameraJoystick();
+  PTZ.padSelect = b(8);
   const c = cameraPtzAlvo();
   if (!c) return;
   const morto = v => Math.abs(v) < 0.25 ? 0 : v;
   let ax = morto(gp.axes[0] || 0), ay = morto(gp.axes[1] || 0);
-  const b = i => !!gp.buttons[i]?.pressed;
   if (!ax && !ay) { ax = b(14) ? -1 : b(15) ? 1 : 0; ay = b(12) ? -1 : b(13) ? 1 : 0; }   // D-pad
   const forca = Math.min(1, Math.hypot(ax, ay));
   const estado = ax || ay ? `${Math.sign(ax)}:${Math.sign(ay)}:${Math.round(forca * 4)}` : '';
@@ -188,5 +205,5 @@ function ligarPtz() {
     if (e.data?.tipo === 'ptzStatus' && e.data.erro) toast(`🎮 Câmera ${e.data.ip}: ${e.data.erro}`);
   });
   // joystick: começa a ler quando um controle é conectado (ou tocado)
-  addEventListener('gamepadconnected', e => { toast(`🎮 Controle conectado: ${e.gamepad.id.replace(/\(.*\)/, '').trim() || 'joystick'}`); if (!PTZ.pad) { PTZ.pad = true; requestAnimationFrame(lerJoystick); } });
+  addEventListener('gamepadconnected', e => { toast(`🎮 Controle conectado: ${e.gamepad.id.replace(/\(.*\)/, '').trim() || 'joystick'}`); if (!PTZ.pad) { PTZ.pad = true; requestAnimationFrame(lerJoystick); } renderCameraAtiva(); });
 }

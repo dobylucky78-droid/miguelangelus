@@ -373,9 +373,11 @@ function gerarSlidesBase(item) {
   switch (item.tipo) {
     case 'canto': {
       const c = S.cantos.find(c => c.id === item.cantoId);
-      if (c) return comRefrao(c.refrao, c.letra, c.titulo);
+      const fala = t => dividir(t || '').map(x => ({ texto: x, rodape: item.momento || '' }));
+      // Ato Penitencial cantado: o convite e a absolvição do padre continuam em volta do canto
+      if (c) return [...fala(item.textoAntes), ...comRefrao(c.refrao, c.letra, c.titulo), ...fala(item.textoDepois)];
       // sem canto escolhido: o texto rezado do folheto (ex.: Santo tirado da Oração Eucarística)
-      return item.textoRezado ? dividir(item.textoRezado).map(t => ({ texto: t, rodape: item.momento || '' })) : [];
+      return fala(item.textoRezado);
     }
     case 'texto':
       return dividir(item.texto).map(t => ({ texto: t, rodape: item.titulo || '' }));
@@ -1311,7 +1313,7 @@ async function salvarCantosDoFolheto(itens, creditos) {
     }
     saida.push({ tipo: 'canto', momento, cantoId: c.id });
   }
-  return { itens: separarSanto(saida) || saida, novos, existentes, cantosNovos };
+  return { itens: separarCantaveis(saida) || saida, novos, existentes, cantosNovos };
 }
 
 // O folheto traz o Santo no meio do texto da Oração Eucarística ("…a uma só voz:\nT. Santo, Santo, Santo, …").
@@ -1343,20 +1345,75 @@ function desfazerHifens(t) {
     /^(nos|vos|lhes?|se|me|te)$/.test(b) || (/^(lo|la|los|las|no|na)$/.test(b) && /[áâéêíóôú]$/i.test(a)) ? m : a + b);
 }
 
-// Uma vez: separa o Santo nos roteiros que já existiam (vai para a nuvem como qualquer mudança de roteiro)
-async function separarSantoNosRoteiros() {
-  if (S.config.santoSeparado) return;
+// Ato Penitencial, Glória e Cordeiro também podem ser cantados ou rezados: como o Santo, viram item de canto
+// "rezado" (o texto do folheto) até alguém escolher um canto.
+const temMomento = (itens, momento, parte) => itens.some(i => (i.tipo === 'canto' && i.momento === momento) || (i.tipo === 'ordinario' && i.parte === parte));
+const itemRezado = (it, momento, texto, extra = {}) => ({ id: it?.id || uid(), tipo: 'canto', momento, cantoId: '', textoRezado: desfazerHifens(texto.trim()), ...extra });
+
+function separarGloria(itens) {
+  if (temMomento(itens, 'Glória', 'gloria')) return null;
+  const k = itens.findIndex(i => i.tipo === 'texto' && /hino de louvor|^gloria/.test(semAcento(i.titulo || '')) && /gl[oó]ria a deus nas alturas/i.test(i.texto || ''));
+  if (k < 0) return null;
+  return [...itens.slice(0, k), itemRezado(itens[k], 'Glória', itens[k].texto), ...itens.slice(k + 1)];
+}
+
+// Cantado, o canto entra no lugar das invocações ("…tende piedade de nós"); o convite antes e a absolvição depois ficam
+function separarPenitencial(itens) {
+  if (temMomento(itens, 'Ato Penitencial', 'kyrie')) return null;
+  const k = itens.findIndex(i => i.tipo === 'texto' && /penitencial/.test(semAcento(i.titulo || '')) && /piedade/i.test(i.texto || ''));
+  if (k < 0) return null;
+  const texto = itens[k].texto.trim(), blocos = texto.split(/\n\s*\n/);
+  const pied = blocos.map((b, j) => /piedade/i.test(b) ? j : -1).filter(j => j >= 0);
+  const extra = { textoAntes: blocos.slice(0, pied[0]).join('\n\n'), textoDepois: blocos.slice(pied[pied.length - 1] + 1).join('\n\n') };
+  return [...itens.slice(0, k), itemRezado(itens[k], 'Ato Penitencial', texto, extra), ...itens.slice(k + 1)];
+}
+
+// O Cordeiro: se vier dentro de um texto do folheto, sai dele; se o folheto nem o traz, entra o do Ordinário,
+// depois do Rito da Comunhão (ou antes do canto de Comunhão)
+const RX_CORDEIRO = /^\s*(?:T\.\s*|—\s*)?Cordeiro de Deus,? que tirais/i;
+function separarCordeiro(itens) {
+  if (temMomento(itens, 'Cordeiro', 'cordeiro')) return null;
+  const k = itens.findIndex(i => i.tipo === 'texto' && (i.texto || '').split('\n').some(l => RX_CORDEIRO.test(l)));
+  if (k >= 0) {
+    const it = itens[k], linhas = it.texto.split('\n');
+    const a = linhas.findIndex(l => RX_CORDEIRO.test(l));
+    let b = linhas.findIndex((l, j) => j >= a && /dai-nos a paz/i.test(l));
+    if (b < 0) { b = a; while (b + 1 < linhas.length && linhas[b + 1].trim()) b++; }
+    const antes = linhas.slice(0, a).join('\n').trim(), depois = linhas.slice(b + 1).join('\n').trim();
+    const novos = [];
+    if (antes) novos.push({ ...it, id: uid(), texto: antes });
+    novos.push(itemRezado(null, 'Cordeiro', linhas.slice(a, b + 1).join('\n')));
+    if (depois) novos.push({ ...it, texto: depois });
+    return [...itens.slice(0, k), ...novos, ...itens.slice(k + 1)];
+  }
+  let p = itens.findIndex(i => i.tipo === 'texto' && /rito da comunhao/.test(semAcento(i.titulo || '')));
+  if (p >= 0) p++;
+  else p = itens.findIndex(i => i.tipo === 'canto' && i.momento === 'Comunhão');
+  if (p < 0) return null;
+  const novo = itemRezado(null, 'Cordeiro', Ordinario.parte('cordeiro').slides.join('\n\n'));
+  return [...itens.slice(0, p), novo, ...itens.slice(p)];
+}
+
+function separarCantaveis(itens) {
+  let r = itens, mudou = false;
+  for (const f of [separarPenitencial, separarGloria, separarSanto, separarCordeiro]) {
+    const n = f(r);
+    if (n) { r = n; mudou = true; }
+  }
+  return mudou ? r : null;
+}
+
+// Nos roteiros que já existem (e nos que chegam da nuvem de um computador com versão antiga). Não muda o que já está separado.
+async function separarCantaveisNosRoteiros() {
   let n = 0;
   for (const r of S.roteiros) {
-    const novos = separarSanto(r.itens);
+    const novos = separarCantaveis(r.itens || []);
     if (!novos) continue;
     r.itens = novos;
     await DB.salvar('roteiros', r);
     n++;
   }
-  S.config.santoSeparado = true;
-  salvarConfig();
-  if (n) console.info(`Santo separado da Oração Eucarística em ${n} roteiro(s).`);
+  if (n) console.info(`Ato Penitencial/Glória/Santo/Cordeiro separados em ${n} roteiro(s).`);
 }
 
 // Slide de abertura (ideia do Miguel): a ilustração da capa do folheto + o nome da Missa e a data,
@@ -2027,7 +2084,7 @@ async function iniciar() {
   S.roteiro = S.roteiros.find(r => r.id === S.config.roteiroAtivo)
     || [...S.roteiros].sort((a, b) => b.atualizado - a.atualizado)[0];
   if (!S.roteiro) { S.roteiro = novoRoteiro(); S.roteiros.push(S.roteiro); DB.salvar('roteiros', S.roteiro); }
-  await separarSantoNosRoteiros();     // (uma vez) Santo que veio dentro do texto da Oração Eucarística vira item próprio
+  await separarCantaveisNosRoteiros();  // Ato Penitencial, Glória, Santo e Cordeiro viram itens "cantado ou rezado"
 
   const opcoesMomento = MOMENTOS.map(m => `<option>${m}</option>`).join('');
   $('#filtroMomento').innerHTML = '<option value="">Todos os momentos</option>' + opcoesMomento;
@@ -2071,7 +2128,7 @@ async function iniciar() {
   renderBiblia();
   renderCabecalho();
   renderEstadoProj();
-  $('#versaoApp').textContent = NO_APP ? 'Versão 1.5.1 · aplicativo para Windows' : 'Versão 1.5.1 · no navegador';
+  $('#versaoApp').textContent = NO_APP ? 'Versão 1.5.2 · aplicativo para Windows' : 'Versão 1.5.2 · no navegador';
   // pede armazenamento permanente (o navegador não apaga os dados para liberar espaço)
   try { navigator.storage?.persist?.(); } catch (_) {}
   enviarConfigTelao(); renderTemasRapidos();

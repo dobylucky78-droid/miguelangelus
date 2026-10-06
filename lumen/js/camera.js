@@ -102,6 +102,7 @@ function garantirNdiWebcam(avisar) {
 function mostrarCamera(c, it) {
   if (ehCameraNdi(c)) garantirNdiWebcam(true);
   Camera.ativa = c.id;
+  if (typeof PTZ !== 'undefined') PTZ.alvo = null;   // o joystick volta a seguir a câmera do telão
   S.live = { slide: null, preto: false, item: it || null, idx: -1 };
   enviar({ tipo: 'slide', slide: null });
   enviar({ tipo: 'preto', on: false });
@@ -146,11 +147,13 @@ function renderCameraAtiva() {
   const ativa = cams.find(c => c.id === Camera.ativa);
   const fechado = Recolher.fechado('quadro:cameras', false);
   el.classList.toggle('no-ar', !!ativa);
+  // com joystick conectado, marca 🎮 a câmera que ele está controlando (Select troca)
+  const joy = typeof PTZ !== 'undefined' && PTZ.pad ? cameraPtzAlvo()?.id : null;
   el.innerHTML = `<button class="toc-tit cam-cab" data-camativa="recolher" title="Recolher / expandir">
       <span class="seta">${fechado ? '▸' : '▾'}</span>📷 Câmeras${ativa ? ` · <span class="cam-noar">● ${esc(ativa.nome)} no telão</span>` : ''}</button>
     ${fechado ? '' : `<div class="cam-lista">${cams.map(c => `
       <button class="cam-bt ${c.id === Camera.ativa ? 'ativa' : ''}" data-camquadro="${c.id}" title="${c.id === Camera.ativa ? 'No telão' : 'Mostrar no telão'}">
-        ${c.id === Camera.ativa ? '●' : '📷'} ${esc(c.nome)}</button>`).join('')}</div>
+        ${c.id === Camera.ativa ? '●' : '📷'} ${esc(c.nome)}${c.id === joy ? '<span class="cam-joy" title="O joystick está controlando esta câmera (Select troca)">🎮</span>' : ''}</button>`).join('')}</div>
     ${cams.filter(c => c.ptz?.ip && c.ptzPosicoes?.length).map(c => `<div class="cam-ptz" title="Posições prontas da câmera PTZ (um clique leva a câmera até lá)">
       <span class="sutil pequeno">🎮 ${esc(c.nome)}:</span>${c.ptzPosicoes.slice().sort((a, b) => a.n - b.n).map(p => `<button data-ptzquadro="${c.id}:${p.n}">${esc(p.nome)}</button>`).join('')}</div>`).join('')}
     <div class="toc">

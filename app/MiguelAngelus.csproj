@@ -16,7 +16,7 @@
     <RootNamespace>MiguelAngelus</RootNamespace>
     <ApplicationIcon>..\lumen\img\miguelangelus.ico</ApplicationIcon>
     <ApplicationManifest>app.manifest</ApplicationManifest>
-    <Version>1.5.1</Version>
+    <Version>1.5.2</Version>
     <Product>MiguelAngelus</Product>
     <Description>MiguelAngelus — projeção para a Missa</Description>
     <Copyright>Paróquia São José Operário — PASCOM</Copyright>
