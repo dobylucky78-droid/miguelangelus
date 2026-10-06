@@ -342,6 +342,21 @@ button.cards-sec:hover, button.cards-dia:hover { border-bottom-color: var(--bord
 /* barrinha N I S ao editar textos (formatacao.js) */
 .barra-formato { position: fixed; z-index: 120; display: flex; gap: 2px; padding: 2px; background: var(--painel); border: 1px solid var(--borda); border-radius: 7px; box-shadow: 0 4px 14px rgba(0,0,0,.35); }
 .barra-formato button { width: 28px; height: 24px; padding: 0; font-size: 14px; border-radius: 5px; }
+/* Câmera PTZ */
+.ptz-cx { border: 1px solid var(--borda); border-radius: 8px; padding: 6px 10px; margin-top: 10px; }
+.ptz-cx summary { cursor: pointer; font-weight: 600; }
+.ptz-cfg { flex-wrap: wrap; align-items: flex-end; margin: 8px 0; gap: 8px; }
+.ptz-corpo { display: flex; gap: 18px; flex-wrap: wrap; align-items: flex-start; margin-top: 6px; }
+.ptz-pad { display: grid; grid-template-columns: repeat(3, 46px); grid-template-rows: repeat(3, 46px); gap: 4px; user-select: none; touch-action: none; }
+.ptz-pad button { font-size: 18px; padding: 0; }
+.ptz-pad button:active { background: var(--acento); color: #1b1503; }
+.ptz-zoom { display: flex; flex-direction: column; gap: 6px; user-select: none; touch-action: none; }
+.ptz-zoom button:active { background: var(--acento); color: #1b1503; }
+.ptz-pos { flex: 1; min-width: 220px; }
+.ptz-p { display: inline-flex; }
+.ptz-p .ptz-x { padding: 2px 6px; opacity: .6; }
+.cam-ptz { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; margin: 4px 0; }
+.cam-ptz button { padding: 3px 8px; font-size: 12px; }
 /* Cantos: favoritos e cifras */
 .visao-cantos { display: flex; gap: 6px; margin: 6px 0 4px; flex-wrap: wrap; }
 .visao-cantos button { padding: 4px 10px; border-radius: 16px; font-size: 12.5px; }

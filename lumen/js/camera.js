@@ -64,6 +64,7 @@ function htmlCamera(it) {
     <label class="check"><input type="checkbox" data-cam="letra" ${Camera.letra ? 'checked' : ''}> Letra por cima (faixa na parte de baixo)</label>
     <p class="sutil pequeno">Com a câmera no telão: ligada, os slides aparecem numa faixa embaixo, por cima da câmera;
       desligada, clicar num slide tira a câmera e mostra o slide. Para câmeras NDI, o <b>NDI Webcam</b> (NDI Tools) precisa estar aberto.</p>
+    ${typeof htmlPtz === 'function' ? htmlPtz(c) : ''}
   </div>`;
 }
 
@@ -89,7 +90,17 @@ function pararPrevia() {
 
 // ---------- Telão ----------
 
+// Câmera NDI precisa do "NDI Webcam" (NDI Tools) aberto: o programa abre sozinho se estiver fechado.
+// Ao abrir o MiguelAngelus (se houver câmera NDI cadastrada) e ao pôr uma câmera NDI no telão.
+const ehCameraNdi = c => /ndi/i.test(`${c?.rotulo || ''} ${c?.nome || ''}`);
+function garantirNdiWebcam(avisar) {
+  if (!NO_APP) return;
+  Camera.avisarNdi = !!avisar;
+  window.chrome.webview.postMessage({ tipo: 'ndiWebcam' });
+}
+
 function mostrarCamera(c, it) {
+  if (ehCameraNdi(c)) garantirNdiWebcam(true);
   Camera.ativa = c.id;
   S.live = { slide: null, preto: false, item: it || null, idx: -1 };
   enviar({ tipo: 'slide', slide: null });
@@ -140,6 +151,8 @@ function renderCameraAtiva() {
     ${fechado ? '' : `<div class="cam-lista">${cams.map(c => `
       <button class="cam-bt ${c.id === Camera.ativa ? 'ativa' : ''}" data-camquadro="${c.id}" title="${c.id === Camera.ativa ? 'No telão' : 'Mostrar no telão'}">
         ${c.id === Camera.ativa ? '●' : '📷'} ${esc(c.nome)}</button>`).join('')}</div>
+    ${cams.filter(c => c.ptz?.ip && c.ptzPosicoes?.length).map(c => `<div class="cam-ptz" title="Posições prontas da câmera PTZ (um clique leva a câmera até lá)">
+      <span class="sutil pequeno">🎮 ${esc(c.nome)}:</span>${c.ptzPosicoes.slice().sort((a, b) => a.n - b.n).map(p => `<button data-ptzquadro="${c.id}:${p.n}">${esc(p.nome)}</button>`).join('')}</div>`).join('')}
     <div class="toc">
       <label class="check" title="Letra dos slides numa faixa embaixo, por cima da câmera"><input type="checkbox" data-camativa="letra" ${Camera.letra ? 'checked' : ''}> Letra por cima</label>
       <span class="toc-nome"></span>
@@ -170,4 +183,13 @@ function ligarCamera() {
   window.addEventListener('message', e => {
     if (e.data?.app === 'lumen' && e.data.tipo === 'cameraStatus' && e.data.erro && !e.data.preview) toast('Câmera no telão: ' + e.data.erro);
   });
+  // NDI Webcam: abre junto com o MiguelAngelus quando há câmera NDI cadastrada
+  if (NO_APP) {
+    window.chrome.webview.addEventListener('message', e => {
+      const est = e.data?.tipo === 'ndiWebcamStatus' ? e.data.estado : null;
+      if (est === 'abrindo') toast('📷 Abrindo o NDI Webcam (para as câmeras NDI)…');
+      else if (est === 'naoInstalado' && Camera.avisarNdi) toast('📷 O NDI Webcam não está instalado neste computador (vem no NDI Tools).');
+    });
+    if (Midia.lista.some(m => m.tipo === 'camera' && ehCameraNdi(m))) garantirNdiWebcam(false);
+  }
 }

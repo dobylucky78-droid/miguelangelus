@@ -86,7 +86,8 @@ function estadoCelular() {
     recentes: Avisos.recentes.map(x => x.texto),
     temas: TEMAS.map(t => { const c = t.id === 'ajustes' ? S.config : t; return { id: t.id, nome: t.nome, fundo: c.corFundo || '#000', texto: c.corTexto || '#fff' }; }),
     tema: temaAtual(),
-    cameras: Midia.lista.filter(m => m.tipo === 'camera').sort((x, y) => x.nome.localeCompare(y.nome, 'pt-BR')).map(c => ({ id: c.id, nome: c.nome })),
+    cameras: Midia.lista.filter(m => m.tipo === 'camera').sort((x, y) => x.nome.localeCompare(y.nome, 'pt-BR')).map(c => ({ id: c.id, nome: c.nome,
+      ptz: !!c.ptz?.ip, posicoes: (c.ptzPosicoes || []).slice().sort((a, b) => a.n - b.n).map(p => ({ n: p.n, nome: p.nome })) })),
     camera: Camera.ativa, letra: !!Camera.letra,
     tocando, volume: volumeMidia(),
     cfg: { corRotulo: cfg.corRotulo || '#ff5a4f', mostrarRotulos: cfg.mostrarRotulos !== false, espacoResposta: cfg.espacoResposta !== false },
@@ -149,6 +150,17 @@ function comandoCelular(c) {
       break;
     }
     case 'letra': definirLetraCamera(!!c.on); break;
+    // câmera PTZ (ptz.js): o celular repete "mover" enquanto o dedo está na seta; sem repetição, para sozinha
+    case 'ptzIr': case 'ptzMover': case 'ptzZoom': case 'ptzParar': case 'ptzHome': {
+      const cam = Midia.lista.find(m => m.id === c.id && temPtz(m));
+      if (!cam) break;
+      if (c.acao === 'ptzIr') ptzIrPara(cam, +c.n);
+      else if (c.acao === 'ptzHome') ptzHome(cam);
+      else if (c.acao === 'ptzParar') { ptzParar(cam); ptzZoom(cam, 0); }
+      else if (c.acao === 'ptzMover') ptzMoverPorUmTempo(cam, Math.sign(+c.dx || 0), Math.sign(+c.dy || 0), 0.5);
+      else if (c.acao === 'ptzZoom') { ptzZoom(cam, Math.sign(+c.z || 0)); clearTimeout(PTZ.zoomCel); PTZ.zoomCel = setTimeout(() => ptzZoom(cam, 0), 700); }
+      return;      // não precisa redesenhar nada
+    }
     case 'midiaTocar': {
       const m = midiaPorId(c.id);
       if (m) tocarPausar(m, a && midiaDe(a.item) === m ? a.item : null);

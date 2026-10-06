@@ -299,8 +299,45 @@ namespace MiguelAngelus
                 else if (tipo == "segurarFechar") { relogioFechar?.Stop(); relogioFechar = new Timer { Interval = 15 * 60 * 1000 }; relogioFechar.Tick += (s2, e2) => { relogioFechar.Stop(); podeFechar = true; Close(); }; relogioFechar.Start(); }
                 else if (tipo == "cancelarFechar") { relogioFechar?.Stop(); avisouFechamento = false; }
                 else if (tipo == "celular") MensagemCelular(m);
+                else if (tipo == "ndiWebcam") AbrirNdiWebcam();
+                else if (tipo == "ptz") EnviarPtz(m);
             }
             catch (Exception ex) { erroNdi = ex.Message; InformarNdi(); }
+        }
+
+        // ---------- Câmera PTZ (Ptz.cs): {tipo:'ptz', ip, porta, protocolo, bytes:[…]} → erro (se houver) volta como 'ptzStatus' ----------
+        async void EnviarPtz(System.Collections.Generic.Dictionary<string, object> m)
+        {
+            var ip = m.TryGetValue("ip", out var i) ? Convert.ToString(i) : "";
+            var porta = m.TryGetValue("porta", out var p) ? Convert.ToInt32(p) : 52381;
+            var protocolo = m.TryGetValue("protocolo", out var pr) ? Convert.ToString(pr) : "visca-ip";
+            var bytes = m.TryGetValue("bytes", out var b) && b is System.Collections.IEnumerable l ? l.Cast<object>().Select(x => Convert.ToByte(x)).ToArray() : new byte[0];
+            var erro = await Visca.Enviar(ip, porta, protocolo, bytes);
+            if (erro != null) try { Web.CoreWebView2?.PostWebMessageAsJson(json.Serialize(new { tipo = "ptzStatus", ip, erro })); } catch { }
+        }
+
+        // ---------- NDI Webcam (NDI Tools): abre sozinho se houver câmera NDI e ele estiver fechado ----------
+        // Responde {tipo:'ndiWebcamStatus', estado:'aberto'|'abrindo'|'naoInstalado'|'erro'}
+        void AbrirNdiWebcam()
+        {
+            string estado;
+            try
+            {
+                if (Process.GetProcessesByName("Webcam").Length > 0) estado = "aberto";
+                else
+                {
+                    var exe = new[] { Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86) }
+                        .Where(p => !string.IsNullOrEmpty(p) && Directory.Exists(Path.Combine(p, "NDI")))
+                        .SelectMany(p => Directory.GetDirectories(Path.Combine(p, "NDI")))
+                        .OrderByDescending(d => d)                                      // "NDI 6 Tools" antes de "NDI 5 Tools"
+                        .Select(d => Path.Combine(d, "Webcam", "Webcam.exe"))
+                        .FirstOrDefault(File.Exists);
+                    if (exe == null) estado = "naoInstalado";
+                    else { Process.Start(new ProcessStartInfo(exe) { UseShellExecute = true, WorkingDirectory = Path.GetDirectoryName(exe) }); estado = "abrindo"; }
+                }
+            }
+            catch (Exception ex) { Program.Erro("abrir o NDI Webcam", ex); estado = "erro"; }
+            try { Web.CoreWebView2?.PostWebMessageAsJson(json.Serialize(new { tipo = "ndiWebcamStatus", estado })); } catch { }
         }
 
         // ---------- Controle pelo celular (Celular.cs) ----------

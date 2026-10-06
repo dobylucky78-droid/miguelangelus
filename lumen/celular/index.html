@@ -141,6 +141,14 @@
   .mc .sem { padding: 10px 12px 14px; font-size: var(--tam-cifra, 15px); white-space: pre-wrap; color: #c9d1de; }
   .mc .sem .agora { background: rgba(224, 70, 60, .22); }
   .mc .cc { margin: 0 12px 12px; display: inline-block; text-decoration: none; color: #1b1503; background: var(--acento); padding: 9px 12px; border-radius: 10px; font-weight: 600; font-size: 14px; }
+  .ptz-pos { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+  .ptz-pos button { padding: 10px 12px; font-size: 14px; }
+  .ptz-ctl { display: flex; gap: 14px; align-items: center; }
+  .ptz-pad { display: grid; grid-template-columns: repeat(3, 58px); grid-template-rows: repeat(3, 58px); gap: 6px; touch-action: none; -webkit-user-select: none; user-select: none; }
+  .ptz-pad button { padding: 0; font-size: 22px; }
+  .ptz-zm { display: flex; flex-direction: column; gap: 8px; touch-action: none; }
+  .ptz-zm button { padding: 16px 12px; }
+  .ptz-pad button.ativo, .ptz-zm button.ativo { background: var(--acento); color: #1b1503; }
   #acordado { position: fixed; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
   /* Tablet: conteúdo centralizado numa coluna confortável, letra e miniaturas maiores */
   @media (min-width: 700px) {
@@ -236,7 +244,8 @@
     <div class="cartao"><h3>Tocando agora</h3><div id="tocando"><p class="sutil">Nada tocando.</p></div>
       <div class="linha"><span class="sutil">Volume</span><input type="range" id="vol" min="0" max="1" step="0.05" style="flex:1"></div></div>
     <div class="cartao" id="cxCameras" hidden><h3>Câmeras</h3><div id="cameras" class="lista"></div>
-      <label class="check"><input type="checkbox" id="letra"> Letra por cima da câmera</label></div>
+      <label class="check"><input type="checkbox" id="letra"> Letra por cima da câmera</label>
+      <div id="ptzCel"></div></div>
     <div class="cartao"><h3>Tema do telão</h3><div id="temas" class="temas"></div></div>
   </section>
 </main>
@@ -380,6 +389,15 @@ function render() {
   $('#cameras').innerHTML = est.cameras.map(c => `<button class="it ${est.camera === c.id ? 'sel' : ''}" data-camera="${esc(c.id)}"><span class="tit">📷 ${esc(c.nome)}</span>${est.camera === c.id ? '<span class="noar"></span>' : ''}</button>`).join('') +
     (est.camera ? '<button data-camera="" class="it"><span class="tit">✕ Tirar a câmera do telão</span></button>' : '');
   $('#letra').checked = !!est.letra;
+  // câmeras PTZ: posições prontas + setas/zoom (segurar)
+  const ptzHtml = est.cameras.filter(c => c.ptz).map(c => `<div class="ptz-cel"><div class="sutil" style="margin:10px 0 6px">🎮 ${esc(c.nome)}</div>
+    ${c.posicoes.length ? `<div class="ptz-pos">${c.posicoes.map(p => `<button data-ptzir="${esc(c.id)}:${p.n}">📍 ${esc(p.nome)}</button>`).join('')}</div>` : ''}
+    <div class="ptz-ctl"><div class="ptz-pad">
+      <span></span><button data-pm="${esc(c.id)}:0:-1">▲</button><span></span>
+      <button data-pm="${esc(c.id)}:-1:0">◀</button><button data-ptzhome="${esc(c.id)}">⌂</button><button data-pm="${esc(c.id)}:1:0">▶</button>
+      <span></span><button data-pm="${esc(c.id)}:0:1">▼</button><span></span></div>
+      <div class="ptz-zm"><button data-pz="${esc(c.id)}:1">＋ Zoom</button><button data-pz="${esc(c.id)}:-1">− Zoom</button></div></div></div>`).join('');
+  if ($('#ptzCel').dataset.html !== ptzHtml) { $('#ptzCel').dataset.html = ptzHtml; $('#ptzCel').innerHTML = ptzHtml; }
   $('#temas').innerHTML = est.temas.map(t => `<button class="${est.tema === t.id ? 'sel' : ''}" data-tema="${esc(t.id)}" style="background:${esc(t.fundo)};color:${esc(t.texto)}" title="${esc(t.nome)}">Aa<small>${esc(t.nome)}</small></button>`).join('');
 
   // recentes do aviso
@@ -672,6 +690,32 @@ $('#avMostrar').addEventListener('click', () => {
   cmd('aviso', { texto: t }); $('#folhaAviso').hidden = true; toast('Aviso no telão');
 });
 $('#vol').addEventListener('change', e => cmd('volume', { v: +e.target.value }));
+// Câmera PTZ: segurar a seta/zoom repete o comando a cada 250 ms; ao soltar, para (e o computador para sozinho se o sinal cair)
+let ptzSegura = null;
+function envioPtz(acao, dados) { fetch('/api/comando?t=' + encodeURIComponent(token), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ acao, ...dados }) }).catch(() => {}); }
+function soltarPtz() {
+  if (!ptzSegura) return;
+  clearInterval(ptzSegura.timer); ptzSegura.bt.classList.remove('ativo');
+  envioPtz('ptzParar', { id: ptzSegura.id });
+  ptzSegura = null;
+}
+$('#ptzCel').addEventListener('pointerdown', e => {
+  const m = e.target.closest('[data-pm]'), z = e.target.closest('[data-pz]');
+  if (!m && !z) return;
+  e.preventDefault(); soltarPtz(); vibrar(); manterAcesa();
+  const bt = m || z;
+  const [id, a, b] = bt.dataset[m ? 'pm' : 'pz'].split(':');
+  const enviar = () => m ? envioPtz('ptzMover', { id, dx: +a, dy: +b }) : envioPtz('ptzZoom', { id, z: +a });
+  enviar();
+  bt.classList.add('ativo');
+  ptzSegura = { id, bt, timer: setInterval(enviar, 250) };
+});
+['pointerup', 'pointercancel', 'pointerleave'].forEach(ev => $('#ptzCel').addEventListener(ev, soltarPtz));
+$('#ptzCel').addEventListener('click', e => {
+  const ir = e.target.closest('[data-ptzir]'), h = e.target.closest('[data-ptzhome]');
+  if (ir) { const [id, n] = ir.dataset.ptzir.split(':'); cmd('ptzIr', { id, n: +n }); toast('Câmera indo para a posição'); }
+  if (h) cmd('ptzHome', { id: h.dataset.ptzhome });
+});
 $('#letra').addEventListener('change', e => cmd('letra', { on: e.target.checked }));
 $('#parOk').addEventListener('click', parear);
 $('#parCod').addEventListener('keydown', e => { if (e.key === 'Enter') parear(); });
