@@ -21,7 +21,7 @@
     </div>
     <div class="splash-info">
       <div class="splash-gratis"><b>Gratuito · uso livre</b></div>
-      <div>Versão 1.5.2</div>
+      <div>Versão 1.5.3</div>
       <div>© 2026 · PASCOM</div>
       <div><b>Paróquia São José Operário</b></div>
     </div>
@@ -117,6 +117,7 @@
         <button data-menu="manual">📘 Manual do MiguelAngelus <span class="atalho">F1</span></button>
         <button data-menu="atalhos">Atalhos do teclado…</button>
         <button data-menu="atualizar">Procurar atualizações…</button>
+        <button data-menu="novidades">📋 Novidades (histórico de versões)…</button>
         <hr>
         <button data-menu="sobre">Sobre o MiguelAngelus…</button>
       </div>
@@ -796,7 +797,16 @@
       <figure><img src="img/brasao-paroquia.webp" alt="Brasão da Paróquia São José Operário"><figcaption>Paróquia São José Operário (RJ)</figcaption></figure>
       <figure><img src="img/brasao-pascom.webp" alt="Logotipo da PASCOM"><figcaption>PASCOM</figcaption></figure>
     </div>
-    <p class="sutil pequeno" id="versaoApp">Versão 1.5.2</p>
+    <p class="sutil pequeno" id="versaoApp">Versão 1.5.3</p>
+    <div class="linha"><span class="espaco"></span><button value="ok" class="primario">OK</button></div>
+  </form>
+</dialog>
+
+<!-- ============ Novidades (o que mudou em cada versão) ============ -->
+<dialog id="dlgNovidades">
+  <form method="dialog" class="form">
+    <h2 id="novTitulo">Novidades</h2>
+    <div id="novCorpo" class="nov-corpo"></div>
     <div class="linha"><span class="espaco"></span><button value="ok" class="primario">OK</button></div>
   </form>
 </dialog>
@@ -1006,6 +1016,7 @@
 <script src="js/folhetosonline.js"></script>
 <script src="js/sincronia.js"></script>
 <script src="js/atualizacao.js"></script>
+<script src="js/novidades.js"></script>
 <script src="js/formatacao.js"></script>
 <script src="js/cowabunga.js"></script>
 <script src="js/cifras.js"></script>

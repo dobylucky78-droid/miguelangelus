@@ -257,6 +257,14 @@ dialog::backdrop { background: rgba(0,0,0,.6); }
 .ajustes-paineis section.ativa { display: flex; }
 .ajustes-paineis h3 { margin: 0 0 4px; font-size: 16px; }
 #dlgMensagem, #dlgAtalhos, #dlgSobre { width: min(520px, 92vw); }
+#dlgNovidades { width: min(620px, 94vw); }
+.nov-corpo { max-height: 62vh; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding-right: 4px; }
+.nov-corpo > p { margin: 0; }
+.nov-versao h3 { margin: 0 0 4px; font-size: 15px; }
+.nov-versao ul { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 3px; }
+.nov-versao.nova { border-left: 3px solid var(--acento); padding-left: 10px; }
+.nov-hist summary { cursor: pointer; color: var(--sutil); margin: 4px 0 8px; }
+.nov-hist .nov-versao { margin-bottom: 10px; }
 .sobre p { margin: 0; }
 .creditos { display: flex; flex-direction: column; gap: 10px; padding: 12px 0; border-top: 1px solid var(--borda); border-bottom: 1px solid var(--borda); }
 .credito { display: flex; align-items: center; gap: 12px; }

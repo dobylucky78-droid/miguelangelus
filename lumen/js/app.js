@@ -321,7 +321,9 @@ function limitarSlide(s) {
 function gerarSlides(item) {
   const slides = gerarSlidesBase(item);
   // a Homilia é sempre um slide só (a letra diminui para caber todas as leituras)
-  if (!S.config.quebraAuto || item.tipo === 'homilia' || (item.tipo === 'canto' && !S.config.quebraCantos)) return slides;
+  // (e a "Capa do folheto" também: título, linha e edição juntos)
+  if (!S.config.quebraAuto || item.tipo === 'homilia' || (item.tipo === 'imagem' && item.layout === 'capa') ||
+    (item.tipo === 'canto' && !S.config.quebraCantos)) return slides;
   return slides.flatMap(limitarSlide);
 }
 
@@ -898,6 +900,7 @@ const LAYOUTS_IMG = [
   ['acima', 'Imagem em cima'],
   ['fundo', 'Imagem de fundo'],
   ['so', 'Só a imagem'],
+  ['capa', 'Capa do folheto'],     // fundo branco; 1ª linha = título (vermelho), as outras em azul; linha com "Ano A – nº…" ou data = em cima, pequena
 ];
 
 // Coloca a imagem no item "Imagem + texto" aberto (escolhida, colada ou arrastada)
@@ -1246,7 +1249,7 @@ async function importarBiblia(arquivo) {
 
 function momentoDoTitulo(titulo) {
   const n = semAcento(titulo);
-  const mapa = [[/entrada/, 'Entrada'], [/oferta|ofertorio/, 'Ofertório'], [/comunhao/, 'Comunhão'], [/acao de gracas/, 'Ação de Graças'],
+  const mapa = [[/entrada|abertura/, 'Entrada'], [/oferta|ofertorio|oferendas/, 'Ofertório'], [/comunhao/, 'Comunhão'], [/acao de gracas/, 'Ação de Graças'],
     [/final/, 'Final'], [/gloria/, 'Glória'], [/santo/, 'Santo'], [/cordeiro/, 'Cordeiro'], [/penitencial|piedade/, 'Ato Penitencial'],
     [/maria|mariano/, 'Mariano'], [/adoracao/, 'Adoração']];
   return (mapa.find(([re]) => re.test(n)) || [0, 'Outros'])[1];
@@ -1416,9 +1419,29 @@ async function separarCantaveisNosRoteiros() {
   if (n) console.info(`Ato Penitencial/Glória/Santo/Cordeiro separados em ${n} roteiro(s).`);
 }
 
+// (uma vez) As aberturas que já existiam (ilustração à esquerda) passam para o jeito da capa do folheto,
+// nos roteiros de hoje em diante. Quem escolheu outro layout fica como está.
+async function aberturasNoJeitoDaCapa() {
+  if (S.config.aberturaCapa) return;
+  const hoje = new Date().toISOString().slice(0, 10);
+  for (const r of S.roteiros) {
+    if ((r.data || '') < hoje) continue;
+    const ab = (r.itens || []).find(i => i.tipo === 'imagem' && i.abertura && i.imagem && (i.layout || 'esquerda') === 'esquerda');
+    if (!ab) continue;
+    ab.layout = 'capa';
+    await DB.salvar('roteiros', r);
+  }
+  S.config.aberturaCapa = true;
+  salvarConfig();
+}
+
 // Slide de abertura (ideia do Miguel): a ilustração da capa do folheto + o nome da Missa e a data,
 // para ficar no telão antes de a Missa começar. Vira o primeiro item do roteiro.
 function itemAbertura(r) {
+  // com os textos da capa: no jeito da capa do folheto (fundo branco, título vermelho, linha azul, ilustração ao lado)
+  const c = r.capaTextos;
+  if (r.capa && c) return [{ tipo: 'imagem', abertura: true, titulo: '', imagem: r.capa, layout: 'capa', escurecer: 45,
+    texto: [c.titulo, c.sub, c.edicao].filter(Boolean).join('\n') }];
   const titulo = (r.tituloLiturgico || '').replace(/\s+—\s+/g, '\n');
   const data = (r.nome || '').match(/\d{1,2} de [a-zç]+ de \d{4}/i)?.[0] || '';
   const texto = [titulo, data].filter(Boolean).join('\n\n').trim();
@@ -2085,6 +2108,7 @@ async function iniciar() {
     || [...S.roteiros].sort((a, b) => b.atualizado - a.atualizado)[0];
   if (!S.roteiro) { S.roteiro = novoRoteiro(); S.roteiros.push(S.roteiro); DB.salvar('roteiros', S.roteiro); }
   await separarCantaveisNosRoteiros();  // Ato Penitencial, Glória, Santo e Cordeiro viram itens "cantado ou rezado"
+  await aberturasNoJeitoDaCapa();
 
   const opcoesMomento = MOMENTOS.map(m => `<option>${m}</option>`).join('');
   $('#filtroMomento').innerHTML = '<option value="">Todos os momentos</option>' + opcoesMomento;
@@ -2128,11 +2152,12 @@ async function iniciar() {
   renderBiblia();
   renderCabecalho();
   renderEstadoProj();
-  $('#versaoApp').textContent = NO_APP ? 'Versão 1.5.2 · aplicativo para Windows' : 'Versão 1.5.2 · no navegador';
+  $('#versaoApp').textContent = NO_APP ? 'Versão 1.5.3 · aplicativo para Windows' : 'Versão 1.5.3 · no navegador';
   // pede armazenamento permanente (o navegador não apaga os dados para liberar espaço)
   try { navigator.storage?.persist?.(); } catch (_) {}
   enviarConfigTelao(); renderTemasRapidos();
   enviarLayout();
+  mostrarNovidadesSeAtualizou();
 }
 
 // Tela de abertura (enquanto abre o banco e sincroniza com a nuvem)

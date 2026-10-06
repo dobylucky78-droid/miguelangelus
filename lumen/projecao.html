@@ -40,6 +40,17 @@
   body.lay-fundo #imgSlide { object-fit: cover; }
   body.lay-fundo #veu { display: block; }
   body.lay-so #area, body.lay-so #rodape { display: none; }
+  /* "Capa do folheto" (slide de abertura): fundo branco, ilustração à direita, título vermelho e linha azul em letra serifada */
+  #papel { position: fixed; inset: 0; background: #fff; display: none; }
+  body.lay-capa #papel { display: block; }
+  body.lay-capa #imgSlide { display: block; top: 4vh; right: 3vw; width: 47vw; height: 92vh; }
+  body.lay-capa #area { left: 4vw; right: 52vw; top: 8vh; bottom: 8vh; }
+  body.lay-capa #rodape { display: none; }
+  body.lay-capa #texto { color: #1a1a1a; font-family: Georgia, "Times New Roman", serif; line-height: 1.15;
+    text-align: center !important; text-align-last: center !important; text-shadow: none !important; -webkit-text-stroke: 0 !important; }
+  #texto .capa-ed { display: block; font-size: .36em; color: #222; margin-bottom: .9em; font-family: "Segoe UI", Arial, sans-serif; }
+  #texto .capa-tit { display: block; color: #c4161c; font-weight: 600; }
+  #texto .capa-sub { display: block; color: #1d4f9c; font-size: .56em; margin-top: .6em; }
   #texto { max-width: 100%; line-height: 1.22; color: #fff; text-align: center; transition: opacity .14s ease; overflow-wrap: break-word; }
   #texto sup { font-size: .5em; opacity: .75; margin-right: .15em; vertical-align: .6em; }
   #texto .resp { font-weight: 700; }
@@ -68,6 +79,7 @@
 </head>
 <body>
 <div id="fundo"></div>
+<div id="papel"></div>
 <video id="cam" autoplay muted playsinline></video>
 <img id="canto-se" class="canto" alt="">
 <img id="canto-sd" class="canto" alt="">
@@ -95,7 +107,18 @@ if (window.chrome && window.chrome.webview) $('dica').innerHTML = 'Só há um mo
 
 let cfg = {}, slide = null, chaveAtual = '', timer = 0;
 
+// Capa do folheto: 1ª linha = título (vermelho); as outras em azul; a linha da edição ("Ano A – nº 48 – …" ou só a data) vai em cima, pequena
+function htmlCapa(s) {
+  const ehEdicao = l => /^Ano [ABC]\b|\b\d{1,2} de [a-zç]+ de \d{4}$/i.test(l);
+  const linhas = String(s.texto || '').split('\n').map(l => l.trim()).filter(Boolean);
+  const ed = linhas.filter(ehEdicao), resto = linhas.filter(l => !ehEdicao(l));
+  return (ed.length ? `<span class="capa-ed">${acabamento(esc(ed.join(' · ')))}</span>` : '') +
+    (resto[0] ? `<span class="capa-tit">${acabamento(esc(resto[0]))}</span>` : '') +
+    resto.slice(1).map(l => `<span class="capa-sub">${acabamento(esc(l))}</span>`).join('');
+}
+
 function htmlSlide(s) {
+  if (s.img && s.layout === 'capa') return htmlCapa(s);
   if (s.versos) {
     return acabamento(s.versos.map(v => (cfg.numerarVersos !== false ? `<sup>${esc(v.n)}</sup>` : '') + esc(v.t)).join(' '));
   }
@@ -162,7 +185,7 @@ function ajustar() {
   }
 }
 
-const LAYOUTS = ['esquerda', 'direita', 'acima', 'fundo', 'so'];
+const LAYOUTS = ['esquerda', 'direita', 'acima', 'fundo', 'so', 'capa'];
 function desenharImagem() {
   const lay = slide?.img ? slide.layout || 'esquerda' : '';
   for (const l of LAYOUTS) document.body.classList.toggle('lay-' + l, l === lay);
@@ -179,6 +202,7 @@ const CAIXAS = {   // em fração da tela: [esquerda, topo, direita, base]
   esquerda: { img: [.04, .05, .48, .88], area: [.51, .05, .96, .88] },
   direita: { img: [.52, .05, .96, .88], area: [.04, .05, .49, .88] },
   acima: { img: [.05, .04, .95, .56], area: [.05, .58, .95, .88] },
+  capa: { img: [.50, .04, .97, .96], area: [.04, .08, .48, .92] },
 };
 function harmonizar(lay) {
   const img = $('imgSlide'), area = $('area');

@@ -106,6 +106,7 @@ function acaoMenu(acao) {
     case 'atalhos': return abrirDialogo('dlgAtalhos');
     case 'atualizar': return verificarAtualizacao({ silencioso: false });
     case 'sobre': return abrirDialogo('dlgSobre');
+    case 'novidades': return abrirNovidades();
   }
 }
 
