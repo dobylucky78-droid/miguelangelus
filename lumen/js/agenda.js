@@ -115,7 +115,7 @@ function renderParoquia() {
       <span class="par-cor" style="background:${l.cor}"></span>
       <div class="par-local-txt">
         <div><b>${esc(l.tipo)} ${esc(l.nome)}</b>${l.sigla ? ` <span class="sutil">(${esc(l.sigla)})</span>` : ''}</div>
-        <div class="sutil pequeno">${esc(l.endereco || 'sem endereço')} · ${usos} celebração(ões) na semana</div>
+        <div class="sutil pequeno">${esc(l.endereco || 'sem endereço')} · ${usos} celebração(ões) na semana${l.padroeiro ? ` · padroeiro(a): ${esc(l.padroeiro.nome)} (${l.padroeiro.dia.split('-').reverse().join('/')})` : ''}</div>
       </div>
       <button data-par-layout title="Apresentação desta comunidade (imagens nos cantos)" ${l.layout && Object.keys(l.layout).length ? 'class="on"' : ''}>🖼</button>
       <button data-par-editar title="Editar">✎</button>
@@ -126,7 +126,8 @@ function renderParoquia() {
 
 function limparFormLocal() {
   Agenda.editandoLocal = null;
-  for (const id of ['parLocNome', 'parLocSigla', 'parLocEndereco']) $('#' + id).value = '';
+  for (const id of ['parLocNome', 'parLocSigla', 'parLocEndereco', 'parLocPadroeiro', 'parLocPadDia']) $('#' + id).value = '';
+  $('#parLocPadCor').value = 'branco';
   $('#parLocTipo').value = Agenda.dados.locais.some(l => l.tipo === 'Matriz') ? 'Capela' : 'Matriz';
   $('#parLocCor').value = CORES_LOCAL[Agenda.dados.locais.length % CORES_LOCAL.length];
   $('#btnParLocal').textContent = 'Adicionar';
@@ -137,8 +138,13 @@ function limparFormLocal() {
 function salvarLocalDoForm() {
   const nome = $('#parLocNome').value.trim();
   if (!nome) { toast('Escreva o nome (ex.: Nossa Senhora de Fátima).'); $('#parLocNome').focus(); return; }
+  // padroeiro: nome + dia (dd/mm) → { nome, dia: 'MM-DD', cor } — no dia, os roteiros desta comunidade ficam Solenidade
+  const padNome = $('#parLocPadroeiro').value.trim(), padDia = $('#parLocPadDia').value.trim();
+  const md = /^(\d{1,2})\/(\d{1,2})$/.exec(padDia);
+  if (padNome && (!md || +md[1] < 1 || +md[1] > 31 || +md[2] < 1 || +md[2] > 12)) { toast('Dia do padroeiro: use dd/mm (ex.: 01/05).'); $('#parLocPadDia').focus(); return; }
+  const padroeiro = padNome ? { nome: padNome, dia: `${md[2].padStart(2, '0')}-${md[1].padStart(2, '0')}`, cor: $('#parLocPadCor').value } : null;
   const l = { tipo: $('#parLocTipo').value, nome, sigla: $('#parLocSigla').value.trim().toUpperCase(),
-    endereco: $('#parLocEndereco').value.trim(), cor: $('#parLocCor').value };
+    endereco: $('#parLocEndereco').value.trim(), cor: $('#parLocCor').value, padroeiro };
   if (Agenda.editandoLocal) Object.assign(localDe(Agenda.editandoLocal), l);
   else Agenda.dados.locais.push({ id: uid(), ...l });
   salvarAgenda();
@@ -455,7 +461,7 @@ function ligarAgenda() {
   // ao fechar o editor de apresentação, atualiza os 🖼 da lista
   $('#dlgLayout').addEventListener('close', renderParoquia);
   $('#btnParLocalCancelar').addEventListener('click', limparFormLocal);
-  for (const id of ['parLocNome', 'parLocSigla', 'parLocEndereco']) {
+  for (const id of ['parLocNome', 'parLocSigla', 'parLocEndereco', 'parLocPadroeiro', 'parLocPadDia']) {
     $('#' + id).addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); salvarLocalDoForm(); } });
   }
   $('#parLocais').addEventListener('click', e => {
@@ -475,6 +481,9 @@ function ligarAgenda() {
       Agenda.editandoLocal = l.id;
       $('#parLocTipo').value = l.tipo; $('#parLocNome').value = l.nome; $('#parLocSigla').value = l.sigla || '';
       $('#parLocEndereco').value = l.endereco || ''; $('#parLocCor').value = l.cor || CORES_LOCAL[0];
+      $('#parLocPadroeiro').value = l.padroeiro?.nome || '';
+      $('#parLocPadDia').value = l.padroeiro?.dia ? l.padroeiro.dia.split('-').reverse().join('/') : '';
+      $('#parLocPadCor').value = l.padroeiro?.cor || 'branco';
       $('#btnParLocal').textContent = 'Salvar alteração';
       $('#btnParLocalCancelar').hidden = false;
       renderParoquia();

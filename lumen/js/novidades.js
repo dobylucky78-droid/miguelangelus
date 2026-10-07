@@ -5,6 +5,12 @@
  * A versão mais nova fica em cima. Ao gerar uma versão nova, acrescente a entrada dela aqui.
  */
 const NOVIDADES = [
+  { versao: '1.6.0', data: '2026-10-07', itens: [
+    '✝ Santoral: o calendário agora conhece as memórias e festas dos santos (Calendário Romano e o próprio do Brasil — São José de Anchieta, Santa Paulina, Frei Galvão, Mártires de Cunhaú e Uruaçu…), com a cor certa: branco, ou vermelho para os mártires. Aparece no topo da tela, no calendário e nos cards dos roteiros, e o tema por tempo litúrgico acompanha.',
+    'Regras: domingos e solenidades prevalecem; festas valem também no Advento e na Quaresma; memórias ficam só como lembrete na Quaresma e de 17 a 24 de dezembro; memória facultativa aparece como lembrete, sem mudar a cor.',
+    'São Sebastião (20/1), padroeiro da Arquidiocese do Rio: solenidade, em vermelho.',
+    'Padroeiro de cada comunidade (Agenda → Paróquia e comunidades): no dia do padroeiro, os roteiros daquela comunidade ficam como Solenidade, com o nome e a cor certos.',
+  ] },
   { versao: '1.5.9', data: '2026-10-07', itens: [
     'Câmeras PTZ: "📥 Trazer posições da câmera" herda as posições que já estão gravadas na câmera — elas entram na lista só para chamar, sem gravar nada na câmera.',
     'Cada posição tem ✎ para trocar o nome (ex.: "Posição 3" → "Ambão").',

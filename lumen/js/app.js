@@ -1780,10 +1780,13 @@ async function importarArquivoSolto(arquivos) {
 function renderLiturgia() {
   const l = Liturgia.info(new Date());
   const data = new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
-  $('#liturgia').innerHTML = `<span class="cor-lit" style="background:${l.corHex}" title="Cor litúrgica do tempo: ${l.cor}"></span>
-    <span>${esc(data)}</span><span>·</span><strong>${esc(l.titulo)}</strong><span>·</span>
+  const santo = l.santo ? ` <span class="lit-grau">(${esc(l.santo.toLowerCase())})</span>` : '';
+  const facult = l.facultativa ? `<span>·</span><span class="sutil" title="Memória facultativa (opcional)">${esc(l.facultativa)}</span>` : '';
+  $('#liturgia').innerHTML = `<span class="cor-lit" style="background:${l.corHex}" title="Cor litúrgica do dia: ${l.cor}"></span>
+    <span>${esc(data)}</span><span>·</span><strong>${esc(l.titulo)}</strong>${santo}
+    ${l.santo ? `<span>·</span><span>${esc(l.tituloTempo)}</span>` : ''}${facult}<span>·</span>
     <span>Ano ${l.ciclo} · ${l.ferial === 'I' ? 'Ano ímpar (I)' : 'Ano par (II)'}</span>`;
-  $('#liturgia').title = 'Tempo litúrgico calculado automaticamente. Memórias e festas de santos ainda não são consideradas.';
+  $('#liturgia').title = 'Calendário litúrgico calculado automaticamente: tempos, solenidades, festas e memórias dos santos (próprio do Brasil). Clique para abrir o calendário.';
 }
 
 function renderOrdinario() {
@@ -2305,7 +2308,7 @@ async function iniciar() {
   renderBiblia();
   renderCabecalho();
   renderEstadoProj();
-  $('#versaoApp').textContent = NO_APP ? 'Versão 1.5.9 · aplicativo para Windows' : 'Versão 1.5.9 · no navegador';
+  $('#versaoApp').textContent = NO_APP ? 'Versão 1.6.0 · aplicativo para Windows' : 'Versão 1.6.0 · no navegador';
   // pede armazenamento permanente (o navegador não apaga os dados para liberar espaço)
   try { navigator.storage?.persist?.(); } catch (_) {}
   enviarConfigTelao(); renderTemasRapidos();

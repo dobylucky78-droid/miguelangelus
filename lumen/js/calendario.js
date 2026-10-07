@@ -50,7 +50,7 @@ function renderCalLit() {
     const d = new Date(y, m, dia), l = Liturgia.info(d);
     const cls = ['cl-dia', d.getDay() === 0 ? 'dom' : '', l.festa || /Páscoa$|Natal|Pentecostes|Ascensão|Trindade|Corpo e Sangue|Cristo Rei|Epifania|Cinzas|Ramos/.test(l.titulo) ? 'festa' : '',
       mesmoDia(d, hoje) ? 'hoje' : '', mesmoDia(d, Cal.sel) ? 'sel' : ''].filter(Boolean).join(' ');
-    grade += `<button class="${cls}" data-cl-dia="${dia}" title="${esc(l.titulo)} · ${esc(l.cor)}" style="--cor:${l.corHex}">
+    grade += `<button class="${cls}" data-cl-dia="${dia}" title="${esc(l.titulo)}${l.santo ? ` (${esc(l.santo.toLowerCase())})` : ''}${l.facultativa ? ` · mem. facultativa: ${esc(l.facultativa)}` : ''} · ${esc(l.cor)}" style="--cor:${l.corHex}">
       ${dia}${comRoteiro.has(isoData(d)) ? '<i class="cl-rot" title="Tem roteiro"></i>' : ''}</button>`;
   }
 
@@ -84,6 +84,10 @@ function renderCalLit() {
     <div class="card-lit" style="border-left-color:${l.corHex}">
       <div class="s">${esc(quando)}</div>
       <div class="t">${esc(l.titulo)}</div>
+      ${l.santo ? `<div class="s"><b>${esc(l.santo)}</b> · ${esc(l.tituloTempo)}</div>` : ''}
+      ${l.facultativa ? `<div class="s">Memória facultativa: ${esc(l.facultativa)}</div>` : ''}
+      ${Agenda.dados.locais.filter(x => x.padroeiro).map(x => ({ x, p: Liturgia.info(d, x.padroeiro) })).filter(({ p }) => p.padroeiro)
+        .map(({ x, p }) => `<div class="s">⛪ <b>Solenidade de ${esc(p.titulo)}</b>, padroeiro(a) — só em ${esc(x.tipo)} ${esc(x.nome)}</div>`).join('')}
       <div class="s"><span class="cor-lit" style="background:${l.corHex}"></span> cor ${esc(l.cor)} · ${esc(l.tempo === 'Comum' ? 'Tempo Comum' : l.tempo)}</div>
       <div class="s">Ano ${l.ciclo} (domingos) · Ano ${l.ferial === 'I' ? 'ímpar (I)' : 'par (II)'} (semana)</div>
     </div>
@@ -92,7 +96,8 @@ function renderCalLit() {
     <button data-cl-novo>＋ Roteiro em branco neste dia</button>
     <div class="separador">Datas do ano ${y}</div>
     <div class="cl-datas">${datas}</div>
-    <p class="sutil pequeno">Calcula o tempo litúrgico, as solenidades e as festas principais (regras do Brasil). Memórias de santos não entram.</p>`;
+    <p class="sutil pequeno">Calcula o tempo litúrgico, as solenidades, as festas e as memórias dos santos (calendário do Brasil).
+      Memória facultativa não muda a cor do dia; na Quaresma e de 17 a 24/12 as memórias ficam só como lembrete.</p>`;
 }
 
 function irParaData(d) {
