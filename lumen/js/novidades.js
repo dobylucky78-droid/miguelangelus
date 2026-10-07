@@ -5,6 +5,12 @@
  * A versão mais nova fica em cima. Ao gerar uma versão nova, acrescente a entrada dela aqui.
  */
 const NOVIDADES = [
+  { versao: '1.5.4', data: '2026-10-06', itens: [
+    'Aclamação ao Evangelho rezada ou cantada, como o Santo: rezada, mostra o refrão e o versículo do folheto; dá para trocar por um canto de aclamação.',
+    'App dos músicos: "Meu instrumento" (Si♭, Mi♭ ou Fá) — saxofone, trompete, clarinete e trompa veem as cifras já no tom do instrumento, só no aparelho de quem escolheu.',
+    'Novo momento "Aspersão" para os cantos; no item do Ato Penitencial aparecem também os cantos de aspersão.',
+    'A atualização automática aceita a versão escrita com um ponto a mais (ex.: "v.1.5.4").',
+  ] },
   { versao: '1.5.3', data: '2026-10-06', itens: [
     'Slide de abertura no jeito da capa do folheto: fundo branco, nome da celebração em vermelho, a linha da semana em azul, a edição e a data em cima e a ilustração ao lado (layout "Capa do folheto").',
     'Folhetos de outras dioceses: o MiguelAngelus agora lê folhetos em 2 ou 3 colunas, títulos em MAIÚSCULAS e rótulos como "Pres.:", "Ass.:" e "L1." (testado com a Semana Santa da Arquidiocese de São Paulo, inclusive a Vigília Pascal com as 8 leituras).',

@@ -40,7 +40,8 @@ namespace MiguelAngelus
 
         static Version LerVersao(string tag)
         {
-            var t = new string((tag ?? "").Trim().TrimStart('v', 'V').TakeWhile(ch => char.IsDigit(ch) || ch == '.').ToArray());
+            // "v1.5.3", "V1.5.3" e também "v.1.5.3" / "v 1.5.3" (tag digitada com ponto ou espaço a mais)
+            var t = new string((tag ?? "").Trim().TrimStart('v', 'V', '.', ' ', '-').TakeWhile(ch => char.IsDigit(ch) || ch == '.').ToArray()).TrimEnd('.');
             if (!t.Contains('.')) t += ".0";
             return Version.TryParse(t, out var v) ? v : null;
         }

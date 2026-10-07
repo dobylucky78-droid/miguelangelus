@@ -12,7 +12,7 @@ const NO_APP = !!(window.chrome && window.chrome.webview);
 const semAcento = s => (s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 const debounce = (fn, ms) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; };
 
-const MOMENTOS = ['Entrada', 'Ato Penitencial', 'Glória', 'Salmo', 'Aclamação ao Evangelho', 'Ofertório', 'Santo',
+const MOMENTOS = ['Entrada', 'Ato Penitencial', 'Aspersão', 'Glória', 'Salmo', 'Aclamação ao Evangelho', 'Ofertório', 'Santo',
   'Cordeiro', 'Comunhão', 'Ação de Graças', 'Final', 'Mariano', 'Adoração', 'Outros'];
 
 const CONFIG_PADRAO = {
@@ -378,7 +378,9 @@ function gerarSlidesBase(item) {
       const fala = t => dividir(t || '').map(x => ({ texto: x, rodape: item.momento || '' }));
       // Ato Penitencial cantado: o convite e a absolvição do padre continuam em volta do canto
       if (c) return [...fala(item.textoAntes), ...comRefrao(c.refrao, c.letra, c.titulo), ...fala(item.textoDepois)];
-      // sem canto escolhido: o texto rezado do folheto (ex.: Santo tirado da Oração Eucarística)
+      // sem canto escolhido: o texto rezado do folheto (ex.: Santo tirado da Oração Eucarística);
+      // a aclamação do folheto tem refrão ("Aleluia…") antes e depois do versículo
+      if (item.refraoRezado) return comRefrao(item.refraoRezado, item.textoRezado, item.momento || '');
       return fala(item.textoRezado);
     }
     case 'texto':
@@ -626,13 +628,17 @@ function renderSlides() {
   if (f) f.scrollIntoView({ block: 'nearest' });
 }
 
+// A aspersão da água substitui o Ato Penitencial nos domingos: no item do Ato Penitencial aparecem também os de Aspersão
+const MOMENTOS_IRMAOS = { 'Ato Penitencial': ['Aspersão'] };
+const doMomento = (c, momento) => [momento, ...(MOMENTOS_IRMAOS[momento] || [])].includes(c.momento || 'Outros');
+
 function opcoesCantos(momento, sel, soFav = false, rezado = false) {
   let h = rezado ? '<option value="">— rezado (texto do folheto) —</option>' : '<option value="">— escolher canto —</option>';
   const ficha = c => fichaCanto(c) ? ` — ${esc(fichaCanto(c))}` : '';
   const opFav = c => `<option value="${c.id}" ${c.id === sel ? 'selected' : ''}>⭐ ${esc(c.titulo)}${ficha(c)}${c.cifra ? ' 🎸' : ''}</option>`;
   // "⭐ só favoritos": só os favoritos do momento deste item (Santo → só os Santos); o canto já escolhido continua na lista
   if (soFav) {
-    const l = S.cantos.filter(c => c.favorito && (c.momento || 'Outros') === momento).sort(porTitulo);
+    const l = S.cantos.filter(c => c.favorito && doMomento(c, momento)).sort(porTitulo);
     h += l.length ? `<optgroup label="⭐ ${esc(momento)}">${l.map(opFav).join('')}</optgroup>`
       : `<option disabled>(nenhum favorito de ${esc(momento)} — desmarque “⭐ só favoritos” para ver o acervo)</option>`;
     const atual = S.cantos.find(c => c.id === sel);
@@ -640,7 +646,7 @@ function opcoesCantos(momento, sel, soFav = false, rezado = false) {
     return h;
   }
   // ⭐ favoritos deste momento primeiro (o acervo inteiro continua logo abaixo)
-  const fav = S.cantos.filter(c => c.favorito && (c.momento || 'Outros') === momento).sort(porTitulo);
+  const fav = S.cantos.filter(c => c.favorito && doMomento(c, momento)).sort(porTitulo);
   if (fav.length) h += `<optgroup label="⭐ Favoritos — ${esc(momento)}">${fav.map(opFav).join('')}</optgroup>`;
   for (const m of [momento, ...MOMENTOS.filter(x => x !== momento)]) {
     const lista = S.cantos.filter(c => (c.momento || 'Outros') === m).sort(porTitulo);
@@ -1250,7 +1256,7 @@ async function importarBiblia(arquivo) {
 function momentoDoTitulo(titulo) {
   const n = semAcento(titulo);
   const mapa = [[/entrada|abertura/, 'Entrada'], [/oferta|ofertorio|oferendas/, 'Ofertório'], [/comunhao/, 'Comunhão'], [/acao de gracas/, 'Ação de Graças'],
-    [/final/, 'Final'], [/gloria/, 'Glória'], [/santo/, 'Santo'], [/cordeiro/, 'Cordeiro'], [/penitencial|piedade/, 'Ato Penitencial'],
+    [/final/, 'Final'], [/gloria/, 'Glória'], [/santo/, 'Santo'], [/cordeiro/, 'Cordeiro'], [/aspersao/, 'Aspersão'], [/penitencial|piedade/, 'Ato Penitencial'],
     [/maria|mariano/, 'Mariano'], [/adoracao/, 'Adoração']];
   return (mapa.find(([re]) => re.test(n)) || [0, 'Outros'])[1];
 }
@@ -1397,9 +1403,23 @@ function separarCordeiro(itens) {
   return [...itens.slice(0, p), novo, ...itens.slice(p)];
 }
 
+// A aclamação do folheto (refrão + versículo) vira item de canto "rezado" com o mesmo refrão e versículo:
+// assim dá para trocar por um canto de aclamação, como no Santo
+function aclamacaoRezada(it) {
+  const refrao = (it.refrao || '').trim(), texto = (it.texto || '').trim();
+  return { id: it.id || uid(), tipo: 'canto', momento: 'Aclamação ao Evangelho', cantoId: '',
+    refraoRezado: texto ? refrao : '', textoRezado: texto || refrao };
+}
+function separarAclamacao(itens) {
+  if (itens.some(i => i.tipo === 'canto' && i.momento === 'Aclamação ao Evangelho')) return null;
+  const k = itens.findIndex(i => i.tipo === 'salmo' && /aclama/.test(semAcento(i.titulo || '')) && ((i.refrao || '').trim() || (i.texto || '').trim()));
+  if (k < 0) return null;
+  return [...itens.slice(0, k), aclamacaoRezada(itens[k]), ...itens.slice(k + 1)];
+}
+
 function separarCantaveis(itens) {
   let r = itens, mudou = false;
-  for (const f of [separarPenitencial, separarGloria, separarSanto, separarCordeiro]) {
+  for (const f of [separarPenitencial, separarGloria, separarAclamacao, separarSanto, separarCordeiro]) {
     const n = f(r);
     if (n) { r = n; mudou = true; }
   }
@@ -2152,7 +2172,7 @@ async function iniciar() {
   renderBiblia();
   renderCabecalho();
   renderEstadoProj();
-  $('#versaoApp').textContent = NO_APP ? 'Versão 1.5.3 · aplicativo para Windows' : 'Versão 1.5.3 · no navegador';
+  $('#versaoApp').textContent = NO_APP ? 'Versão 1.5.4 · aplicativo para Windows' : 'Versão 1.5.4 · no navegador';
   // pede armazenamento permanente (o navegador não apaga os dados para liberar espaço)
   try { navigator.storage?.persist?.(); } catch (_) {}
   enviarConfigTelao(); renderTemasRapidos();

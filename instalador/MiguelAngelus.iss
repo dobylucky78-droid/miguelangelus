@@ -7,7 +7,7 @@
 ;   nem ao instalar uma versão nova por cima.
 
 #define Nome "MiguelAngelus"
-#define Versao "1.5.3"
+#define Versao "1.5.4"
 #define Editor "Paróquia São José Operário — PASCOM"
 
 [Setup]
@@ -18,7 +18,7 @@ AppVersion={#Versao}
 AppVerName={#Nome} {#Versao}
 AppPublisher={#Editor}
 AppComments=Projeção para a Missa
-VersionInfoVersion=1.1.0.0
+VersionInfoVersion={#Versao}
 VersionInfoDescription=Instalador do {#Nome}
 DefaultDirName={autopf}\{#Nome}
 DefaultGroupName={#Nome}

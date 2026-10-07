@@ -206,7 +206,7 @@ function musicaCelular() {
     const titulo = c?.titulo || (rezado ? `${it.momento} (rezado)` : it.titulo) || 'Canto';
     out.push({ i, momento: it.momento || it.titulo || 'Canto', titulo, cifra: f?.cifra || '', tom: f?.tom || c?.tom || '', rezado: !!rezado,
       deOutro: f && c && f.id !== c.id ? f.titulo : '', autor: fichaCanto(f || c),
-      letra: f ? '' : rezado ? it.textoRezado : (c ? [c.refrao, c.letra].filter(Boolean).join('\n\n') : [it.refrao, it.texto].filter(Boolean).join('\n\n')) });
+      letra: f ? '' : rezado ? [it.refraoRezado, it.textoRezado].filter(Boolean).join('\n\n') : (c ? [c.refrao, c.letra].filter(Boolean).join('\n\n') : [it.refrao, it.texto].filter(Boolean).join('\n\n')) });
   });
   return out;
 }

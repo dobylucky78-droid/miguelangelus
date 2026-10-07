@@ -112,7 +112,8 @@ function itensDaLiturgia(r, domingo, comOE2) {
   }
   if (r.aclamacao?.refrao) {
     const s = achar(i => i.momento === 'Aclamação ao Evangelho');
-    const item = { id: uid(), tipo: 'salmo', rotulo: 'Canto', titulo: 'Aclamação ao Evangelho', ref: '', refrao: r.aclamacao.refrao, texto: r.aclamacao.verso };
+    // item de canto "rezado" (app.js aclamacaoRezada): dá para trocar por um canto de aclamação
+    const item = aclamacaoRezada({ refrao: r.aclamacao.refrao, texto: r.aclamacao.verso });
     if (s >= 0) itens[s] = item;
   }
   if (comOE2) inserirEucaristia(itens, 'oe2', 'p-oe2');

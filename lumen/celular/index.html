@@ -123,6 +123,8 @@
   body.musico .abas, body.musico #nav { display: none !important; }
   .m-barra { position: sticky; top: -12px; z-index: 2; background: var(--bg); display: flex; gap: 8px; align-items: center; padding: 6px 0 8px; }
   .m-barra button { padding: 8px 14px; font-weight: 700; }
+  .m-barra select { min-width: 0; flex: 1 1 140px; max-width: 260px; padding: 7px 6px; font-size: 14px; }
+  .m-barra { flex-wrap: wrap; }
   .m-seguir { margin-left: auto; font-size: 14px; }
   .mc { background: var(--painel); border: 1px solid var(--borda); border-radius: 12px; margin-bottom: 12px; overflow: hidden; }
   .mc.vivo { border: 2px solid var(--vivo); }
@@ -233,6 +235,12 @@
   <section data-aba="musico" hidden>
     <div class="m-barra">
       <button id="mMenor" title="Letra menor">A−</button><button id="mMaior" title="Letra maior">A+</button>
+      <select id="mInstr" title="Meu instrumento: as cifras aparecem no tom dele (só neste aparelho)">
+        <option value="c">🎹 Dó (violão, teclado…)</option>
+        <option value="bb">🎺 Si♭ (sax tenor, trompete, clarinete)</option>
+        <option value="eb">🎷 Mi♭ (sax alto, sax barítono)</option>
+        <option value="f">📯 Fá (trompa)</option>
+      </select>
       <label class="check m-seguir"><input type="checkbox" id="mSeguir" checked> Seguir o telão</label>
     </div>
     <div id="mCantos"></div>
@@ -411,6 +419,11 @@ let papelEscolhido = 'controle', musica = [], chaveMusica = '';
 const ultimaLinha = {};                               // por canto: última linha destacada (o refrão se repete; segue em frente)
 let transp = {}; try { transp = JSON.parse(localStorage.getItem('mgl.celular.transp') || '{}'); } catch (_) {}
 let tamCifra = 15; try { tamCifra = +localStorage.getItem('mgl.celular.tamCifra') || 15; } catch (_) {}
+// Meu instrumento (instrumentos transpositores): o músico lê no tom do instrumento, que soa junto com os outros.
+// Si♭ lê 1 tom acima do som real; Mi♭ lê 1 tom e meio abaixo; Fá lê uma quinta acima. Só neste aparelho.
+const INSTR = { c: 0, bb: 2, eb: -3, f: 7 };
+let instr = 'c'; try { instr = localStorage.getItem('mgl.celular.instr') || 'c'; } catch (_) {}
+if (!(instr in INSTR)) instr = 'c';
 const RX_AC = /^[A-G][#b]?(?:m|M|maj|min|sus|dim|aug|add|°|º|\+)?\d*(?:M|\+|°|º|maj\d*)?(?:\([^)]*\))?(?:[+\-]\d+)?(?:\/[A-G][#b]?\d*)?$/;
 const ehAcordes = l => {
   let s = l.trim();
@@ -447,14 +460,16 @@ function renderMusico(refazer) {
   if (papel !== 'musico' && aba !== 'musico') return;    // controle: só quando a aba 🎸 Cifras está aberta
   document.documentElement.style.setProperty('--tam-cifra', tamCifra + 'px');
   const vivo = est?.vivoIdx ?? -1;
-  const chave = JSON.stringify(musica) + JSON.stringify(transp);
+  const chave = JSON.stringify(musica) + JSON.stringify(transp) + instr;
   if (refazer || chave !== chaveMusica) {
     chaveMusica = chave;
     $('#mCantos').innerHTML = musica.length ? musica.map(m => {
-      const p = transp[m.titulo] || 0;
+      const pMusica = transp[m.titulo] || 0, p = pMusica + INSTR[instr];
       const tom = m.tom ? transpAcorde(m.tom, p) : (p ? (p > 0 ? '+' : '') + p : '—');
+      // instrumento transpositor: lembra o tom em que a música soa (o dos outros músicos)
+      const soa = INSTR[instr] && m.cifra && m.tom ? `<div class="sutil">o grupo toca em ${esc(transpAcorde(m.tom, pMusica))}</div>` : '';
       return `<div class="mc" data-i="${m.i}">
-        <div class="mc-cab"><div class="tt"><div class="mom">${esc(m.momento)}</div>${esc(m.titulo)}${m.autor ? `<div class="sutil">${esc(m.autor)}</div>` : ''}${m.deOutro ? `<div class="sutil">cifra de: ${esc(m.deOutro)}</div>` : ''}</div>
+        <div class="mc-cab"><div class="tt"><div class="mom">${esc(m.momento)}</div>${esc(m.titulo)}${m.autor ? `<div class="sutil">${esc(m.autor)}</div>` : ''}${m.deOutro ? `<div class="sutil">cifra de: ${esc(m.deOutro)}</div>` : ''}${soa}</div>
           <span class="noar" hidden>no telão</span>
           ${m.cifra ? `<div class="mc-tom"><button data-tr="${esc(m.titulo)}" data-p="-1">−</button><b title="Tom">${esc(tom)}</b><button data-tr="${esc(m.titulo)}" data-p="1">+</button></div>` : ''}</div>
         ${m.cifra ? `<pre class="cifra">${htmlCifra(m, p)}</pre>`
@@ -690,6 +705,8 @@ $('#avMostrar').addEventListener('click', () => {
   cmd('aviso', { texto: t }); $('#folhaAviso').hidden = true; toast('Aviso no telão');
 });
 $('#vol').addEventListener('change', e => cmd('volume', { v: +e.target.value }));
+$('#mInstr').value = instr;
+$('#mInstr').addEventListener('change', e => { instr = e.target.value; try { localStorage.setItem('mgl.celular.instr', instr); } catch (_) {} renderMusico(true); });
 // Câmera PTZ: segurar a seta/zoom repete o comando a cada 250 ms; ao soltar, para (e o computador para sozinho se o sinal cair)
 let ptzSegura = null;
 function envioPtz(acao, dados) { fetch('/api/comando?t=' + encodeURIComponent(token), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ acao, ...dados }) }).catch(() => {}); }
