@@ -16,6 +16,7 @@ const MOMENTOS = ['Entrada', 'Ato Penitencial', 'Aspersão', 'Glória', 'Salmo',
   'Cordeiro', 'Comunhão', 'Ação de Graças', 'Final', 'Mariano', 'Adoração', 'Outros'];
 
 const CONFIG_PADRAO = {
+  pixCartao: 64, pixQrCamera: 36, pixFaixaCamera: 11,      // tamanhos do 💠 Pix no telão (% da altura da tela)
   fonte: '"Segoe UI", Arial, sans-serif', fonteMax: 9, corTexto: '#ffffff', corFundo: '#000000', fundoImagem: '',
   alinhamento: 'justify-center', sombra: true, maiusculas: false, rodape: true, versosPorSlide: 1, numerarVersos: true,
   quebraAuto: true, linhasPorSlide: 4, caracteresPorLinha: 40, quebraCantos: false,
@@ -92,6 +93,7 @@ function enviarEstado(w) {
   enviarEstadoMidia(w);
   enviarEstadoAviso(w);
   enviarEstadoCamera(w);
+  if (typeof enviarEstadoPix === 'function') enviarEstadoPix(w);
 }
 
 window.addEventListener('message', e => {
@@ -566,6 +568,7 @@ function tratarTecla(key) {
     case 'b': case 'B': alternarPreto(); return true;
     case 'a': case 'A': abrirAviso(); return true;
     case 'l': case 'L': alternarAltar(); return true;
+    case 'p': case 'P': alternarPix(); return true;
     case 'Escape': limpar(); return true;
   }
   return false;
@@ -2096,6 +2099,7 @@ function ligarEventos() {
 function renderControles() {
   $('#btnPreto').classList.toggle('ligado', S.live.preto);
   $('#btnAltar').classList.toggle('ligado', !!S.live.altar);
+  $('#btnPix').classList.toggle('ligado', !!S.pixNoAr);
 }
 
 async function iniciar() {
@@ -2162,6 +2166,7 @@ async function iniciar() {
   ligarCowabunga();
   ligarCifras();
   ligarCelular();
+  ligarPix();
   lerPastaMidia('video'); lerPastaMidia('audio');     // pastas deste computador (os roteiros apontam para os arquivos delas)
   mostrarAba('roteiros', false);    // sempre abre nos Roteiros, com os cards das celebrações
   renderLiturgia();
@@ -2172,7 +2177,7 @@ async function iniciar() {
   renderBiblia();
   renderCabecalho();
   renderEstadoProj();
-  $('#versaoApp').textContent = NO_APP ? 'Versão 1.5.4 · aplicativo para Windows' : 'Versão 1.5.4 · no navegador';
+  $('#versaoApp').textContent = NO_APP ? 'Versão 1.5.5 · aplicativo para Windows' : 'Versão 1.5.5 · no navegador';
   // pede armazenamento permanente (o navegador não apaga os dados para liberar espaço)
   try { navigator.storage?.persist?.(); } catch (_) {}
   enviarConfigTelao(); renderTemasRapidos();

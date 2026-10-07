@@ -107,6 +107,7 @@ function acaoMenu(acao) {
     case 'atualizar': return verificarAtualizacao({ silencioso: false });
     case 'sobre': return abrirDialogo('dlgSobre');
     case 'novidades': return abrirNovidades();
+    case 'pix': return alternarPix();
   }
 }
 

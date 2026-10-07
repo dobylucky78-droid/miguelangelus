@@ -51,6 +51,24 @@
   #texto .capa-ed { display: block; font-size: .36em; color: #222; margin-bottom: .9em; font-family: "Segoe UI", Arial, sans-serif; }
   #texto .capa-tit { display: block; color: #c4161c; font-weight: 600; }
   #texto .capa-sub { display: block; color: #1d4f9c; font-size: .56em; margin-top: .6em; }
+  /* Pix da paróquia POR CIMA do que está passando (como a câmera): cartão branco com a faixa do CNPJ em cima e o
+     QR code embaixo. Sem câmera: o cartão ocupa o alto e os slides continuam, menores, na faixa de baixo.
+     Com câmera: o cartão fica menor no alto (o QR code continua grande o bastante para o celular ler). */
+  :root { --pix-cartao: 64vh; --pix-qr-cam: 36vh; --pix-faixa-cam: 11vh; }   /* tamanhos: Ajustes → 💠 Pix */
+  #pixCaixa { position: fixed; left: 50%; transform: translateX(-50%); top: 2.5vh; height: var(--pix-cartao); z-index: 4; display: none;
+    flex-direction: column; align-items: center; gap: 1.2vh; padding: 1.4vh 1.4vh 1.8vh; background: #fff; border-radius: 1.6vh;
+    box-shadow: 0 .6vh 2.4vh rgba(0,0,0,.45); box-sizing: border-box; }
+  body.pix-on #pixCaixa { display: flex; }
+  #pixCaixa .pix-faixa { height: calc(var(--pix-cartao) * .16); max-width: 80vw; object-fit: contain; flex: none; }
+  #pixCaixa .pix-qr { flex: 1 1 auto; min-height: 0; aspect-ratio: 1; object-fit: contain; image-rendering: pixelated; }
+  body.pix-on:not(.camera) #imgSlide, body.pix-on:not(.camera) #rodape { display: none !important; }
+  /* com a câmera: faixa no canto superior esquerdo, QR code no canto superior direito; sem as imagens dos cantos */
+  body.pix-on.camera .canto { display: none !important; }
+  body.pix-on.camera #pixCaixa { left: 2vw; right: 2vw; top: 2.5vh; transform: none; height: auto; padding: 0; gap: 2vw;
+    flex-direction: row; justify-content: space-between; align-items: flex-start; background: transparent; box-shadow: none; }
+  body.pix-on.camera #pixCaixa img { background: #fff; border-radius: 1.2vh; box-shadow: 0 .6vh 2.4vh rgba(0,0,0,.45); box-sizing: border-box; }
+  body.pix-on.camera #pixCaixa .pix-faixa { height: var(--pix-faixa-cam); max-width: 62vw; padding: .8vh; }
+  body.pix-on.camera #pixCaixa .pix-qr { flex: none; height: var(--pix-qr-cam); width: var(--pix-qr-cam); padding: 1.2vh; }
   #texto { max-width: 100%; line-height: 1.22; color: #fff; text-align: center; transition: opacity .14s ease; overflow-wrap: break-word; }
   #texto sup { font-size: .5em; opacity: .75; margin-right: .15em; vertical-align: .6em; }
   #texto .resp { font-weight: 700; }
@@ -60,7 +78,7 @@
   #video { position: fixed; inset: 0; width: 100%; height: 100%; object-fit: contain; background: #000; display: none; }
   #video.on { display: block; }
   #aviso-som { position: fixed; bottom: 2vh; left: 50%; transform: translateX(-50%); background: rgba(160,30,30,.92); color: #fff; font: 15px "Segoe UI", sans-serif; padding: 8px 14px; border-radius: 8px; display: none; z-index: 6; }
-  #preto { position: fixed; inset: 0; background: #000; opacity: 0; transition: opacity .25s ease; pointer-events: none; }
+  #preto { position: fixed; inset: 0; background: #000; opacity: 0; transition: opacity .25s ease; pointer-events: none; z-index: 6; }
   #preto.on { opacity: 1; }
   #dica { position: fixed; top: 2vh; left: 50%; transform: translateX(-50%); background: rgba(20,22,26,.92); color: #eee; font: 15px "Segoe UI", sans-serif; padding: 10px 16px; border-radius: 8px; transition: opacity .6s; z-index: 5; text-align: center; }
   #dica.fora { opacity: 0; pointer-events: none; }
@@ -87,6 +105,7 @@
 <img id="canto-id" class="canto" alt="">
 <img id="imgSlide" alt="">
 <div id="veu"></div>
+<div id="pixCaixa"></div>
 <div id="area"><div id="texto"></div></div>
 <div id="rodape"></div>
 <video id="video" playsinline preload="auto"></video>
@@ -115,6 +134,16 @@ function htmlCapa(s) {
   return (ed.length ? `<span class="capa-ed">${acabamento(esc(ed.join(' · ')))}</span>` : '') +
     (resto[0] ? `<span class="capa-tit">${acabamento(esc(resto[0]))}</span>` : '') +
     resto.slice(1).map(l => `<span class="capa-sub">${acabamento(esc(l))}</span>`).join('');
+}
+
+// Pix por cima (mensagem 'pix'): só imagens guardadas no programa (data:image/…)
+function pix(m) {
+  const ok = u => /^data:image\//.test(u || '');
+  const on = !!m.on && ok(m.qr);
+  document.body.classList.toggle('pix-on', on);
+  $('pixCaixa').innerHTML = on ? (ok(m.faixa) ? `<img class="pix-faixa" src="${m.faixa}" alt="Chave Pix">` : '') +
+    `<img class="pix-qr" src="${m.qr}" alt="QR code do Pix">` : '';
+  desenharImagem(); ajustar();
 }
 
 function htmlSlide(s) {
@@ -208,7 +237,11 @@ function harmonizar(lay) {
   const img = $('imgSlide'), area = $('area');
   const limpar = () => { for (const p of ['left', 'top', 'right', 'bottom', 'width', 'height']) { img.style[p] = ''; area.style[p] = ''; } };
   if (document.body.classList.contains('camera') || lay === 'so') return limpar();
-  const cx = CAIXAS[lay] || { area: [.05, .05, .95, .88] };     // texto comum (e imagem de fundo): também desvia dos cantos
+  // Pix por cima (sem câmera): o cartão do Pix fica no alto e o texto desce para a faixa de baixo, menor
+  const pixOn = document.body.classList.contains('pix-on');
+  const topoTexto = (Math.min(80, Math.max(40, +cfg.pixCartao || 64)) + 5) / 100;     // logo abaixo do cartão do Pix
+  const cx = pixOn ? { area: [.04, topoTexto, .96, .975] }
+    : CAIXAS[lay] || { area: [.05, .05, .95, .88] };     // texto comum (e imagem de fundo): também desvia dos cantos
   const W = innerWidth, H = innerHeight, folga = H * .02;
   const cantos = [...document.querySelectorAll('.canto.on')].filter(c => c.naturalWidth).map(c => c.getBoundingClientRect());
   const encaixar = (fr, encolher) => {
@@ -275,6 +308,10 @@ function mostrar(s) {
 
 function aplicarConfig(c) {
   cfg = c || {};
+  const raiz = document.documentElement.style, entre = (v, a, b, p) => Math.min(b, Math.max(a, +v || p));
+  raiz.setProperty('--pix-cartao', entre(cfg.pixCartao, 40, 80, 64) + 'vh');
+  raiz.setProperty('--pix-qr-cam', entre(cfg.pixQrCamera, 20, 55, 36) + 'vh');
+  raiz.setProperty('--pix-faixa-cam', entre(cfg.pixFaixaCamera, 6, 20, 11) + 'vh');
   const t = $('texto');
   document.body.style.fontFamily = cfg.fonte || '';
   t.style.color = $('rodape').style.color = cfg.corTexto || '#fff';
@@ -421,6 +458,7 @@ window.addEventListener('message', e => {
   else if (m.tipo === 'preto') $('preto').classList.toggle('on', !!m.on);
   else if (m.tipo === 'aviso') aviso(m.aviso);
   else if (m.tipo === 'camera') camera(m);
+  else if (m.tipo === 'pix') pix(m);
   else if (m.tipo === 'posicionar') {
     try { window.moveTo(m.x, m.y); window.resizeTo(m.w, m.h); } catch (_) { /* o usuário arrasta manualmente */ }
   }

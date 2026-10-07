@@ -5,6 +5,11 @@
  * A versão mais nova fica em cima. Ao gerar uma versão nova, acrescente a entrada dela aqui.
  */
 const NOVIDADES = [
+  { versao: '1.5.5', data: '2026-10-07', itens: [
+    'Botão 💠 Pix (ou tecla P): o QR code do Pix da paróquia e a faixa com o CNPJ aparecem POR CIMA do que está passando — os slides continuam, menores, embaixo; com a câmera no ar, a faixa vai para o canto superior esquerdo e o QR code para o direito. Também pelo celular.',
+    'As imagens do Pix são protegidas por uma senha de 4 números criada pela PASCOM (o programa guarda só uma impressão embaralhada dela). Ficam em Ajustes → 💠 Pix da paróquia e vão para os outros computadores pela nuvem.',
+    'Tamanhos do Pix ajustáveis em cada computador (cartão sem câmera; QR code e faixa com câmera).',
+  ] },
   { versao: '1.5.4', data: '2026-10-06', itens: [
     'Aclamação ao Evangelho rezada ou cantada, como o Santo: rezada, mostra o refrão e o versículo do folheto; dá para trocar por um canto de aclamação.',
     'App dos músicos: "Meu instrumento" (Si♭, Mi♭ ou Fá) — saxofone, trompete, clarinete e trompa veem as cifras já no tom do instrumento, só no aparelho de quem escolheu.',

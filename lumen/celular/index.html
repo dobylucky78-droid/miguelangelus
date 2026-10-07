@@ -211,6 +211,7 @@
       <button data-cmd="limpar">Limpar</button>
       <button data-cmd="altar" id="btAltar">Altar</button>
       <button id="btAviso">Aviso</button>
+      <button data-cmd="pix" id="btPix" hidden style="grid-column: 1 / -1">💠 Pix da paróquia (QR code)</button>
     </div>
     <button data-cmd="projecao" id="btProjecao" style="width:100%;margin-top:8px">Abrir o telão</button>
   </section>
@@ -371,6 +372,8 @@ function render() {
   $('#btProjecao').classList.toggle('ligado', !!est.projecao);
   $('#btPreto').classList.toggle('ligado', !!est.preto);
   $('#btAltar').classList.toggle('ligado', !!est.altar);
+  $('#btPix').hidden = !est.temPix;                    // só aparece com o QR code do Pix cadastrado no computador
+  $('#btPix').classList.toggle('ligado', !!est.pix);
 
   // roteiro
   renderRoteiros();

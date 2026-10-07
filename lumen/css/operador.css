@@ -258,6 +258,16 @@ dialog::backdrop { background: rgba(0,0,0,.6); }
 .ajustes-paineis h3 { margin: 0 0 4px; font-size: 16px; }
 #dlgMensagem, #dlgAtalhos, #dlgSobre { width: min(520px, 92vw); }
 #dlgNovidades { width: min(620px, 94vw); }
+.pix-cfg { display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-start; }
+.pix-cfg > div { display: flex; flex-direction: column; gap: 6px; }
+.pix-prev { width: 140px; height: 140px; border: 1px dashed var(--borda); border-radius: var(--raio); background: #fff;
+  display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.pix-prev.larga { width: 300px; height: 70px; }
+.pix-prev img { max-width: 100%; max-height: 100%; object-fit: contain; }
+.pix-cfg.travado { opacity: .55; }
+.pix-cadeado { margin: 6px 0 12px; gap: 8px; align-items: center; flex-wrap: wrap; }
+#dlgPin { width: min(340px, 92vw); }
+.pin-campo { font-size: 28px; letter-spacing: .5em; text-align: center; width: 100%; margin: 6px 0; }
 .nov-corpo { max-height: 62vh; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding-right: 4px; }
 .nov-corpo > p { margin: 0; }
 .nov-versao h3 { margin: 0 0 4px; font-size: 15px; }

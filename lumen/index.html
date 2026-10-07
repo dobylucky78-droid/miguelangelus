@@ -21,7 +21,7 @@
     </div>
     <div class="splash-info">
       <div class="splash-gratis"><b>Gratuito · uso livre</b></div>
-      <div>Versão 1.5.4</div>
+      <div>Versão 1.5.5</div>
       <div>© 2026 · PASCOM</div>
       <div><b>Paróquia São José Operário</b></div>
     </div>
@@ -86,6 +86,7 @@
         <button data-menu="preto">Tela preta <span class="atalho">B</span></button>
         <button data-menu="limpar">Limpar a tela <span class="atalho">Esc</span></button>
         <button data-menu="altar">Olhar para o altar <span class="atalho">L</span></button>
+        <button data-menu="pix">Pix da paróquia (QR code) <span class="atalho">P</span></button>
         <hr>
         <button data-menu="mensagem">Mensagem rápida…</button>
         <button data-menu="aviso">Aviso na tela (carro, criança…)… <span class="atalho">A</span></button>
@@ -312,6 +313,7 @@
       <button id="btnLimpar" title="Limpar texto (Esc)">Limpar</button>
       <button id="btnAltar" title="Slide &quot;Todos dirijam seu olhar para o altar&quot; (L). Clique de novo para voltar ao slide que estava no ar.">⛪ Altar</button>
       <button id="btnAviso" title="Aviso na tela: placa de carro, responsável por criança… (A)">📢 Aviso</button>
+      <button id="btnPix" title="QR code do Pix da paróquia no telão — ofertório, fim da Missa (P). Clique de novo para voltar ao que estava no ar.">💠 Pix</button>
     </div>
     <div id="temasRapidos" class="temas-rapidos"></div>
 
@@ -357,6 +359,7 @@
         <button type="button" data-ajsec="slides">📏 Tamanho dos slides</button>
         <button type="button" data-ajsec="biblia">📖 Bíblia</button>
         <button type="button" data-ajsec="altar">⛪ Botão Altar</button>
+        <button type="button" data-ajsec="pix">💠 Pix da paróquia</button>
         <button type="button" data-ajsec="ndi">📡 Transmissão (OBS)</button>
         <button type="button" data-ajsec="celular">📱 Controle pelo celular</button>
         <button type="button" data-ajsec="sync">☁ Sincronização</button>
@@ -471,6 +474,31 @@
             <input data-cfg="textoAltar" placeholder="TODOS DIRIJAM SEU OLHAR PARA O ALTAR">
           </label>
           <p class="sutil pequeno">Usa a aparência do telão. Apertar de novo volta ao slide que estava no ar.</p>
+        </section>
+
+        <section data-ajpainel="pix">
+          <h3>💠 Pix da paróquia</h3>
+          <p class="sutil pequeno">O botão <b>💠 Pix</b> (ou a tecla <b>P</b>) mostra no telão o QR code e a faixa com a chave, para o
+            ofertório e o fim da Missa. Apertar de novo volta ao que estava no ar. As imagens vão para a nuvem com o resto:
+            basta colocar num computador.</p>
+          <div class="pix-cadeado linha" id="pixCadeado"></div>
+          <div class="pix-cfg" id="pixCfg">
+            <div><b>QR code</b><div class="pix-prev" id="pixPrevQr"></div>
+              <span class="linha"><button type="button" data-pix="qr">Escolher imagem…</button><button type="button" data-pixtirar="qr" class="perigo">Tirar</button></span></div>
+            <div><b>Faixa com a chave (para conferir)</b><div class="pix-prev larga" id="pixPrevFaixa"></div>
+              <span class="linha"><button type="button" data-pix="faixa">Escolher imagem…</button><button type="button" data-pixtirar="faixa" class="perigo">Tirar</button></span></div>
+          </div>
+          <p class="sutil pequeno">Antes de usar na Missa, leia o QR code com o aplicativo do banco e confira se aparece o nome e o
+            CNPJ da paróquia (não precisa pagar nada).</p>
+          <h4>Tamanho no telão (deste computador)</h4>
+          <label class="campo">Sem câmera — altura do cartão (faixa + QR code; os slides ficam embaixo)
+            <span class="linha"><input type="range" min="40" max="80" step="1" data-cfg="pixCartao"><b class="pix-val" data-pixval="pixCartao"></b></span></label>
+          <label class="campo">Com câmera — tamanho do QR code (canto superior direito)
+            <span class="linha"><input type="range" min="20" max="55" step="1" data-cfg="pixQrCamera"><b class="pix-val" data-pixval="pixQrCamera"></b></span></label>
+          <label class="campo">Com câmera — altura da faixa do CNPJ (canto superior esquerdo)
+            <span class="linha"><input type="range" min="6" max="20" step="0.5" data-cfg="pixFaixaCamera"><b class="pix-val" data-pixval="pixFaixaCamera"></b></span></label>
+          <p class="sutil pequeno">Em % da altura da tela. Ligue o 💠 Pix e mexa aqui para ver no telão na hora.</p>
+          <input type="file" id="pixArq" accept="image/*" hidden>
         </section>
 
         <section data-ajpainel="ndi">
@@ -797,8 +825,23 @@
       <figure><img src="img/brasao-paroquia.webp" alt="Brasão da Paróquia São José Operário"><figcaption>Paróquia São José Operário (RJ)</figcaption></figure>
       <figure><img src="img/brasao-pascom.webp" alt="Logotipo da PASCOM"><figcaption>PASCOM</figcaption></figure>
     </div>
-    <p class="sutil pequeno" id="versaoApp">Versão 1.5.4</p>
+    <p class="sutil pequeno" id="versaoApp">Versão 1.5.5</p>
     <div class="linha"><span class="espaco"></span><button value="ok" class="primario">OK</button></div>
+  </form>
+</dialog>
+
+<!-- ============ Senha do Pix (4 dígitos; o programa guarda só o hash) ============ -->
+<dialog id="dlgPin">
+  <form method="dialog" class="form" id="formPin" autocomplete="off">
+    <h2 id="pinTitulo">Senha do Pix</h2>
+    <p class="sutil pequeno" id="pinTexto"></p>
+    <input id="pinCampo" type="password" inputmode="numeric" pattern="\d{4}" maxlength="4" autocomplete="off"
+      class="pin-campo" aria-label="Senha de 4 números">
+    <input id="pinCampo2" type="password" inputmode="numeric" pattern="\d{4}" maxlength="4" autocomplete="off"
+      class="pin-campo" aria-label="Repita a senha" placeholder="repita" hidden>
+    <p class="erro pequeno" id="pinErro"></p>
+    <div class="linha"><span class="espaco"></span><button value="cancelar" type="button" id="pinCancelar">Cancelar</button>
+      <button value="ok" class="primario" id="pinOk">OK</button></div>
   </form>
 </dialog>
 
@@ -1017,6 +1060,7 @@
 <script src="js/sincronia.js"></script>
 <script src="js/atualizacao.js"></script>
 <script src="js/novidades.js"></script>
+<script src="js/pix.js"></script>
 <script src="js/formatacao.js"></script>
 <script src="js/cowabunga.js"></script>
 <script src="js/cifras.js"></script>
