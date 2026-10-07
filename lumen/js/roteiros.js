@@ -200,6 +200,9 @@ function ligarRoteiros() {
   $('#dataRoteiro').addEventListener('input', e => { S.roteiro.data = e.target.value; salvarRoteiro(); renderPreparacao(); renderCardsRoteiros(); });
   $('#respRoteiro').addEventListener('input', e => { S.roteiro.responsavel = e.target.value.trim(); salvarRoteiro(); renderPreparacao(); renderCardsRoteiros(); });
   $('#horaRoteiro').addEventListener('input', e => { S.roteiro.hora = e.target.value; salvarRoteiro(); renderPreparacao(); renderCardsRoteiros(); });
-  $('#corRoteiro').addEventListener('change', e => { S.roteiro.corManual = e.target.value; salvarRoteiro(); renderPreparacao(); renderCardsRoteiros(); });
+  $('#corRoteiro').addEventListener('change', e => {
+    S.roteiro.corManual = e.target.value; salvarRoteiro(); renderPreparacao(); renderCardsRoteiros();
+    if (temaAtual() === 'liturgico') { enviarConfigTelao(); renderTemasRapidos(); }    // o tema litúrgico segue a cor do roteiro
+  });
   $('#btnVerRoteiros').addEventListener('click', () => mostrarAba('roteiros'));
 }

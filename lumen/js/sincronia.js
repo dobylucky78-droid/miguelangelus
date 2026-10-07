@@ -203,10 +203,12 @@ async function recarregarDadosDaNuvem() {
     if (typeof separarCantaveisNosRoteiros === 'function') await separarCantaveisNosRoteiros();
   }
   Oracoes.lista = await DB.todos('oracoes');
+  if (typeof juntarOracoesRepetidas === 'function') await juntarOracoesRepetidas();   // a nuvem trouxe cópias de outro computador
   Midia.lista = await DB.todos('midias');
   const ag = await DB.obter('config', 'agenda'); if (ag?.valor) Object.assign(Agenda.dados, ag.valor);
   if (typeof carregarPix === 'function') await carregarPix();
   try { renderCantos(); renderOracoes(); renderMidias(); renderRoteiroCab(); renderRoteiroLista(); } catch (_) {}
+  if (typeof oferecerJuntarRoteiros === 'function') setTimeout(() => oferecerJuntarRoteiros(), 500);   // cópias de outro computador
 }
 
 // Ao abrir o programa, antes de carregar os dados (chamado por iniciar())

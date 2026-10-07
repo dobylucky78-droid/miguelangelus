@@ -218,7 +218,7 @@ function renderCalendario() {
     const iso = isoData(d), lit = Liturgia.info(d);
     const evs = ocorrencias(d).filter(o => !Agenda.filtroLocal || o.localId === Agenda.filtroLocal).map(o => {
       const loc = localDe(o.localId);
-      const rot = Agenda.dados.vinculos[o.chave] && S.roteiros.some(r => r.id === Agenda.dados.vinculos[o.chave]);
+      const rot = !!roteiroDaCelebracao(o);
       const dica = [o.tipo + (o.avulsa ? ' (avulsa)' : ''), loc ? `${loc.tipo} ${loc.nome}${loc.endereco ? ' — ' + loc.endereco : ''}` : '',
         o.alterada ? 'alterada neste dia' : '', o.cancelada ? 'CANCELADA neste dia' : ''].filter(Boolean).join('\n');
       return `<div class="ev ${o.cancelada ? 'cancelada' : ''} ${o.alterada ? 'alterada' : ''} ${o.avulsa ? 'avulsa' : ''}"
@@ -307,7 +307,81 @@ function guardarExcecao(chave, ex) {
 
 // ---------- Roteiro da celebração ----------
 
-const roteiroDaCelebracao = o => S.roteiros.find(x => x.id === Agenda.dados.vinculos[o.chave]) || null;
+// O quanto um roteiro já foi trabalhado: cantos escolhidos, depois itens, depois o mais recente
+const pesoRoteiro = r => [(r.itens || []).filter(i => i.tipo === 'canto' && i.cantoId).length, (r.itens || []).length, r.atualizado || 0];
+function melhorRoteiro(lista) {
+  return [...lista].sort((a, b) => {
+    const pa = pesoRoteiro(a), pb = pesoRoteiro(b);
+    for (let i = 0; i < pa.length; i++) if (pa[i] !== pb[i]) return pb[i] - pa[i];
+    return a.id < b.id ? -1 : 1;                 // empate: o de menor id (todos os computadores escolhem o mesmo)
+  })[0];
+}
+
+// O roteiro de uma celebração: pelo vínculo da Agenda ou, se o vínculo se perdeu (a Agenda de outro computador
+// sobrescreveu a lista de vínculos na nuvem), pela celebração gravada no próprio roteiro. Sem isso, o programa
+// "esquecia" o roteiro e criava outro igual ao importar o folheto.
+function roteiroDaCelebracao(o) {
+  const v = S.roteiros.find(x => x.id === Agenda.dados.vinculos[o.chave]);
+  if (v) return v;
+  const doMesmo = S.roteiros.filter(x => x.celebracao === o.chave);
+  if (!doMesmo.length) return null;
+  const r = melhorRoteiro(doMesmo);
+  Agenda.dados.vinculos[o.chave] = r.id;         // refaz o vínculo
+  salvarAgenda();
+  return r;
+}
+
+// Roteiros repetidos: mais de um roteiro para a mesma celebração da Agenda
+function roteirosRepetidos() {
+  const grupos = new Map();
+  for (const r of S.roteiros) if (r.celebracao) (grupos.get(r.celebracao) || grupos.set(r.celebracao, []).get(r.celebracao)).push(r);
+  return [...grupos.values()].filter(g => g.length > 1).map(g => {
+    const fica = melhorRoteiro(g);
+    return { fica, saem: g.filter(r => r !== fica) };
+  });
+}
+
+// Fica o mais trabalhado de cada celebração; as cópias são apagadas aqui e na nuvem (senão voltavam)
+async function juntarRoteirosRepetidos(grupos = roteirosRepetidos()) {
+  let n = 0;
+  for (const { fica, saem } of grupos) {
+    Agenda.dados.vinculos[fica.celebracao] = fica.id;
+    for (const r of saem) {
+      await DB.remover('roteiros', r.id);
+      if (typeof Sync !== 'undefined' && typeof ligadaSync === 'function' && ligadaSync() &&
+          !Sync.estado.removidos.some(x => x.store === 'roteiros' && x.id === r.id)) {
+        Sync.estado.removidos.push({ store: 'roteiros', id: r.id, quando: Date.now() });
+        Sync.sujo = true;
+      }
+      if (S.roteiro === r) S.roteiro = fica;
+      n++;
+    }
+  }
+  if (!n) return 0;
+  const sair = new Set(grupos.flatMap(g => g.saem));
+  S.roteiros = S.roteiros.filter(r => !sair.has(r));
+  if (typeof salvarEstadoSync === 'function') salvarEstadoSync();
+  salvarAgenda();
+  trocarRoteiro(S.roteiro);
+  return n;
+}
+
+// Mostra os repetidos e pergunta antes de apagar (roteiro é trabalho de alguém)
+let avisouRepetidos = false;
+async function oferecerJuntarRoteiros(pedido) {
+  const grupos = roteirosRepetidos();
+  if (!grupos.length) { if (pedido) toast('Nenhum roteiro repetido.'); return; }
+  if (!pedido && avisouRepetidos) return;      // já disse "não" nesta sessão: só pelo menu
+  const resumo = r => `${(r.itens || []).filter(i => i.tipo === 'canto' && i.cantoId).length} cantos, ${(r.itens || []).length} itens`;
+  const linhas = grupos.slice(0, 12).map(g => `• ${g.fica.nome}\n   fica: ${resumo(g.fica)} · sai(em): ${g.saem.map(resumo).join(' / ')}`);
+  const nSaem = grupos.reduce((s, g) => s + g.saem.length, 0);
+  if (!confirm(`Há ${grupos.length} celebração(ões) com mais de um roteiro (cópias criadas em outro computador).\n\n` +
+    linhas.join('\n') + (grupos.length > 12 ? `\n… e mais ${grupos.length - 12}` : '') +
+    `\n\nJuntar? Fica o roteiro com mais cantos escolhidos de cada uma; ${nSaem} cópia(s) serão apagadas aqui e na nuvem.\n` +
+    '(Também em Ferramentas → Juntar roteiros repetidos.)')) { avisouRepetidos = true; return; }
+  const n = await juntarRoteirosRepetidos(grupos);
+  toast(`${n} roteiro(s) repetido(s) apagado(s).`);
+}
 
 // Cria o roteiro de uma celebração (ligado a ela na Agenda). Sem `itens`, usa o modelo de Missa.
 async function criarRoteiroDaCelebracao(o, itens) {

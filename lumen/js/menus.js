@@ -108,6 +108,8 @@ function acaoMenu(acao) {
     case 'sobre': return abrirDialogo('dlgSobre');
     case 'novidades': return abrirNovidades();
     case 'pix': return alternarPix();
+    case 'temaLiturgico': return alternarTemaLiturgico();
+    case 'roteirosRepetidos': return oferecerJuntarRoteiros(true);
   }
 }
 

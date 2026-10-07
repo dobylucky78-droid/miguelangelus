@@ -84,7 +84,7 @@ function estadoCelular() {
     projecao: !!(S.projWin && !S.projWin.closed),
     aviso: Avisos.atual ? { texto: Avisos.atual.texto } : null,
     recentes: Avisos.recentes.map(x => x.texto),
-    temas: TEMAS.map(t => { const c = t.id === 'ajustes' ? S.config : t; return { id: t.id, nome: t.nome, fundo: c.corFundo || '#000', texto: c.corTexto || '#fff' }; }),
+    temas: TEMAS.map(t => { const c = t.id === 'ajustes' ? S.config : coresDoTema(t); return { id: t.id, nome: t.nome, fundo: c.corFundo || '#000', texto: c.corTexto || '#fff' }; }),
     tema: temaAtual(),
     cameras: Midia.lista.filter(m => m.tipo === 'camera').sort((x, y) => x.nome.localeCompare(y.nome, 'pt-BR')).map(c => ({ id: c.id, nome: c.nome,
       ptz: !!c.ptz?.ip, posicoes: (c.ptzPosicoes || []).slice().sort((a, b) => a.n - b.n).map(p => ({ n: p.n, nome: p.nome })) })),

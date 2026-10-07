@@ -21,7 +21,7 @@
     </div>
     <div class="splash-info">
       <div class="splash-gratis"><b>Gratuito · uso livre</b></div>
-      <div>Versão 1.5.6</div>
+      <div>Versão 1.5.7</div>
       <div>© 2026 · PASCOM</div>
       <div><b>Paróquia São José Operário</b></div>
     </div>
@@ -110,7 +110,8 @@
         <hr>
         <button data-menu="celular">📱 Controle pelo celular…</button>
         <hr>
-        <button disabled>Temas por tempo litúrgico <span class="em-breve">em breve</span></button>
+        <button data-menu="temaLiturgico">✝ Temas por tempo litúrgico…</button>
+        <button data-menu="roteirosRepetidos">🧹 Juntar roteiros repetidos…</button>
       </div>
     </div>
     <div class="menu"><button class="menu-titulo">Ajuda</button>
@@ -833,7 +834,7 @@
       <figure><img src="img/brasao-paroquia.webp" alt="Brasão da Paróquia São José Operário"><figcaption>Paróquia São José Operário (RJ)</figcaption></figure>
       <figure><img src="img/brasao-pascom.webp" alt="Logotipo da PASCOM"><figcaption>PASCOM</figcaption></figure>
     </div>
-    <p class="sutil pequeno" id="versaoApp">Versão 1.5.6</p>
+    <p class="sutil pequeno" id="versaoApp">Versão 1.5.7</p>
     <div class="linha"><span class="espaco"></span><button value="ok" class="primario">OK</button></div>
   </form>
 </dialog>
@@ -881,8 +882,14 @@
         <b>Organizar</b>: cifras saem, o refrão e o autor são separados sozinhos.</span>
       <button type="button" id="btnOrganizar">Organizar</button>
     </div>
-    <label class="campo">Refrão <small class="sutil">— opcional; aparece no início e depois de cada estrofe</small>
+    <label class="campo">Refrão <small class="sutil">— opcional; aparece depois de cada estrofe e, conforme abaixo, também no começo</small>
       <textarea name="refrao" rows="4"></textarea>
+    </label>
+    <label class="campo comeca-por">O canto começa
+      <select name="comecaPor">
+        <option value="refrao">pelo refrão (refrão → estrofe → refrão…)</option>
+        <option value="estrofe">pela 1ª estrofe (estrofe → refrão → estrofe…)</option>
+      </select>
     </label>
     <label class="campo">Estrofes / letra <small class="sutil">— deixe uma linha em branco entre um slide e outro</small>
       <textarea name="letra" rows="14"></textarea>

@@ -13,8 +13,29 @@ const TEMAS = [
   { id: 'escuro', nome: 'Escuro', corFundo: '#000000', corTexto: '#ffffff', corRotulo: '#ff5a4f' },
   { id: 'azul', nome: 'Azul claro', corFundo: '#d9eefa', corTexto: '#111111', sombra: false, corRotulo: '#c8102e' },
   { id: 'creme', nome: 'Creme', corFundo: '#fbf1de', corTexto: '#111111', sombra: false, corRotulo: '#c8102e' },
+  // muda sozinho com o tempo litúrgico do roteiro aberto (a mesma cor do card: Advento roxo, Natal branco, Comum verde…)
+  { id: 'liturgico', nome: 'Tempo litúrgico', dica: 'A cor do tempo litúrgico do roteiro aberto: verde, roxo, branco, vermelho ou rosa' },
 ];
 const temaPorId = id => TEMAS.find(t => t.id === id) || TEMAS[0];
+
+// Cores do telão para cada cor litúrgica: fundos escuros e sóbrios (o texto continua bem legível); no branco, fundo claro
+const CORES_TEMA_LIT = {
+  verde: { corFundo: '#0f2d1d', corTexto: '#ffffff', corRotulo: '#ffd166' },
+  roxo: { corFundo: '#2c1442', corTexto: '#ffffff', corRotulo: '#ffd166' },
+  rosa: { corFundo: '#4a1d36', corTexto: '#ffffff', corRotulo: '#ffd166' },
+  vermelho: { corFundo: '#3f0d13', corTexto: '#ffffff', corRotulo: '#ffd166' },
+  branco: { corFundo: '#fbf6ea', corTexto: '#111111', sombra: false, corRotulo: '#a8750a' },
+  preto: { corFundo: '#000000', corTexto: '#ffffff', corRotulo: '#ff5a4f' },
+};
+const corLiturgicaAtual = () => {
+  try { return semAcento(liturgiaDoRoteiro(S.roteiro).cor || ''); } catch (_) { return ''; }
+};
+// as cores que um tema põe no telão (o "Tempo litúrgico" depende do roteiro aberto; sem cor conhecida: Escuro)
+function coresDoTema(t) {
+  if (t.id === 'liturgico') return CORES_TEMA_LIT[corLiturgicaAtual()] || CORES_TEMA_LIT.preto;
+  const { id: _i, nome: _n, dica: _d, ...cores } = t;
+  return cores;
+}
 
 const Temas = { manual: null };     // tema escolhido na tela de controle (null = o da capela)
 
@@ -32,8 +53,7 @@ const temaAtual = () => cameraNoTelao() ? 'escuro' : Temas.manual || temaDaCapel
 function configTelao(id = temaAtual()) {
   const t = temaPorId(id);
   if (t.id === 'ajustes') return S.config;
-  const { id: _i, nome: _n, dica: _d, ...cores } = t;
-  return { ...S.config, ...cores, fundoImagem: '' };
+  return { ...S.config, ...coresDoTema(t), fundoImagem: '' };
 }
 
 function enviarConfigTelao(destinos) {
@@ -50,9 +70,10 @@ function escolherTema(id) {
 
 // Amostra "Aa" com as cores do tema
 function amostraTema(t, sel, atributo) {
-  const c = t.id === 'ajustes' ? S.config : t;
-  return `<button type="button" class="tema-amostra ${sel ? 'sel' : ''}" ${atributo}="${t.id}" title="${esc(t.nome)}${t.dica ? ' — ' + esc(t.dica) : ''}"
-    style="background:${c.corFundo || '#000'};color:${c.corTexto || '#fff'};font-weight:${c.negrito ? 700 : 400}">${c.maiusculas ? 'AA' : 'Aa'}</button>`;
+  const c = t.id === 'ajustes' ? S.config : { ...S.config, ...coresDoTema(t) };
+  const lit = t.id === 'liturgico';
+  return `<button type="button" class="tema-amostra ${sel ? 'sel' : ''} ${lit ? 'tema-lit' : ''}" ${atributo}="${t.id}" title="${esc(t.nome)}${t.dica ? ' — ' + esc(t.dica) : ''}${lit && corLiturgicaAtual() ? ' (agora: ' + corLiturgicaAtual() + ')' : ''}"
+    style="background:${c.corFundo || '#000'};color:${c.corTexto || '#fff'};font-weight:${c.negrito ? 700 : 400}">${lit ? '✝' : c.maiusculas ? 'AA' : 'Aa'}</button>`;
 }
 
 function renderTemasRapidos() {
@@ -68,6 +89,24 @@ function renderTemasRapidos() {
 function aoTrocarCapela() {
   Temas.manual = null;
   renderTemasRapidos();
+  if (temaAtual() === 'liturgico') enviarConfigTelao();     // a cor do roteiro novo pode ser outra
+}
+
+// Ferramentas → "Temas por tempo litúrgico": liga/desliga para a paróquia toda (as capelas com tema próprio continuam com o delas)
+function alternarTemaLiturgico() {
+  const p = Agenda.dados.paroquia || (Agenda.dados.paroquia = {});
+  const ligado = p.tema === 'liturgico';
+  if (!confirm(ligado
+    ? 'Desligar o tema por tempo litúrgico?\n\nO telão volta ao tema "Ajustes" (o de Ferramentas → Ajustes → Aparência).'
+    : 'Ligar o tema por tempo litúrgico para a paróquia?\n\nO fundo do telão acompanha a cor litúrgica do roteiro aberto: verde no Tempo Comum, ' +
+      'roxo no Advento e na Quaresma, branco no Natal e na Páscoa, vermelho em Pentecostes e nos mártires, rosa no Gaudete e no Laetare.\n\n' +
+      'Capelas com tema próprio (Agenda → Paróquia → 🖼) continuam com o delas; o quadradinho ✝ na tela de controle também liga só por um roteiro.')) return;
+  if (ligado) delete p.tema; else p.tema = 'liturgico';
+  salvarAgenda();
+  Temas.manual = null;
+  enviarConfigTelao();
+  renderTemasRapidos();
+  toast(ligado ? 'Tema por tempo litúrgico desligado.' : `✝ Tema por tempo litúrgico ligado${corLiturgicaAtual() ? ' (agora: ' + corLiturgicaAtual() + ')' : ''}.`);
 }
 
 function ligarTemas() {

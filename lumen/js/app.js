@@ -329,10 +329,11 @@ function gerarSlides(item) {
   return slides.flatMap(limitarSlide);
 }
 
-// Refrão no início e depois de cada estrofe (sem refrão: só as estrofes)
-function comRefrao(refrao, estrofes, rodape) {
+// Refrão no início e depois de cada estrofe (sem refrão: só as estrofes).
+// porEstrofe = o canto começa pela 1ª estrofe (marcação do canto): o refrão só vem depois dela.
+function comRefrao(refrao, estrofes, rodape, porEstrofe = false) {
   const r = (refrao || '').trim();
-  const out = r ? [{ texto: r, rodape, refrao: true }] : [];
+  const out = r && !porEstrofe ? [{ texto: r, rodape, refrao: true }] : [];
   for (const e of dividir(estrofes)) {
     out.push({ texto: e, rodape });
     if (r) out.push({ texto: r, rodape, refrao: true });
@@ -379,7 +380,7 @@ function gerarSlidesBase(item) {
       const c = S.cantos.find(c => c.id === item.cantoId);
       const fala = t => dividir(t || '').map(x => ({ texto: x, rodape: item.momento || '' }));
       // Ato Penitencial cantado: o convite e a absolvição do padre continuam em volta do canto
-      if (c) return [...fala(item.textoAntes), ...comRefrao(c.refrao, c.letra, c.titulo), ...fala(item.textoDepois)];
+      if (c) return [...fala(item.textoAntes), ...comRefrao(c.refrao, c.letra, c.titulo, c.comecaPor === 'estrofe'), ...fala(item.textoDepois)];
       // sem canto escolhido: o texto rezado do folheto (ex.: Santo tirado da Oração Eucarística);
       // a aclamação do folheto tem refrão ("Aleluia…") antes e depois do versículo
       if (item.refraoRezado) return comRefrao(item.refraoRezado, item.textoRezado, item.momento || '');
@@ -1118,7 +1119,15 @@ function organizarColado(bruto) {
   // Primeiro bloco com uma linha curta costuma ser o título
   let titulo = '';
   if (letra.length > 1 && !letra[0].includes('\n') && letra[0].length <= 60) titulo = letra.shift();
-  return { titulo, autor, refrao, letra: letra.join('\n\n') };
+  // o canto começa pelo refrão ou pela 1ª estrofe? (o primeiro bloco depois do título)
+  let comecaPor = '';
+  if (refrao) {
+    const blocos = linhas.join('\n').split(/\n\s*\n/).map(b => b.trim()).filter(Boolean)
+      .filter(b => !(titulo && norm(b) === norm(titulo)));
+    const p = blocos[0] || '';
+    comecaPor = marca.test(p) || norm(p) === kR ? 'refrao' : 'estrofe';
+  }
+  return { titulo, autor, refrao, letra: letra.join('\n\n'), comecaPor };
 }
 
 let aoSalvarCanto = null;
@@ -1132,6 +1141,7 @@ function abrirEditorCanto(canto, momento, aoSalvar) {
   f.momento.value = c.momento || 'Outros';
   f.refrao.value = c.refrao || '';
   f.letra.value = c.letra || '';
+  f.comecaPor.value = c.comecaPor === 'estrofe' ? 'estrofe' : 'refrao';
   f.favorito.checked = !!c.favorito;
   f.cd.value = c.cd || '';
   f.tom.value = c.tom || '';
@@ -1156,6 +1166,7 @@ async function salvarCantoDoEditor() {
     momento: f.momento.value,
     refrao: f.refrao.value.replace(/\r/g, '').trim(),
     letra: f.letra.value.replace(/\r/g, '').trim(),
+    comecaPor: f.comecaPor.value === 'estrofe' ? 'estrofe' : '',      // '' = começa pelo refrão (o padrão)
     favorito: f.favorito.checked,
     cd: f.cd.value.trim(),
     tom: f.tom.value.trim(),
@@ -1666,7 +1677,7 @@ function renderDistribuicao() {
       <span class="dist-txt">${esc(o.texto)}</span>
       ${o.vigilia ? '<span class="tag">vigília</span>' : ''}
       ${o.tipo !== 'Missa' ? `<span class="tag">${esc(o.tipo)}</span>` : ''}
-      ${existente ? '<span class="dist-existe">já tem roteiro — marque para substituir os itens</span>' : ''}
+      ${existente ? '<span class="dist-existe">já tem roteiro — não será criado de novo; marque só se quiser substituir os itens</span>' : ''}
     </label>`;
   }).join('');
   atualizarBotaoDistribuir();
@@ -2069,6 +2080,7 @@ function ligarEventos() {
     const r = organizarColado(colado);
     f.refrao.value = r.refrao;
     f.letra.value = r.letra;
+    if (r.comecaPor) f.comecaPor.value = r.comecaPor;
     if (r.autor && !f.autor.value.trim()) f.autor.value = r.autor;
     if (r.titulo && !f.titulo.value.trim()) f.titulo.value = r.titulo;
     toast(`Organizado: ${dividir(r.letra).length} estrofe(s)${r.refrao ? ' + refrão' : ''}${r.autor ? ' · autor encontrado' : ''}. Confira antes de salvar.`);
@@ -2252,12 +2264,18 @@ async function iniciar() {
   renderBiblia();
   renderCabecalho();
   renderEstadoProj();
-  $('#versaoApp').textContent = NO_APP ? 'Versão 1.5.6 · aplicativo para Windows' : 'Versão 1.5.6 · no navegador';
+  $('#versaoApp').textContent = NO_APP ? 'Versão 1.5.7 · aplicativo para Windows' : 'Versão 1.5.7 · no navegador';
   // pede armazenamento permanente (o navegador não apaga os dados para liberar espaço)
   try { navigator.storage?.persist?.(); } catch (_) {}
   enviarConfigTelao(); renderTemasRapidos();
   enviarLayout();
   mostrarNovidadesSeAtualizou();
+  // roteiros repetidos (mesma celebração): pergunta depois da tela de abertura e das novidades
+  setTimeout(() => {
+    const nov = $('#dlgNovidades');
+    if (nov.open) nov.addEventListener('close', () => oferecerJuntarRoteiros(), { once: true });
+    else oferecerJuntarRoteiros();
+  }, 2500);
 }
 
 // Tela de abertura (enquanto abre o banco e sincroniza com a nuvem)

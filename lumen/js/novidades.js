@@ -5,6 +5,12 @@
  * A versão mais nova fica em cima. Ao gerar uma versão nova, acrescente a entrada dela aqui.
  */
 const NOVIDADES = [
+  { versao: '1.5.7', data: '2026-10-07', itens: [
+    'Cantos com refrão: nova opção "O canto começa pelo refrão / pela 1ª estrofe" no editor do canto. Começando pela estrofe, o telão mostra estrofe → refrão → estrofe… (antes o refrão vinha sempre primeiro). "Montar a letra a partir da cifra" e "Organizar" já marcam sozinhos, e o app dos músicos segue a mesma ordem.',
+    '✝ Temas por tempo litúrgico (Ferramentas): o fundo do telão acompanha a cor litúrgica do roteiro — verde, roxo, branco, vermelho ou rosa. Também pelo quadradinho ✝ ao lado dos temas.',
+    'Orações repetidas: as cópias iguais que chegavam de outro computador são juntadas e apagadas também na nuvem (não voltam mais); e ao cadastrar uma oração parecida com uma que já existe, o programa avisa.',
+    'Roteiros repetidos: o programa não cria mais um segundo roteiro para a mesma celebração quando a nuvem traz a Agenda de outro computador (ao distribuir o folheto, as celebrações que já têm roteiro aparecem desmarcadas). Os repetidos que já existem podem ser juntados: o programa pergunta ao abrir, ou em Ferramentas → Juntar roteiros repetidos — fica o de cada celebração com mais cantos escolhidos.',
+  ] },
   { versao: '1.5.6', data: '2026-10-07', itens: [
     'Coluna da direita (ao vivo + roteiro) cerca de 20% mais larga e prévia do telão menor — sobra mais espaço para o roteiro em monitores pequenos. Arraste a divisória à esquerda da coluna para alargar ou estreitar, e o puxador embaixo da prévia para aumentá-la ou diminuí-la (dois cliques volta ao normal); cada computador lembra os seus tamanhos.',
     'O botão "Tela preta" saiu do painel (continua no menu Projeção e na tecla B); com a tela preta ligada, o rótulo em cima da prévia avisa "TELA PRETA". Assim Limpar, Altar, Aviso e Pix cabem numa linha só.',

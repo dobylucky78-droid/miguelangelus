@@ -100,6 +100,14 @@ function letraDaCifra(cifra) {
   return o;
 }
 
+// Letra corrida na ordem em que se canta (para os músicos): o refrão primeiro, ou depois da 1ª estrofe
+function letraNaOrdem(c) {
+  const r = (c.refrao || '').trim(), est = (c.letra || '').trim();
+  if (!r || c.comecaPor !== 'estrofe') return [r, est].filter(Boolean).join('\n\n');
+  const blocos = est.split(/\n\s*\n/);
+  return [blocos[0], r, ...blocos.slice(1)].filter(Boolean).join('\n\n');
+}
+
 // Ficha curta do canto para as listas: "Comunidade Shalom · CD Na Dança da Vida"
 const fichaCanto = c => [c?.autor, c?.cd ? 'CD ' + c.cd : ''].filter(Boolean).join(' · ');
 
@@ -206,7 +214,7 @@ function musicaCelular() {
     const titulo = c?.titulo || (rezado ? `${it.momento} (rezado)` : it.titulo) || 'Canto';
     out.push({ i, momento: it.momento || it.titulo || 'Canto', titulo, cifra: f?.cifra || '', tom: f?.tom || c?.tom || '', rezado: !!rezado,
       deOutro: f && c && f.id !== c.id ? f.titulo : '', autor: fichaCanto(f || c),
-      letra: f ? '' : rezado ? [it.refraoRezado, it.textoRezado].filter(Boolean).join('\n\n') : (c ? [c.refrao, c.letra].filter(Boolean).join('\n\n') : [it.refrao, it.texto].filter(Boolean).join('\n\n')) });
+      letra: f ? '' : rezado ? [it.refraoRezado, it.textoRezado].filter(Boolean).join('\n\n') : (c ? letraNaOrdem(c) : [it.refrao, it.texto].filter(Boolean).join('\n\n')) });
   });
   return out;
 }
@@ -232,7 +240,7 @@ async function importarCantos(arquivo) {
   let novos = 0, atualizados = 0;
   for (const x of lista) {
     if (!x || !x.titulo || !(x.letra || x.refrao || x.cifra)) continue;
-    const campos = ['titulo', 'autor', 'cd', 'momento', 'refrao', 'letra', 'tom', 'cifra', 'favorito', 'numero', 'fonte'];
+    const campos = ['titulo', 'autor', 'cd', 'momento', 'refrao', 'letra', 'comecaPor', 'tom', 'cifra', 'favorito', 'numero', 'fonte'];
     let c = x.id && S.cantos.find(k => k.id === x.id);
     if (c) {
       for (const k of campos) if (x[k] !== undefined && x[k] !== '') c[k] = x[k];
@@ -258,6 +266,7 @@ function ligarCifras() {
     const o = letraDaCifra(cifra);
     f.refrao.value = o.refrao;
     f.letra.value = o.letra;
+    if (o.comecaPor) f.comecaPor.value = o.comecaPor;      // a cifra mostra se começa pelo refrão ou pela estrofe
     if (!f.titulo.value.trim() && o.titulo) f.titulo.value = o.titulo;
     const tom = cifra.match(/^\s*tom\s*:\s*([A-G][#b]?m?)/im);
     if (tom && !f.tom.value) f.tom.value = tom[1];

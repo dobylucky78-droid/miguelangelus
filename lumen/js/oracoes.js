@@ -63,11 +63,15 @@ async function carregarOracoes() {
 }
 
 // Orações idênticas (mesmo título, categoria e texto) viram uma só. Os roteiros que usavam a cópia
-// passam a usar a que fica. (Aconteceu com as orações-padrão gravadas duas vezes.)
+// passam a usar a que fica. (Aconteceu com as orações-padrão gravadas duas vezes: cada computador novo grava as
+// suas antes de ligar a nuvem, e depois a nuvem traz as dos outros.)
+// Fica sempre a de MENOR id — todos os computadores escolhem a mesma — e a cópia é apagada também na nuvem;
+// senão ela voltava na próxima sincronização.
 async function juntarOracoesRepetidas() {
+  const norm = t => (t || '').replace(/\r/g, '').replace(/[ \t]+/g, ' ').replace(/\s*\n\s*/g, '\n').trim();
   const vistas = new Map(), troca = {};
-  for (const o of Oracoes.lista) {
-    const k = [o.categoria || '', o.titulo || '', (o.texto || '').trim()].join('\u0001');
+  for (const o of [...Oracoes.lista].sort((a, b) => (a.id < b.id ? -1 : 1))) {
+    const k = [norm(o.categoria), norm(o.titulo), norm(o.texto)].join('\u0001');
     if (vistas.has(k)) troca[o.id] = vistas.get(k).id; else vistas.set(k, o);
   }
   const ids = Object.keys(troca);
@@ -77,8 +81,19 @@ async function juntarOracoesRepetidas() {
     for (const it of r.itens || []) if (it.oracaoId && troca[it.oracaoId]) { it.oracaoId = troca[it.oracaoId]; mudou = true; }
     if (mudou) await DB.salvar('roteiros', r);
   }
-  for (const id of ids) await DB.remover('oracoes', id);
+  for (const id of ids) {
+    await DB.remover('oracoes', id);
+    // ao abrir, a sincronia ainda não está "escutando" as remoções: registra aqui para apagar na nuvem também
+    if (typeof Sync !== 'undefined' && typeof ligadaSync === 'function' && ligadaSync() &&
+        !Sync.estado.removidos.some(x => x.store === 'oracoes' && x.id === id)) {
+      Sync.estado.removidos.push({ store: 'oracoes', id, quando: Date.now() });
+      Sync.sujo = true;
+    }
+  }
+  if (typeof salvarEstadoSync === 'function') salvarEstadoSync();
   Oracoes.lista = Oracoes.lista.filter(o => !troca[o.id]);
+  console.info(`Orações repetidas juntadas: ${ids.length}.`);
+  return ids.length;
 }
 
 function categoriasUsadas() {
@@ -132,6 +147,22 @@ function abrirEditorOracao(o, aoSalvar) {
   (x.id ? f.texto : f.titulo).focus();
 }
 
+// Uma oração que já existe com o mesmo título, ou com o texto quase igual (60% ou mais das sequências de 3 palavras)
+function oracaoParecida(titulo, texto) {
+  const n = t => semAcento(t || '').replace(/[^a-z0-9]+/g, ' ').trim();
+  const nt = n(titulo), tri = trigramasLetra(texto);
+  let melhor = null, nota = 0;
+  for (const o of Oracoes.lista) {
+    if (nt && n(o.titulo) === nt) return o;
+    const t2 = trigramasLetra(o.texto);
+    if (!tri.size || !t2.size) continue;
+    let comum = 0; tri.forEach(x => t2.has(x) && comum++);
+    const j = comum / (tri.size + t2.size - comum);
+    if (j > nota) { nota = j; melhor = o; }
+  }
+  return nota >= 0.6 ? melhor : null;
+}
+
 async function salvarOracaoDoEditor() {
   const f = $('#formOracao');
   const antiga = Oracoes.lista.find(o => o.id === f.dataset.id);
@@ -178,7 +209,22 @@ function ligarOracoes() {
     if (row) abrirEditorOracao(Oracoes.lista.find(o => o.id === row.dataset.id));
   });
   // Salva no envio do formulário (mais confiável que o evento "close" do diálogo)
-  $('#formOracao').addEventListener('submit', e => { if (e.submitter?.value === 'salvar') salvarOracaoDoEditor(); });
+  $('#formOracao').addEventListener('submit', e => {
+    if (e.submitter?.value !== 'salvar') return;
+    const f = $('#formOracao');
+    // oração NOVA parecida com uma que já existe: oferece usar a existente em vez de criar outra (como nos cantos)
+    if (!f.dataset.id) {
+      const p = oracaoParecida(f.titulo.value, f.texto.value);
+      if (p && confirm(`Já existe uma oração parecida:\n\n"${p.titulo}" (${p.categoria || 'Outras'})\n\n` +
+        'OK = usar essa (não cria outra)\nCancelar = salvar esta como uma oração nova')) {
+        e.preventDefault();
+        $('#dlgOracao').close();
+        if (aoSalvarOracao) aoSalvarOracao(p); else abrirItem({ tipo: 'oracao', oracaoId: p.id });
+        return toast(`Usando a oração que já existia: "${p.titulo}".`);
+      }
+    }
+    salvarOracaoDoEditor();
+  });
   $('#btnExcluirOracao').addEventListener('click', async () => {
     const id = $('#formOracao').dataset.id;
     if (!id || !confirm('Excluir esta oração? Os roteiros que a usam ficarão com o espaço vazio.')) return;
