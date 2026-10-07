@@ -49,13 +49,25 @@ async function salvarNovaCamera() {
   abrirItem({ tipo: 'midia', midiaId: c.id, loop: false });
 }
 
+// Trocar o nome (ex.: "Câmera NDI 1" → "Câmera do altar"): o dispositivo (rótulo do NDI/webcam) continua o mesmo
+async function renomearCamera(c) {
+  const nome = (prompt('Nome da câmera (ex.: Câmera do altar, Câmera do coro):', c.nome) || '').trim();
+  if (!nome || nome === c.nome) return;
+  c.nome = nome;
+  await DB.salvar('midias', c);
+  if (typeof renderMidias === 'function') renderMidias();
+  renderCameraAtiva();
+  renderCabecalho(); renderSlides();
+  if (typeof agendarEstadoCelular === 'function') agendarEstadoCelular();
+}
+
 // ---------- Centro: prévia local + botões ----------
 
 function htmlCamera(it) {
   const c = cameraDe(it), noAr = Camera.ativa === c.id;
   return `<div class="player camera" data-id="${c.id}">
     <div class="pl-topo"><span class="tag t-midia">Câmera</span><span class="sutil">${esc(c.rotulo)}</span></div>
-    <div class="pl-nome">${esc(c.nome)}</div>
+    <div class="pl-nome">${esc(c.nome)} <button class="pl-renomear" data-cam="renomear" title="Trocar o nome da câmera">✎</button></div>
     <video id="camPrevia" class="cam-previa" autoplay muted playsinline></video>
     <div class="pl-botoes">
       <button class="primario grande" data-cam="mostrar">${noAr ? '📷 No telão' : '📷 Mostrar no telão'}</button>
@@ -172,6 +184,7 @@ function ligarCamera() {
     if (!b || !c) return;
     if (b.dataset.cam === 'mostrar') mostrarCamera(c, S.atual.item);
     else if (b.dataset.cam === 'parar') pararCamera();
+    else if (b.dataset.cam === 'renomear') renomearCamera(c);
   });
   $('#slides').addEventListener('change', e => { if (e.target.dataset?.cam === 'letra') definirLetraCamera(e.target.checked); });
   $('#cameraAtiva').addEventListener('change', e => { if (e.target.dataset?.camativa === 'letra') definirLetraCamera(e.target.checked); });

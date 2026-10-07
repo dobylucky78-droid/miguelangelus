@@ -3,7 +3,8 @@
  * Câmeras PTZ (mover, zoom, posições prontas) por VISCA na rede — as mesmas do plugin "PTZ Controls" do OBS.
  * Assim dá para mexer na câmera pelo computador do telão (ou pelo celular, ou por um joystick USB) sem ligar o da transmissão.
  * A configuração fica na câmera (Mídia → Câmeras): c.ptz = { ip, porta, protocolo }, c.ptzPosicoes = [{ n, nome }].
- * As posições são gravadas NA PRÓPRIA CÂMERA (presets VISCA 1, 2, 3…); aqui só guardamos os nomes.
+ * As posições são gravadas NA PRÓPRIA CÂMERA (presets VISCA, por número); aqui só guardamos os nomes. As que já estão
+ * na câmera (as do OBS usam 0–15) entram pelo "Trazer posições da câmera", só para chamar; as novas gravam do nº 20 em diante.
  * Usa S, Midia, Camera, DB, toast, esc, renderCameraAtiva, renderSlides… (em tempo de execução).
  */
 const PTZ = { mov: '', parada: 0, pad: null, padEstado: '', padTempo: 0, padZoom: 0, padBotoes: [], alvo: null };
@@ -69,16 +70,51 @@ async function salvarCameraPtz(c) {
   if (typeof agendarEstadoCelular === 'function') agendarEstadoCelular();
 }
 
+// Posições novas gravam a partir do nº 20: os números baixos costumam ser os do OBS (ele usa 0–15) e gravar por cima
+// apagaria a posição de lá. 95–99 ficam de fora (em muitas câmeras chamam o menu da própria câmera).
+const PTZ_PRIMEIRA_NOVA = 20;
 async function guardarPosicao(c) {
-  const nome = (prompt('Nome desta posição (ex.: Altar, Ambão, Coral, Geral):') || '').trim();
-  if (!nome) return;
   const usados = new Set((c.ptzPosicoes || []).map(p => p.n));
-  let n = 1; while (usados.has(n)) n++;
+  let n = PTZ_PRIMEIRA_NOVA; while (usados.has(n) || (n >= 95 && n <= 99)) n++;
+  if (n > 127) return toast('A câmera não tem mais números livres para posições.');
+  const nome = (prompt(`Gravar NA CÂMERA a posição em que ela está agora, no nº ${n}.\n` +
+    `(As posições que já estavam na câmera, como as do OBS, não são tocadas.)\n\nNome desta posição (ex.: Altar, Ambão, Coral, Geral):`) || '').trim();
+  if (!nome) return;
   ptzGravar(c, n);
   c.ptzPosicoes = [...(c.ptzPosicoes || []), { n, nome }];
   await salvarCameraPtz(c);
   renderSlides();
   toast(`📍 Posição "${nome}" gravada na câmera (nº ${n}).`);
+}
+
+// Posições que JÁ estão gravadas na câmera (ex.: as do OBS): entram na lista só para chamar — nada é gravado
+async function trazerPosicoes(c) {
+  const r = prompt('Quais posições já estão gravadas na câmera (por exemplo, pelo OBS)?\n' +
+    'Elas entram na lista só para chamar — nada é gravado na câmera. Depois, ✎ troca o nome.\n\nNúmeros (ex.: 0-15 ou 1, 2, 5):', '0-15');
+  if (!r) return;
+  const nums = new Set();
+  for (const parte of r.split(/[,;\s]+/).filter(Boolean)) {
+    const m = /^(\d+)(?:-(\d+))?$/.exec(parte);
+    if (!m) return toast(`Não entendi "${parte}". Use, por exemplo, 0-15 ou 1, 2, 5.`);
+    for (let k = +m[1]; k <= +(m[2] ?? m[1]) && k <= 127; k++) nums.add(k);
+  }
+  const usados = new Set((c.ptzPosicoes || []).map(p => p.n));
+  const novas = [...nums].filter(n => !usados.has(n)).sort((a, b) => a - b).map(n => ({ n, nome: `Posição ${n}` }));
+  if (!novas.length) return toast('Essas posições já estão na lista.');
+  c.ptzPosicoes = [...(c.ptzPosicoes || []), ...novas];
+  await salvarCameraPtz(c);
+  renderSlides();
+  toast(`📍 ${novas.length} posição(ões) da câmera na lista. Clique em ✎ para dar nome.`);
+}
+
+async function renomearPosicao(c, n) {
+  const p = (c.ptzPosicoes || []).find(x => x.n === n);
+  if (!p) return;
+  const nome = (prompt(`Nome da posição nº ${n} (ex.: Altar, Ambão, Coral, Geral):`, p.nome) || '').trim();
+  if (!nome || nome === p.nome) return;
+  p.nome = nome;
+  await salvarCameraPtz(c);
+  renderSlides();
 }
 
 async function apagarPosicao(c, n) {
@@ -115,8 +151,9 @@ function htmlPtz(c) {
         <label class="campo">Velocidade <input type="range" min="0.1" max="1" step="0.1" value="${PTZ.vel || 0.5}" data-ptzvel></label></div>
       <div class="ptz-pos">
         <div class="sutil pequeno">Posições prontas (um clique leva a câmera até lá):</div>
-        <div class="linha" style="flex-wrap:wrap">${posicoes.map(x => `<span class="ptz-p"><button data-ptzir="${x.n}">📍 ${esc(x.nome)}</button><button class="ptz-x" data-ptzdel="${x.n}" title="Tirar da lista">✕</button></span>`).join('')}
-          <button data-ptz="guardar" class="primario" title="Grava na câmera a posição em que ela está agora">＋ Guardar posição atual</button></div>
+        <div class="linha" style="flex-wrap:wrap">${posicoes.map(x => `<span class="ptz-p"><button data-ptzir="${x.n}" title="Posição nº ${x.n} da câmera">📍 ${esc(x.nome)}</button><button class="ptz-x" data-ptzren="${x.n}" title="Trocar o nome">✎</button><button class="ptz-x" data-ptzdel="${x.n}" title="Tirar da lista (a câmera continua com ela)">✕</button></span>`).join('')}
+          <button data-ptz="trazer" title="As posições que já estão gravadas na câmera (ex.: pelo OBS) entram na lista, só para chamar">📥 Trazer posições da câmera</button>
+          <button data-ptz="guardar" class="primario" title="Grava na câmera a posição em que ela está agora (a partir do nº ${PTZ_PRIMEIRA_NOVA}, sem tocar nas do OBS)">＋ Guardar posição atual</button></div>
       </div>
     </div>` : '<p class="sutil pequeno">Informe o IP para aparecerem os controles.</p>'}
   </details>`;
@@ -185,10 +222,12 @@ function ligarPtz() {
   slides.addEventListener('click', e => {
     const c = cameraDe(S.atual?.item);
     if (!c) return;
-    const b = e.target.closest('[data-ptz],[data-ptzir],[data-ptzdel]');
+    const b = e.target.closest('[data-ptz],[data-ptzir],[data-ptzdel],[data-ptzren]');
     if (!b) return;
     if (b.dataset.ptz === 'home') ptzHome(c);
     else if (b.dataset.ptz === 'guardar') guardarPosicao(c);
+    else if (b.dataset.ptz === 'trazer') trazerPosicoes(c);
+    else if (b.dataset.ptzren) renomearPosicao(c, +b.dataset.ptzren);
     else if (b.dataset.ptzir) ptzIrPara(c, +b.dataset.ptzir);
     else if (b.dataset.ptzdel) apagarPosicao(c, +b.dataset.ptzdel);
   });

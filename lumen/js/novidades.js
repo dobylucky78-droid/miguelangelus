@@ -5,6 +5,12 @@
  * A versão mais nova fica em cima. Ao gerar uma versão nova, acrescente a entrada dela aqui.
  */
 const NOVIDADES = [
+  { versao: '1.5.9', data: '2026-10-07', itens: [
+    'Câmeras PTZ: "📥 Trazer posições da câmera" herda as posições que já estão gravadas na câmera — elas entram na lista só para chamar, sem gravar nada na câmera.',
+    'Cada posição tem ✎ para trocar o nome (ex.: "Posição 3" → "Ambão").',
+    '"Guardar posição atual" grava as posições novas a partir do nº 20 e mostra o número antes de gravar, sem tocar nas que a câmera já tinha.',
+    'O nome da câmera pode ser trocado depois de criada (✎ ao lado do nome).',
+  ] },
   { versao: '1.5.8', data: '2026-10-07', itens: [
     '📢 Avisos paroquiais: novo item "Avisos" no roteiro, com uma tela própria no telão — o título numa faixa colorida e cada aviso num cartão. Em Ferramentas → 📢 Avisos paroquiais ficam os avisos programados (de quando até quando valem e para qual comunidade): eles entram sozinhos nas Missas do período. Também dá para escrever avisos só de uma Missa e escolher o título, o ícone, as cores e quantos avisos por slide. Os roteiros novos já vêm com o item Avisos antes da bênção final.',
     'Avisos salvos: na aba "Outro aviso" do botão Aviso ficam avisos prontos — já vêm "aniversariantes ao presbitério" e "crianças ao presbitério". Clique para usar (e editar), ▶ para mostrar direto, e 💾 para salvar um aviso novo ou salvar por cima. Também no celular.',

@@ -214,6 +214,7 @@ code { background: var(--painel2); padding: 1px 4px; border-radius: 4px; }
 .player { max-width: 640px; margin: 10px auto; background: var(--painel); border: 1px solid var(--borda); border-radius: 12px; padding: 18px 20px; display: flex; flex-direction: column; gap: 12px; }
 .pl-topo { display: flex; gap: 8px; align-items: center; font-size: 12.5px; }
 .pl-nome { font-size: 20px; font-weight: 600; }
+.pl-renomear { font-size: 13px; padding: 1px 7px; vertical-align: middle; margin-left: 4px; }
 .pl-barra { padding: 0; height: 22px; }
 .pl-tempo { display: flex; justify-content: space-between; font-variant-numeric: tabular-nums; color: var(--sutil); font-size: 13px; margin-top: -6px; }
 .pl-botoes { display: flex; gap: 10px; }
