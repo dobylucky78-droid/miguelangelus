@@ -400,6 +400,10 @@ button.cards-sec:hover, button.cards-dia:hover { border-bottom-color: var(--bord
 .visao-cantos .n { opacity: .7; margin-left: 3px; }
 .lista .it .estrela { background: none; border: 0; padding: 0 2px; font-size: 15px; line-height: 1; color: var(--sutil, #888); cursor: pointer; flex: none; }
 .lista .it .estrela.on { color: var(--acento); }
+.lista .it .estrela.sem-cifra:not(.on) { opacity: .3; cursor: help; }
+.lista .it .estrela.sem-cifra.on { color: #e0a04a; }
+.aviso-semcifra { color: #f0b35a; border-color: #8a6420; }
+.aviso-semcifra.sel { background: #5a3f12; color: #ffd28a; }
 .lista .it .tit .ficha { display: block; font-size: 11px; color: var(--sutil, #888); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .sep-acervo { font-size: 12px; color: var(--sutil, #888); margin: 10px 2px 4px; padding-top: 6px; border-top: 1px dashed var(--borda); }
 .cx-cifra { border: 1px solid var(--borda); border-radius: 8px; padding: 6px 10px; margin: 6px 0; }
@@ -627,6 +631,29 @@ button.cards-sec:hover, button.cards-dia:hover { border-bottom-color: var(--bord
 .aviso-ativo .linha button { flex: 1; }
 .av-recentes { display: flex; flex-direction: column; gap: 4px; max-height: 150px; overflow: auto; }
 .av-recente { text-align: left; font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* Avisos salvos (aba "Outro aviso") */
+.av-salvos { display: flex; flex-direction: column; gap: 4px; max-height: 170px; overflow: auto; }
+.av-salvo { display: flex; gap: 4px; }
+.av-salvo-txt { flex: 1; min-width: 0; text-align: left; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.av-salvo.sel .av-salvo-txt { border-color: var(--acento); box-shadow: 0 0 0 1px var(--acento); }
+.av-salvo-ir { flex: none; width: 34px; padding: 0; }
+/* Avisos paroquiais */
+#dlgAvisosPar { width: min(820px, 94vw); }
+.ap-lista { display: flex; flex-direction: column; gap: 6px; max-height: 34vh; overflow: auto; }
+.ap-item { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; padding: 7px 10px; border: 1px solid var(--borda); border-left: 4px solid var(--ok, #3fb37f); border-radius: 7px; background: var(--painel2); }
+.ap-item.agendado { border-left-color: #5a9cf0; }
+.ap-item.vencido { border-left-color: #777; opacity: .6; }
+.ap-item.sel { box-shadow: 0 0 0 1px var(--acento); }
+.ap-txt { grid-column: 1; white-space: pre-wrap; font-size: 13.5px; }
+.ap-info { grid-column: 1; font-size: 12px; color: var(--sutil); }
+.ap-sit { font-weight: 600; }
+.ap-bts { grid-column: 2; grid-row: 1 / span 2; display: flex; gap: 4px; align-items: center; }
+.ap-form { border: 1px solid var(--borda); border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 6px; }
+.ap-estilo summary { cursor: pointer; font-weight: 600; margin-bottom: 8px; }
+.ap-estilo input[type=color] { width: 54px; height: 30px; padding: 2px; }
+.ape-amostra { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 12px 18px; border-radius: 8px; min-width: 300px; }
+.ape-faixa { padding: 4px 18px; border-radius: 999px; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; }
+.ape-cartao { align-self: stretch; padding: 5px 10px; border-left: 4px solid; border-radius: 5px; background: rgba(255,255,255,.08); font-size: 13px; }
 
 /* Item "Imagem + texto" (slide híbrido) */
 .t-imagem { background: #1f3340; color: #9fd8ff; }
@@ -725,6 +752,7 @@ button.cards-sec:hover, button.cards-dia:hover { border-bottom-color: var(--bord
 .lit-auto .campo { flex: 0 0 auto; }
 
 .t-homilia { background: #3b2a12; color: #ffd27a; }
+.t-avisos { background: #46161b; color: #ff9aa2; }
 
 /* Sincronização (nuvem) */
 .sync-abertura { position: fixed; inset: 0; z-index: 50; background: rgba(10, 12, 16, .82); display: flex; align-items: center; justify-content: center; }
@@ -765,6 +793,7 @@ html[data-tema-app="claro"] .t-midia { background: #f5e6fb; color: #8a3aa8; }
 html[data-tema-app="claro"] .t-oracao { background: #edf5dc; color: #5a7a1c; }
 html[data-tema-app="claro"] .t-imagem, html[data-tema-app="claro"] .t-apres { background: #e1f0fa; color: #1f6a99; }
 html[data-tema-app="claro"] .t-homilia { background: #fbefd6; color: #8a5a10; }
+html[data-tema-app="claro"] .t-avisos { background: #fde3e5; color: #9b1c27; }
 html[data-tema-app="claro"] .tocando { background: #f7effb; border-color: #d9b8e8; }
 html[data-tema-app="claro"] .toc-tit { color: #8a3aa8; }
 html[data-tema-app="claro"] .aviso-ativo { background: #fdecea; border-color: #e3a29b; }

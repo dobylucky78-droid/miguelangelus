@@ -85,7 +85,12 @@ function ligarFormatacao() {
     if (bt && Formato.alvo) aplicarFormato(Formato.alvo, TAGS[bt.dataset.fmt]);
   });
   document.addEventListener('focusin', e => {
-    if (e.target.tagName === 'TEXTAREA') { clearTimeout(Formato.timer); Formato.alvo = e.target; posicionarBarra(); }
+    if (e.target.tagName !== 'TEXTAREA') return;
+    clearTimeout(Formato.timer); Formato.alvo = e.target;
+    // janela aberta (editor de canto, de oração…) fica "por cima de tudo": a barra vai para dentro dela, senão some atrás
+    const casa = e.target.closest('dialog[open]') || document.body;
+    if (b.parentNode !== casa) casa.appendChild(b);
+    posicionarBarra();
   });
   document.addEventListener('focusout', e => {
     if (e.target === Formato.alvo) Formato.timer = setTimeout(() => { Formato.alvo = null; b.hidden = true; }, 150);
@@ -100,4 +105,7 @@ function ligarFormatacao() {
   // a barra acompanha a caixa (rolagem, redimensionar, diálogos)
   addEventListener('scroll', () => { if (!b.hidden) posicionarBarra(); }, true);
   addEventListener('resize', () => { if (!b.hidden) posicionarBarra(); });
+  // a janela muda de tamanho (abre uma seção, aparece uma lista): a caixa anda e a barra vai junto
+  document.addEventListener('toggle', () => { if (!b.hidden) setTimeout(posicionarBarra, 0); }, true);
+  setInterval(() => { if (!b.hidden) posicionarBarra(); }, 400);
 }

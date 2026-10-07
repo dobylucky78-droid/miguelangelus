@@ -110,6 +110,7 @@ function acaoMenu(acao) {
     case 'pix': return alternarPix();
     case 'temaLiturgico': return alternarTemaLiturgico();
     case 'roteirosRepetidos': return oferecerJuntarRoteiros(true);
+    case 'avisosParoquiais': return abrirAvisosPar();
   }
 }
 

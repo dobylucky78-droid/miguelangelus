@@ -3,7 +3,7 @@
  * Sincronização entre os computadores da paróquia (só no aplicativo).
  * Onde: Google Drive da paróquia (login dentro do app) ou uma pasta do computador (Google Drive para computador, OneDrive…).
  * Na nuvem, cada registro é um arquivo:  roteiros/<id>.json, cantos/<id>.json, oracoes/…, biblias/…, apresentacoes/…,
- *   config/agenda.json, config/eucaristia.json; apagados em removidos/<store>__<id>.json; mídias em midias/<id>.json (+ .bin).
+ *   config/agenda.json, config/eucaristia.json, config/pix.json, config/avisos.json; apagados em removidos/<store>__<id>.json; mídias em midias/<id>.json (+ .bin).
  * Ao abrir: baixa o que mudou (vale o mais novo, pelo campo "atualizado"). Ao fechar e de tempos em tempos: envia o que mudou aqui.
  * Mídias (vídeo/áudio) só sobem se a pessoa quiser, e só descem quando alguém pede "Baixar".
  * Os ajustes deste computador (telão, NDI, câmeras…) NÃO são sincronizados.
@@ -13,7 +13,7 @@
 const Sync = { estado: { vistos: {}, enviados: {}, removidos: [] }, pedidos: {}, seq: 0, sujo: false, ocupado: false, ultimo: 0, erro: null, timer: 0 };
 
 const GRUPOS_SYNC = [
-  { sub: 'config', store: 'config', filtro: r => r.id === 'agenda' || r.id === 'eucaristia' || r.id === 'pix' },
+  { sub: 'config', store: 'config', filtro: r => r.id === 'agenda' || r.id === 'eucaristia' || r.id === 'pix' || r.id === 'avisos' },
   { sub: 'roteiros', store: 'roteiros' },
   { sub: 'cantos', store: 'cantos' },
   { sub: 'oracoes', store: 'oracoes' },
@@ -207,6 +207,7 @@ async function recarregarDadosDaNuvem() {
   Midia.lista = await DB.todos('midias');
   const ag = await DB.obter('config', 'agenda'); if (ag?.valor) Object.assign(Agenda.dados, ag.valor);
   if (typeof carregarPix === 'function') await carregarPix();
+  if (typeof carregarAvisosPar === 'function') await carregarAvisosPar();
   try { renderCantos(); renderOracoes(); renderMidias(); renderRoteiroCab(); renderRoteiroLista(); } catch (_) {}
   if (typeof oferecerJuntarRoteiros === 'function') setTimeout(() => oferecerJuntarRoteiros(), 500);   // cópias de outro computador
 }

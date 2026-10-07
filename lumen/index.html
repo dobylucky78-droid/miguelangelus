@@ -21,7 +21,7 @@
     </div>
     <div class="splash-info">
       <div class="splash-gratis"><b>Gratuito · uso livre</b></div>
-      <div>Versão 1.5.7</div>
+      <div>Versão 1.5.8</div>
       <div>© 2026 · PASCOM</div>
       <div><b>Paróquia São José Operário</b></div>
     </div>
@@ -111,6 +111,7 @@
         <button data-menu="celular">📱 Controle pelo celular…</button>
         <hr>
         <button data-menu="temaLiturgico">✝ Temas por tempo litúrgico…</button>
+        <button data-menu="avisosParoquiais">📢 Avisos paroquiais…</button>
         <button data-menu="roteirosRepetidos">🧹 Juntar roteiros repetidos…</button>
       </div>
     </div>
@@ -344,6 +345,7 @@
         <button data-add="ordinario">Parte da Missa</button>
         <button data-add="homilia" title="Slide para a homilia (fica no ar o tempo todo)">Homilia</button>
         <button data-add="texto">Texto</button>
+        <button data-add="avisos" title="Tela de avisos paroquiais: título chamativo e os avisos programados para a data">Avisos</button>
         <button data-add="midia" title="Vídeo, áudio, apresentação ou câmera">Mídia</button>
       </div>
     </section>
@@ -740,9 +742,19 @@
       <label class="campo">Nome da criança <input id="avCrianca" placeholder="ex.: Maria Eduarda" autocomplete="off"></label>
     </div>
     <label class="campo" id="avCampoLocal">Favor comparecer… <input id="avLocal" placeholder="à porta da igreja"></label>
+    <div id="avSalvos" hidden>
+      <div class="campo">Avisos salvos — clique para usar (e editar), ou ▶ para mostrar direto</div>
+      <div id="avSalvosLista" class="av-salvos"></div>
+    </div>
     <label class="campo">Texto que vai aparecer (pode editar)
       <textarea id="avTexto" rows="3" placeholder="Escreva o aviso…"></textarea>
     </label>
+    <div class="linha" id="avSalvarLinha" hidden>
+      <button type="button" id="avSalvar">💾 Salvar este aviso</button>
+      <button type="button" id="avSalvarNovo" hidden>Salvar como novo</button>
+      <button type="button" id="avApagarSalvo" class="perigo" hidden>🗑 Apagar o salvo</button>
+      <span class="sutil pequeno">Salvar é opcional: dá para mostrar sem salvar.</span>
+    </div>
     <div class="linha">
       <label class="campo">Tempo na tela
         <select id="avDuracao">
@@ -762,6 +774,55 @@
       <span class="espaco"></span>
       <button value="cancelar">Cancelar</button>
       <button value="mostrar" id="avMostrar" class="primario">Mostrar na tela</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- ============ Avisos paroquiais (programados + aparência da tela) ============ -->
+<dialog id="dlgAvisosPar">
+  <form method="dialog" class="form">
+    <h2>📢 Avisos paroquiais</h2>
+    <p class="sutil" style="margin:0">Os avisos programados entram sozinhos no item <b>Avisos</b> dos roteiros das Missas do período
+      (e da comunidade escolhida). No roteiro, dá para acrescentar avisos só daquela Missa.</p>
+    <div id="apLista" class="ap-lista"></div>
+    <div class="ap-form">
+      <label class="campo">Aviso
+        <textarea id="apTexto" rows="3" placeholder="Ex.: Inscrições abertas para a Crisma até o dia 30, na secretaria."></textarea></label>
+      <div class="linha">
+        <label class="campo">A partir de <input type="date" id="apInicio"></label>
+        <label class="campo">Até (inclusive) <input type="date" id="apFim"></label>
+        <label class="campo">Comunidade <select id="apLocal"></select></label>
+        <span class="espaco"></span>
+        <button type="button" id="apCancelar" hidden>Cancelar</button>
+        <button type="button" id="apAdicionar" class="primario">+ Adicionar</button>
+      </div>
+      <p class="sutil pequeno" style="margin:0">Sem data final: o aviso continua até ser apagado.</p>
+    </div>
+    <details class="ap-estilo">
+      <summary>🎨 Aparência da tela de avisos</summary>
+      <div class="linha">
+        <label class="campo">Título <input id="apeTitulo" placeholder="Avisos Paroquiais"></label>
+        <label class="campo">Ícone <select id="apeIcone"></select></label>
+        <label class="campo">Faixa do título <input type="color" id="apeCorTitulo"></label>
+        <label class="campo">Letra do título <input type="color" id="apeCorTituloTexto"></label>
+      </div>
+      <div class="linha">
+        <label class="campo">Fundo
+          <select id="apeFundo"><option value="tema">O do tema do telão</option><option value="cor">Uma cor própria</option></select></label>
+        <span id="apeCoresFundo" class="linha">
+          <label class="campo">Cor do fundo <input type="color" id="apeCorFundo"></label>
+          <label class="campo">Cor da letra <input type="color" id="apeCorTexto"></label>
+        </span>
+        <label class="campo">Avisos por slide
+          <select id="apePorSlide"><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option></select></label>
+      </div>
+      <label class="check"><input type="checkbox" id="apeNoRoteiro"> Colocar o item <b>Avisos</b> sozinho nos roteiros novos (antes da bênção final)</label>
+      <div class="linha"><div id="apeAmostra" class="ape-amostra"></div><span class="espaco"></span><button type="button" id="apePadrao">Voltar ao padrão</button></div>
+    </details>
+    <div class="linha">
+      <button type="button" id="apLimpar" class="perigo" hidden>Apagar vencidos</button>
+      <span class="espaco"></span>
+      <button value="fechar" class="primario">Fechar</button>
     </div>
   </form>
 </dialog>
@@ -834,7 +895,7 @@
       <figure><img src="img/brasao-paroquia.webp" alt="Brasão da Paróquia São José Operário"><figcaption>Paróquia São José Operário (RJ)</figcaption></figure>
       <figure><img src="img/brasao-pascom.webp" alt="Logotipo da PASCOM"><figcaption>PASCOM</figcaption></figure>
     </div>
-    <p class="sutil pequeno" id="versaoApp">Versão 1.5.7</p>
+    <p class="sutil pequeno" id="versaoApp">Versão 1.5.8</p>
     <div class="linha"><span class="espaco"></span><button value="ok" class="primario">OK</button></div>
   </form>
 </dialog>
@@ -1067,6 +1128,7 @@
 <script src="js/eucaristia.js"></script>
 <script src="js/liturgiadia.js"></script>
 <script src="js/avisos.js"></script>
+<script src="js/avisosparoquiais.js"></script>
 <script src="js/apresentacoes.js"></script>
 <script src="js/calendario.js"></script>
 <script src="js/transmissao.js"></script>

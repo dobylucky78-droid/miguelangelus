@@ -115,12 +115,23 @@ const fichaCanto = c => [c?.autor, c?.cd ? 'CD ' + c.cd : ''].filter(Boolean).jo
 async function alternarFavorito(id) {
   const c = S.cantos.find(x => x.id === id);
   if (!c) return;
+  // favorito só com cifra (os favoritos são o repertório dos músicos); tirar dos favoritos pode sempre
+  if (!c.favorito && !temCifra(c)) {
+    toast(`"${c.titulo}" ainda não tem cifra: cole a cifra para poder favoritar.`);
+    abrirEditorCanto(c);
+    $('#cxCifra').open = true;
+    $('#formCanto').cifra.focus();
+    return;
+  }
   c.favorito = !c.favorito;
   await DB.salvar('cantos', c);
   aposMudarCantos();
   toast(c.favorito ? `⭐ "${c.titulo}" nos favoritos` : `"${c.titulo}" saiu dos favoritos`);
 }
 const temFavoritos = () => S.cantos.some(c => c.favorito);
+const temCifra = c => !!(c?.cifra || '').trim();
+// favoritos marcados antes da regra "só com cifra" (ou que perderam a cifra): a aba Cantos avisa e lista
+const favoritosSemCifra = () => S.cantos.filter(c => c.favorito && !temCifra(c));
 // No item "canto" do roteiro: a lista de escolha mostra só os favoritos? (este computador lembra; liga sozinho quando há favoritos)
 function soFavoritosNoRoteiro() {
   if (!temFavoritos()) return false;
@@ -273,12 +284,16 @@ function ligarCifras() {
     toast('Letra montada a partir da cifra. Confira o refrão e as estrofes.');
   });
   $('#visaoCantos').addEventListener('click', e => {
+    if (e.target.closest('[data-semcifra]')) { S.soFavSemCifra = !S.soFavSemCifra; return renderCantos(); }
     const b = e.target.closest('[data-visao]');
     if (!b) return;
+    S.soFavSemCifra = false;
     try { localStorage.setItem('lumen.cantosVisao', b.dataset.visao); } catch {}
     renderCantos();
   });
   $('#btnExportarFav').addEventListener('click', exportarFavoritos);
+  $('#formCanto').cifra.addEventListener('input', travarFavoritoSemCifra);
+  $('#formCanto').favorito.addEventListener('change', travarFavoritoSemCifra);
   $('#itemCab').addEventListener('change', e => {
     if (!e.target.matches('[data-sofav]')) return;
     try { localStorage.setItem('lumen.soFavoritos', e.target.checked ? '1' : '0'); } catch {}

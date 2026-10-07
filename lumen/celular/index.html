@@ -308,6 +308,8 @@ function nomePadrao() {
 // ---------- texto do slide (igual ao telão: P./T. coloridos, resposta do povo em negrito) ----------
 function htmlSlide(s, curto) {
   if (!s) return '';
+  if (s.avisos) return `<div><b>${esc(s.avisos.icone)} ${esc(s.avisos.titulo)}</b>${s.avisos.pag ? ` <small>${esc(s.avisos.pag)}</small>` : ''}` +
+    s.avisos.itens.map(t => '<br>• ' + esc(t).replace(/&lt;(\/?)(b|i|u)&gt;/gi, '<$1$2>')).join('') + '</div>';
   if (s.versos) return '<div>' + s.versos.map(v => `<sup>${esc(v.n)}</sup>${esc(v.t)}`).join(' ') + '</div>';
   const cfg = est?.cfg || {};
   let povo = false;
@@ -412,8 +414,11 @@ function render() {
   $('#temas').innerHTML = est.temas.map(t => `<button class="${est.tema === t.id ? 'sel' : ''}" data-tema="${esc(t.id)}" style="background:${esc(t.fundo)};color:${esc(t.texto)}" title="${esc(t.nome)}">Aa<small>${esc(t.nome)}</small></button>`).join('');
 
   // recentes do aviso
-  $('#avRecentes').innerHTML = est.recentes.length ? '<div class="sutil" style="margin-bottom:6px">Recentes</div>' +
-    est.recentes.map((r, i) => `<button class="rec" data-rec="${i}">📢 ${esc(r)}</button>`).join('') : '';
+  const salvos = est.salvos || [];
+  $('#avRecentes').innerHTML = (salvos.length ? '<div class="sutil" style="margin-bottom:6px">Avisos salvos</div>' +
+    salvos.map((r, i) => `<button class="rec" data-salvo="${i}">💾 ${esc(r)}</button>`).join('') : '') +
+    (est.recentes.length ? '<div class="sutil" style="margin:8px 0 6px">Recentes</div>' +
+    est.recentes.map((r, i) => `<button class="rec" data-rec="${i}">📢 ${esc(r)}</button>`).join('') : '');
 }
 
 // ---------- modo músico: cifras dos cantos do roteiro, acompanhando o telão ----------
@@ -476,7 +481,7 @@ function renderMusico(refazer) {
           <span class="noar" hidden>no telão</span>
           ${m.cifra ? `<div class="mc-tom"><button data-tr="${esc(m.titulo)}" data-p="-1">−</button><b title="Tom">${esc(tom)}</b><button data-tr="${esc(m.titulo)}" data-p="1">+</button></div>` : ''}</div>
         ${m.cifra ? `<pre class="cifra">${htmlCifra(m, p)}</pre>`
-          : `<div class="sem">${(m.letra || 'Sem letra.').split('\n').map((l, k) => `<span class="l" data-k="${k}">${esc(l) || ' '}</span>`).join('\n')}</div>
+          : `<div class="sem">${(m.letra || 'Sem letra.').split('\n').map((l, k) => `<span class="l" data-k="${k}">${esc(l).replace(/&lt;(\/?)(b|i|u)&gt;/gi, '<$1$2>') || ' '}</span>`).join('\n')}</div>
              ${m.rezado ? '' : `<a class="cc" href="https://www.cifraclub.com.br/?q=${encodeURIComponent(m.titulo)}" target="_blank" rel="noopener">🔎 Abrir no Cifra Club</a>`}`}
       </div>`;
     }).join('') : '<p class="sutil">Nenhum canto no roteiro aberto.</p>';
@@ -697,6 +702,7 @@ document.addEventListener('click', e => {
     if (!confirm(`Abrir "${nome}" no computador?`)) return;
     cmd('roteiro', { id: b.dataset.rot }); trocando = false; renderRoteiros(); return toast('Roteiro aberto');
   }
+  if (b.dataset.salvo) { cmd('avisoSalvo', { i: +b.dataset.salvo }); $('#folhaAviso').hidden = true; return toast('Aviso no telão'); }
   if (b.dataset.rec) { cmd('avisoRecente', { i: +b.dataset.rec }); $('#folhaAviso').hidden = true; return toast('Aviso no telão'); }
 });
 $('#btAviso').addEventListener('click', () => { $('#folhaAviso').hidden = false; $('#avTexto').value = ''; });

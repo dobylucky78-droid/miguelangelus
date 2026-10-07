@@ -82,8 +82,9 @@ function estadoCelular() {
     prox,
     preto: !!live.preto, altar: !!live.altar, pix: !!S.pixNoAr, temPix: !!(typeof Pix !== 'undefined' && Pix.qr),
     projecao: !!(S.projWin && !S.projWin.closed),
-    aviso: Avisos.atual ? { texto: Avisos.atual.texto } : null,
-    recentes: Avisos.recentes.map(x => x.texto),
+    aviso: Avisos.atual ? { texto: semMarcasAviso(Avisos.atual.texto) } : null,
+    recentes: Avisos.recentes.map(x => semMarcasAviso(x.texto)),
+    salvos: AvPar.convites.map(x => semMarcasAviso(x.texto)),
     temas: TEMAS.map(t => { const c = t.id === 'ajustes' ? S.config : coresDoTema(t); return { id: t.id, nome: t.nome, fundo: c.corFundo || '#000', texto: c.corTexto || '#fff' }; }),
     tema: temaAtual(),
     cameras: Midia.lista.filter(m => m.tipo === 'camera').sort((x, y) => x.nome.localeCompare(y.nome, 'pt-BR')).map(c => ({ id: c.id, nome: c.nome,
@@ -141,6 +142,7 @@ function comandoCelular(c) {
       if (texto) mostrarAviso({ tipo: 'livre', texto, icone: ICONE_AVISO.livre, duracao: S.config.avisoDuracao ?? 60, pos: S.config.avisoPosicao || 'alto' });
       break;
     }
+    case 'avisoSalvo': { const r = AvPar.convites[+c.i]; if (r) mostrarAviso({ tipo: 'livre', texto: r.texto, icone: ICONE_AVISO.livre, duracao: S.config.avisoDuracao ?? 60, pos: S.config.avisoPosicao || 'alto' }); break; }
     case 'avisoRecente': { const r = Avisos.recentes[+c.i]; if (r) mostrarAviso({ ...r, duracao: S.config.avisoDuracao ?? 60, pos: S.config.avisoPosicao || 'alto' }); break; }
     case 'avisoRepetir': if (Avisos.atual) mostrarAviso(Avisos.atual); break;
     case 'avisoRetirar': retirarAviso(); break;

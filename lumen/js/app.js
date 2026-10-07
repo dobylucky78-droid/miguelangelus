@@ -324,7 +324,7 @@ function gerarSlides(item) {
   const slides = gerarSlidesBase(item);
   // a Homilia é sempre um slide só (a letra diminui para caber todas as leituras)
   // (e a "Capa do folheto" também: título, linha e edição juntos)
-  if (!S.config.quebraAuto || item.tipo === 'homilia' || (item.tipo === 'imagem' && item.layout === 'capa') ||
+  if (!S.config.quebraAuto || item.tipo === 'homilia' || item.tipo === 'avisos' || (item.tipo === 'imagem' && item.layout === 'capa') ||
     (item.tipo === 'canto' && !S.config.quebraCantos)) return slides;
   return slides.flatMap(limitarSlide);
 }
@@ -388,6 +388,8 @@ function gerarSlidesBase(item) {
     }
     case 'texto':
       return dividir(item.texto).map(t => ({ texto: t, rodape: item.titulo || '' }));
+    case 'avisos':
+      return slidesAvisos(item);          // avisosparoquiais.js
     case 'imagem': {
       // Slide híbrido: a mesma imagem em todos os slides do item; linha em branco separa os textos
       if (!item.imagem) return dividir(item.texto).map(t => ({ texto: t, rodape: item.titulo || '' }));
@@ -651,6 +653,11 @@ function tratarTecla(key) {
 // =====================================================================
 
 function htmlCartao(s) {
+  if (s.avisos) {
+    const fmt = t => esc(t).replace(/&lt;(\/?)(b|i|u)&gt;/gi, '<$1$2>').replace(/\n/g, ' ');
+    return `<b style="color:${s.avisos.corTitulo}">${esc(s.avisos.icone)} ${esc(s.avisos.titulo)}</b>${s.avisos.pag ? ` <small>${s.avisos.pag}</small>` : ''}` +
+      (s.avisos.itens.length ? s.avisos.itens.map(t => '<br>• ' + fmt(t)).join('') : '<br><i>(só o título)</i>');
+  }
   if (s.versos) return s.versos.map(v => `<sup>${esc(v.n)}</sup>${esc(v.t)}`).join(' ');
   let povo = false;
   const html = esc(s.texto).split('\n').map((l, i) => {
@@ -850,6 +857,16 @@ function renderCabecalho() {
              <label class="campo">Conclusão (padre)<textarea data-campo="conclusao" rows="3" placeholder="Ó Deus… Por Cristo, nosso Senhor.&#10;— Amém.">${esc(it.conclusao)}</textarea></label>
            </div>`;
       break;
+    case 'avisos': {
+      const { iso } = quandoDoItem(it);
+      const n = it.programados === false ? 0 : AvPar.lista.filter(a => vigente(a, iso, quandoDoItem(it).localId)).length;
+      h = `<div class="cab-linha"><span class="tag t-avisos">Avisos</span>
+             <input data-campo="titulo" class="estreito" value="${esc(it.titulo)}" placeholder="${esc(estiloAvisos().titulo)}" title="Título da tela (vazio: o da paróquia)">
+             <label class="check" title="Os avisos programados em Ferramentas → Avisos paroquiais, válidos em ${dataBR(iso)}"><input type="checkbox" data-campo="programados" ${it.programados !== false ? 'checked' : ''}> Avisos programados (${n} em ${dataBR(iso)})</label>
+             <span class="espaco"></span><button data-cmd="avisosParoquiais">📢 Avisos paroquiais…</button>${btnAdd}</div>
+           <textarea data-campo="extras" rows="3" placeholder="Avisos só desta Missa (opcional). Linha em branco separa um aviso do outro.">${esc(it.extras)}</textarea>`;
+      break;
+    }
     case 'prefacio':
     case 'eucaristica': {
       const pref = it.tipo === 'prefacio', id = pref ? it.prefId : it.oeId;
@@ -914,6 +931,10 @@ function resumoItem(it) {
       return { rot: 'Oração', tit: o ? o.titulo : 'escolher oração…', vazio: !o };
     }
     case 'preces': return { rot: 'Preces', tit: it.titulo || 'Oração dos Fiéis', vazio: !(it.texto || '').trim() };
+    case 'avisos': {
+      const n = avisosDoItem(it).length;
+      return { rot: 'Avisos', tit: `${it.titulo || estiloAvisos().titulo} · ${n ? n + ' aviso(s)' : 'só o título'}`, vazio: false };
+    }
     case 'prefacio': return { rot: 'Prefácio', tit: nomeEuc(it.prefId), vazio: !temTexto(it.prefId) };
     case 'eucaristica': return { rot: 'Or. Eucarística', tit: nomeEuc(it.oeId), vazio: !temTexto(it.oeId) };
     case 'midia': {
@@ -1009,6 +1030,7 @@ function novoItem(tipo) {
     case 'midia': return { ...base, midiaId: '', loop: false };
     case 'oracao': return { ...base, oracaoId: '' };
     case 'preces': return { ...base, titulo: 'Oração dos Fiéis', resposta: 'Senhor, escutai a nossa prece.', convite: '', texto: '', conclusao: '' };
+    case 'avisos': return { ...base, titulo: '', extras: '', programados: true };
   }
 }
 
@@ -1035,10 +1057,15 @@ function renderCantos() {
   const visao = visaoCantos(), nFav = S.cantos.filter(c => c.favorito).length;
   $('#visaoCantos').innerHTML = nFav ? `<button data-visao="favoritos" class="${visao === 'favoritos' ? 'sel' : ''}">⭐ Favoritos <span class="n">${nFav}</span></button>` +
     `<button data-visao="acervo" class="${visao === 'acervo' ? 'sel' : ''}">📚 Acervo completo <span class="n">${S.cantos.length}</span></button>`
-    : '<span class="sutil pequeno">Dica: marque ☆ nos cantos que a paróquia usa — eles ficam em "Favoritos", fáceis de achar.</span>';
+    : '<span class="sutil pequeno">Dica: marque ☆ nos cantos com cifra que a paróquia usa — eles ficam em "Favoritos", fáceis de achar.</span>';
   const soFav = visao === 'favoritos';
+  const semCifra = soFav ? favoritosSemCifra().length : 0;
+  if (!semCifra) S.soFavSemCifra = false;
+  if (semCifra) $('#visaoCantos').innerHTML += `<button data-semcifra class="aviso-semcifra ${S.soFavSemCifra ? 'sel' : ''}"
+    title="Favoritos sem cifra: cole a cifra ou tire dos favoritos (só se favorita canto com cifra)">⚠ ${semCifra} sem cifra</button>`;
   const lista = S.cantos
     .filter(c => !soFav || c.favorito)
+    .filter(c => !S.soFavSemCifra || !temCifra(c))
     .filter(c => !mom || (c.momento || 'Outros') === mom)
     .filter(c => !termo || (/^\d+[a-z]?$/.test(termo.replace(/^n[ºo°]?\s*/, '').replace('-', ''))
       ? String(c.numero || '').replace('-', '').toLowerCase() === termo.replace(/^n[ºo°]?\s*/, '').replace('-', '')   // "150" ou "nº 150" = número do cancioneiro
@@ -1056,7 +1083,7 @@ function renderCantos() {
   if (!S.cantos.length && !bruto) { el.innerHTML = '<p class="vazio">Nenhum canto ainda. Digite o nome de um canto acima, clique em <b>Novo</b> ou importe um folheto.</p>'; return; }
   const selId = S.atual && S.atual.rIdx < 0 && S.atual.item.tipo === 'canto' ? S.atual.item.cantoId : null;
   const linha = (c, tag = true) => `<div class="it ${c.id === selId ? 'sel' : ''}" data-id="${c.id}" title="Duplo clique para editar">
-      <button class="estrela ${c.favorito ? 'on' : ''}" data-fav="${c.id}" title="${c.favorito ? 'Tirar dos favoritos' : 'Marcar como favorito'}">${c.favorito ? '★' : '☆'}</button>
+      <button class="estrela ${c.favorito ? 'on' : ''} ${temCifra(c) ? '' : 'sem-cifra'}" data-fav="${c.id}" title="${c.favorito ? 'Tirar dos favoritos' + (temCifra(c) ? '' : ' (este favorito está sem cifra)') : temCifra(c) ? 'Marcar como favorito' : 'Sem cifra: cadastre a cifra para favoritar'}">${c.favorito ? '★' : '☆'}</button>
       ${tag ? `<span class="tag t-canto">${esc(c.momento || 'Outros')}</span>` : ''}<span class="tit">${esc(c.titulo)}${fichaCanto(c) ? `<small class="ficha">${esc(fichaCanto(c))}</small>` : ''}</span>${c.cifra ? '<span class="sutil pequeno" title="Tem cifra para os músicos">🎸</span>' : ''}${c.numero ? `<span class="sutil pequeno" title="${esc(c.fonte || '')}">nº ${esc(c.numero)}</span>` : ''}</div>`;
   // Nos favoritos, a busca mostra também o que há no acervo (abaixo)
   const doAcervo = soFav && termo ? S.cantos.filter(c => !c.favorito && (!mom || (c.momento || 'Outros') === mom) &&
@@ -1146,6 +1173,7 @@ function abrirEditorCanto(canto, momento, aoSalvar) {
   f.cd.value = c.cd || '';
   f.tom.value = c.tom || '';
   f.cifra.value = c.cifra || '';
+  travarFavoritoSemCifra();
   $('#cxCifra').open = !!c.cifra;
   $('#btnExcluirCanto').hidden = !c.id;
   aoSalvarCanto = aoSalvar || null;
@@ -1155,9 +1183,19 @@ function abrirEditorCanto(canto, momento, aoSalvar) {
   f.titulo.focus();
 }
 
+// ⭐ no editor: só com cifra. Um favorito antigo sem cifra continua marcado (dá para desmarcar), mas não se marca de novo.
+function travarFavoritoSemCifra() {
+  const f = $('#formCanto'), sem = !f.cifra.value.trim();
+  if (sem && !f.favorito.checked) f.favorito.disabled = true;
+  else f.favorito.disabled = false;
+  f.favorito.closest('label').title = sem ? 'Cole a cifra (em "🎸 Cifra para os músicos") para poder favoritar'
+    : 'Os favoritos aparecem primeiro na aba Cantos e na escolha do canto do roteiro';
+}
+
 async function salvarCantoDoEditor() {
   const f = $('#formCanto');
   const antigo = S.cantos.find(x => x.id === f.dataset.id) || {};
+  if (f.favorito.checked && !f.cifra.value.trim() && !antigo.favorito) f.favorito.checked = false;
   const c = {
     ...antigo,                      // mantém o que o editor não mostra (nº e fonte do cancioneiro, origem…)
     id: f.dataset.id || uid(),
@@ -1613,7 +1651,7 @@ async function criarRoteiroUnicoDoFolheto(pacote) {
   const rot = novoRoteiro(pacote.nome);
   rot.data = pacote.dataAlvo || pacote.data;   // data escolhida na janela (reaproveitando um folheto) ou a do folheto
   marcarCelebracaoDoFolheto(rot, pacote);
-  rot.itens = pacote.itens.map(i => ({ ...structuredClone(i), id: uid() }));
+  rot.itens = comAvisos(pacote.itens.map(i => ({ ...structuredClone(i), id: uid() })));
   S.roteiros.push(rot);
   await DB.salvar('roteiros', rot);
   return rot;
@@ -1701,7 +1739,7 @@ async function distribuirFolheto(modo) {
   for (const o of marcadas) {
     let r = roteiroDaCelebracao(o);
     if (r) {
-      r.itens = pacote.itens.map(i => ({ ...structuredClone(i), id: uid() }));
+      r.itens = comAvisos(pacote.itens.map(i => ({ ...structuredClone(i), id: uid() })));
       r.atualizado = Date.now();
       substituidos++;
     } else {
@@ -1881,6 +1919,8 @@ function ligarEventos() {
     if (cmd === 'editarCanto') {
       const c = S.cantos.find(c => c.id === it.cantoId);
       if (c) abrirEditorCanto(c);
+    } else if (cmd === 'avisosParoquiais') {
+      abrirAvisosPar();
     } else if (cmd === 'favoritarCanto') {
       alternarFavorito(it.cantoId);
     } else if (cmd === 'novoCanto') {
@@ -2232,6 +2272,7 @@ async function iniciar() {
   renderOracoes();
   ligarMenus();
   ligarAvisos();
+  ligarAvisosPar();
   ligarAgenda();
   ligarApresentacao();
   renderLocalRoteiro();
@@ -2264,7 +2305,7 @@ async function iniciar() {
   renderBiblia();
   renderCabecalho();
   renderEstadoProj();
-  $('#versaoApp').textContent = NO_APP ? 'Versão 1.5.7 · aplicativo para Windows' : 'Versão 1.5.7 · no navegador';
+  $('#versaoApp').textContent = NO_APP ? 'Versão 1.5.8 · aplicativo para Windows' : 'Versão 1.5.8 · no navegador';
   // pede armazenamento permanente (o navegador não apaga os dados para liberar espaço)
   try { navigator.storage?.persist?.(); } catch (_) {}
   enviarConfigTelao(); renderTemasRapidos();

@@ -393,6 +393,7 @@ async function criarRoteiroDaCelebracao(o, itens) {
     const modelo = o.tipo === 'Missa' ? (d.getDay() === 0 ? 'dominical' : 'semanal') : null;
     r.itens = modelo ? Ordinario.modelos[modelo].map(x => ({ id: uid(), ...structuredClone(x) })) : [];
   }
+  if (o.tipo === 'Missa' && typeof comAvisos === 'function') r.itens = comAvisos(r.itens);   // item Avisos antes da bênção
   r.celebracao = o.chave;
   r.data = o.iso;
   r.hora = o.hora;

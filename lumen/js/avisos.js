@@ -1,13 +1,14 @@
 'use strict';
 /*
  * Avisos na tela: faixa por cima do que estiver projetado (letra, leitura, vídeo ou tela preta),
- * sem tirar o slide do ar. Modelos prontos: veículo (placa) e criança; ou texto livre.
+ * sem tirar o slide do ar. Modelos prontos: veículo (placa) e criança; ou texto livre (com os avisos salvos).
  * Some sozinha depois do tempo escolhido. Os avisos recentes ficam só na memória (somem ao fechar o app).
  * Usa $, $$, S, enviar, esc, salvarConfig, abrirDialogo, toast... de app.js/menus.js (em tempo de execução).
  */
 
 const Avisos = { atual: null, timer: 0, tique: 0, recentes: [], tipo: 'veiculo', editado: false };
 
+const semMarcasAviso = t => String(t || '').replace(/<\/?[biu]>/gi, '');
 const ICONE_AVISO = { veiculo: '🚗', crianca: '🧒', livre: '📢' };
 
 function textoDoModelo() {
@@ -37,6 +38,8 @@ function tipoAviso(tipo) {
   $('#avCamposCrianca').hidden = tipo !== 'crianca';
   $('#avCampoLocal').hidden = tipo === 'livre';
   if (tipo === 'livre') $('#avTexto').value = '';
+  Avisos.salvoSel = null;
+  renderConvites();               // avisos salvos (avisosparoquiais.js): só na aba "Outro aviso"
   atualizarTextoAviso();
   const foco = { veiculo: '#avPlaca', crianca: '#avCrianca', livre: '#avTexto' }[tipo];
   setTimeout(() => $(foco).focus(), 0);
@@ -55,7 +58,7 @@ function abrirAviso() {
 function renderRecentes() {
   $('#avRecentes').hidden = !Avisos.recentes.length;
   $('#avRecentesLista').innerHTML = Avisos.recentes.map((a, i) =>
-    `<button type="button" class="av-recente" data-rec="${i}" title="Mostrar de novo">${ICONE_AVISO[a.tipo] || '📢'} ${esc(a.texto)}</button>`).join('');
+    `<button type="button" class="av-recente" data-rec="${i}" title="Mostrar de novo">${ICONE_AVISO[a.tipo] || '📢'} ${esc(semMarcasAviso(a.texto))}</button>`).join('');
 }
 
 // Mostra o aviso na projeção (e na prévia). duracao em segundos; 0 = até retirar.
@@ -86,7 +89,7 @@ function renderAvisoAtivo() {
     return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
   };
   box.innerHTML = `<div class="toc-tit">📢 Aviso na tela <span class="av-tempo">${tempo()}</span></div>
-    <div class="av-ativo-txt">${esc(a.texto)}</div>
+    <div class="av-ativo-txt">${esc(semMarcasAviso(a.texto))}</div>
     <div class="linha"><button data-av-acao="repetir" title="Faz a faixa piscar de novo e reinicia o tempo">↻ Repetir</button>
     <button data-av-acao="retirar" class="perigo">✕ Retirar</button></div>`;
   if (a.duracao) Avisos.tique = setInterval(() => { const t = box.querySelector('.av-tempo'); if (t) t.textContent = tempo(); }, 1000);
