@@ -125,20 +125,29 @@ async function puxarSync() {
 }
 
 // ---------- enviar (ao fechar e de tempos em tempos) ----------
-async function enviarSync() {
+const NOME_GRUPO = { config: 'agenda e ajustes', roteiros: 'roteiros', cantos: 'cantos', oracoes: 'orações', apresentacoes: 'apresentações', biblias: 'Bíblias' };
+const mudadosDe = async g => (await DB.todos(g.store)).filter(r => !g.filtro || g.filtro(r))
+  .filter(r => { const k = `${g.store}:${r.id}`; return !(k in Sync.estado.enviados) || (r.atualizado || 0) > Sync.estado.enviados[k]; });
+
+// aoAndar(feitos, total, grupo): para mostrar o andamento (ex.: barra da janela de fechar)
+async function enviarSync(aoAndar) {
   let enviados = 0;
-  for (const g of GRUPOS_SYNC) {
-    const todos = (await DB.todos(g.store)).filter(r => !g.filtro || g.filtro(r));
-    const mudados = todos.filter(r => { const k = `${g.store}:${r.id}`; return !(k in Sync.estado.enviados) || (r.atualizado || 0) > Sync.estado.enviados[k]; });
+  const pendentes = [];
+  for (const g of GRUPOS_SYNC) pendentes.push([g, await mudadosDe(g)]);
+  const total = pendentes.reduce((n, [, m]) => n + m.length, 0) + Sync.estado.removidos.length;
+  aoAndar?.(0, total, '');
+  for (const [g, mudados] of pendentes) {
     // lotes por tamanho (Bíblias são grandes: vão uma a uma)
     let lote = [], peso = 0;
     const despachar = async () => {
       if (!lote.length) return;
       progresso(`Enviando ${g.sub}… (${enviados + lote.length})`);
+      aoAndar?.(enviados, total, NOME_GRUPO[g.sub] || g.sub);
       const r = await arqApp('gravarVarios', { itens: lote.map(x => ({ caminho: x.caminho, texto: x.texto })) });
       for (const gv of r.gravados) Sync.estado.vistos[gv.caminho] = gv.mtime;
       for (const x of lote) Sync.estado.enviados[x.k] = x.atualizado;
       enviados += lote.length; lote = []; peso = 0;
+      aoAndar?.(enviados, total, NOME_GRUPO[g.sub] || g.sub);
       salvarEstadoSync();
     };
     for (const reg of mudados) {
@@ -160,6 +169,7 @@ async function enviarSync() {
     await arqApp('apagar', { caminho: `${sub}/${x.id}.json` }).catch(() => {});
     delete Sync.estado.enviados[`${x.store}:${x.id}`];
     enviados++;
+    aoAndar?.(enviados, total, 'itens apagados');
   }
   await salvarEstadoSync(true);
   return enviados;
@@ -386,6 +396,7 @@ function confirmarFechar() {
     ? '<b>Há mudanças neste computador</b> que ainda não foram para a nuvem. Sincronize para os outros computadores receberem.'
     : 'Tudo o que foi feito aqui já está na nuvem. Pode sincronizar mesmo assim, para garantir.';
   $('#fecharStatus').textContent = '';
+  $('#fecharBarra').hidden = true;
   dlg.querySelectorAll('button').forEach(b => { b.disabled = false; });
   $('#btnFecharSync').textContent = '☁ Sincronizar e fechar';
   if (!dlg.open) dlg.showModal();
@@ -394,14 +405,22 @@ function confirmarFechar() {
 async function sincronizarEFechar() {
   const dlg = $('#dlgFechar');
   dlg.querySelectorAll('button').forEach(b => { b.disabled = true; });
-  $('#fecharStatus').textContent = '☁ Enviando para a nuvem…';
+  const barra = $('#fecharBarra');
+  barra.hidden = false; barra.removeAttribute('value');          // sem valor = barra "andando" (conectando)
+  $('#fecharStatus').textContent = '☁ Conectando à nuvem…';
   try {
     await conectarArmazem();
-    const n = await enviarSync();
+    const n = await enviarSync((feitos, total, grupo) => {
+      if (!total) { barra.max = 1; barra.value = 1; $('#fecharStatus').textContent = '☁ Nada de novo para enviar.'; return; }
+      barra.max = total; barra.value = feitos;
+      $('#fecharStatus').textContent = `☁ Enviando${grupo ? ' ' + grupo : ''}… ${feitos} de ${total} (${Math.round(feitos * 100 / total)}%)`;
+    });
     Sync.sujo = false; Sync.ultimo = Date.now();
+    barra.max = 1; barra.value = 1;
     $('#fecharStatus').textContent = `☁ Pronto: ${n} item(ns) enviado(s). Fechando…`;
-    setTimeout(() => paraPrograma({ tipo: 'podeFechar' }), 600);
+    setTimeout(() => paraPrograma({ tipo: 'podeFechar' }), 900);
   } catch (e) {
+    barra.hidden = true;
     $('#fecharStatus').textContent = '⚠ Não sincronizou: ' + e.message + ' (sem internet?)';
     dlg.querySelectorAll('button').forEach(b => { b.disabled = false; });
     $('#btnFecharSync').textContent = '☁ Tentar de novo';

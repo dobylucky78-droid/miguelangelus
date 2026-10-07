@@ -5,6 +5,12 @@
  * A versão mais nova fica em cima. Ao gerar uma versão nova, acrescente a entrada dela aqui.
  */
 const NOVIDADES = [
+  { versao: '1.5.6', data: '2026-10-07', itens: [
+    'Coluna da direita (ao vivo + roteiro) cerca de 20% mais larga e prévia do telão menor — sobra mais espaço para o roteiro em monitores pequenos. Arraste a divisória à esquerda da coluna para alargar ou estreitar, e o puxador embaixo da prévia para aumentá-la ou diminuí-la (dois cliques volta ao normal); cada computador lembra os seus tamanhos.',
+    'O botão "Tela preta" saiu do painel (continua no menu Projeção e na tecla B); com a tela preta ligada, o rótulo em cima da prévia avisa "TELA PRETA". Assim Limpar, Altar, Aviso e Pix cabem numa linha só.',
+    'Ao fechar e sincronizar, uma barra mostra o andamento: o que está sendo enviado e quantos itens faltam.',
+    'Letras maiores na tela do operador: Ajustes → Aparência do app → A− / A+ (de 80% a 200%), ou Ctrl e + / Ctrl e − / Ctrl e 0. Vale só neste computador; o telão não muda.',
+  ] },
   { versao: '1.5.5', data: '2026-10-07', itens: [
     'Botão 💠 Pix (ou tecla P): o QR code do Pix da paróquia e a faixa com o CNPJ aparecem POR CIMA do que está passando — os slides continuam, menores, embaixo; com a câmera no ar, a faixa vai para o canto superior esquerdo e o QR code para o direito. Também pelo celular.',
     'As imagens do Pix são protegidas por uma senha de 4 números criada pela PASCOM (o programa guarda só uma impressão embaralhada dela). Ficam em Ajustes → 💠 Pix da paróquia e vão para os outros computadores pela nuvem.',

@@ -21,7 +21,7 @@
     </div>
     <div class="splash-info">
       <div class="splash-gratis"><b>Gratuito · uso livre</b></div>
-      <div>Versão 1.5.5</div>
+      <div>Versão 1.5.6</div>
       <div>© 2026 · PASCOM</div>
       <div><b>Paróquia São José Operário</b></div>
     </div>
@@ -302,14 +302,15 @@
 
   <!-- ============ DIREITA: ao vivo + roteiro ============ -->
   <aside class="painel direita">
-    <div class="rotulo-vivo"><span class="bolinha"></span> AO VIVO</div>
+    <div class="divisor" id="divisorDireita" title="Arraste para alargar ou estreitar esta coluna (dois cliques: volta ao normal)"></div>
+    <div class="rotulo-vivo"><span class="bolinha"></span> <span id="rotuloVivo">AO VIVO</span></div>
     <div class="preview"><iframe id="preview" src="projecao.html?preview=1" title="Prévia da projeção"></iframe></div>
+    <div class="divisor-h" id="divisorPrevia" title="Arraste para cima ou para baixo: prévia menor = mais espaço para o roteiro (dois cliques: volta ao normal)"></div>
     <div class="linha controles">
       <button id="btnAnt" title="Anterior (←)">◀ Anterior</button>
       <button id="btnProx" class="primario" title="Próximo (→ ou Espaço)">Próximo ▶</button>
     </div>
     <div class="linha controles">
-      <button id="btnPreto" title="Tela preta (B)">Tela preta</button>
       <button id="btnLimpar" title="Limpar texto (Esc)">Limpar</button>
       <button id="btnAltar" title="Slide &quot;Todos dirijam seu olhar para o altar&quot; (L). Clique de novo para voltar ao slide que estava no ar.">⛪ Altar</button>
       <button id="btnAviso" title="Aviso na tela: placa de carro, responsável por criança… (A)">📢 Aviso</button>
@@ -375,6 +376,13 @@
               <option value="claro">Claro: fundo branco e letras pretas</option>
             </select>
           </label>
+          <div class="campo">Tamanho das letras desta tela (para quem enxerga melhor com letras maiores)
+            <span class="linha zoom-app"><button type="button" data-zoomapp="-1" title="Diminuir (Ctrl e −)">A−</button>
+              <b id="zoomAppValor">100%</b>
+              <button type="button" data-zoomapp="1" title="Aumentar (Ctrl e +)">A+</button>
+              <button type="button" data-zoomapp="0" title="Voltar ao normal (Ctrl e 0)">Normal</button></span>
+            <span class="sutil pequeno">Também pelo teclado: Ctrl e + aumenta, Ctrl e − diminui, Ctrl e 0 volta ao normal. Vale só neste computador.</span>
+          </div>
           <label class="check"><input type="checkbox" data-cfg="atualizarAuto"> Procurar atualizações ao abrir</label>
           <p class="sutil pequeno">Muda só a tela do MiguelAngelus. O telão continua com o tema dele (quadradinhos <b>Tema</b> na tela de controle ou <b>Agenda → Paróquia → 🖼</b>).</p>
         </section>
@@ -825,7 +833,7 @@
       <figure><img src="img/brasao-paroquia.webp" alt="Brasão da Paróquia São José Operário"><figcaption>Paróquia São José Operário (RJ)</figcaption></figure>
       <figure><img src="img/brasao-pascom.webp" alt="Logotipo da PASCOM"><figcaption>PASCOM</figcaption></figure>
     </div>
-    <p class="sutil pequeno" id="versaoApp">Versão 1.5.5</p>
+    <p class="sutil pequeno" id="versaoApp">Versão 1.5.6</p>
     <div class="linha"><span class="espaco"></span><button value="ok" class="primario">OK</button></div>
   </form>
 </dialog>
@@ -1024,6 +1032,7 @@
   <div class="form">
     <h2>Fechar o MiguelAngelus</h2>
     <p id="fecharInfo" style="margin:0"></p>
+    <progress id="fecharBarra" class="fechar-barra" hidden></progress>
     <p id="fecharStatus" class="status" style="margin:0"></p>
     <div class="linha" style="flex-wrap:wrap">
       <button id="btnFecharCancelar">Cancelar</button>

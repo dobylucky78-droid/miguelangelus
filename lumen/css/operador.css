@@ -84,7 +84,12 @@ code { background: var(--painel2); padding: 1px 4px; border-radius: 4px; }
 .estado-proj.aberta { color: var(--ok); }
 
 /* ---------- Layout ---------- */
-.layout { flex: 1; display: grid; grid-template-columns: 76px 300px minmax(0, 1fr) 370px; min-height: 0; }
+/* Coluna da direita (ao vivo + roteiro): ~20% mais larga que antes; a divisória ajusta (--dir-usuario, guardado por computador) */
+.layout { --dir: 444px; flex: 1; display: grid; grid-template-columns: 76px 300px minmax(0, 1fr) var(--dir-usuario, var(--dir)); min-height: 0; }
+.direita { position: relative; }
+.divisor { position: absolute; left: -4px; top: 0; bottom: 0; width: 8px; cursor: col-resize; z-index: 5; }
+.divisor:hover, .divisor.arrastando { background: linear-gradient(90deg, transparent 3px, var(--acento) 3px, var(--acento) 5px, transparent 5px); }
+.rotulo-vivo.preto { color: #fff; background: #000; border-radius: 6px; padding: 2px 8px; align-self: flex-start; }
 .painel { display: flex; flex-direction: column; min-height: 0; border-right: 1px solid var(--borda); }
 .modulos { background: var(--painel); }
 .centro { background: var(--bg); }
@@ -227,9 +232,18 @@ code { background: var(--painel2); padding: 1px 4px; border-radius: 4px; }
 .rotulo-vivo { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; letter-spacing: 1px; color: var(--vivo); }
 .bolinha { width: 9px; height: 9px; border-radius: 50%; background: var(--vivo); animation: pulsa 1.6s infinite; }
 @keyframes pulsa { 50% { opacity: .35; } }
-.preview { aspect-ratio: 16 / 9; background: #000; border-radius: 6px; overflow: hidden; border: 2px solid var(--borda); flex: 0 0 auto; }
+/* a prévia não passa de ~30% da altura: coluna mais larga = mais espaço para o roteiro, não uma prévia gigante */
+.preview { aspect-ratio: 16 / 9; background: #000; border-radius: 6px; overflow: hidden; border: 2px solid var(--borda); flex: 0 0 auto;
+  width: min(100%, calc(var(--previa, 22vh) * 16 / 9)); align-self: center; }
+/* puxador embaixo da prévia: arrastar muda a altura dela (o roteiro ganha ou perde espaço) */
+.divisor-h { height: 9px; margin: -6px 0 -3px; cursor: row-resize; flex: none; position: relative; }
+.divisor-h::after { content: ''; position: absolute; left: 50%; top: 3px; width: 46px; height: 3px; margin-left: -23px; border-radius: 2px; background: var(--borda); }
+.divisor-h:hover::after, .divisor-h.arrastando::after { background: var(--acento); width: 80px; margin-left: -40px; }
 .preview iframe { width: 100%; height: 100%; border: 0; display: block; pointer-events: none; }
 .controles button { flex: 1; }
+/* os botões quebram em mais de uma linha quando não cabem (painel estreito: Tela preta, Limpar, Altar, Aviso, Pix…) */
+.linha.controles { display: grid; grid-template-columns: repeat(auto-fit, minmax(86px, 1fr)); }
+.linha.controles button { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .roteiro-painel .linha button { flex: 0 0 auto; }
 .roteiro-painel .adicionar button { padding: 3px 7px; font-size: 12px; }
 .atalhos { margin: 0; padding-left: 16px; color: var(--sutil); font-size: 12.5px; display: flex; flex-direction: column; gap: 5px; }
@@ -258,6 +272,10 @@ dialog::backdrop { background: rgba(0,0,0,.6); }
 .ajustes-paineis h3 { margin: 0 0 4px; font-size: 16px; }
 #dlgMensagem, #dlgAtalhos, #dlgSobre { width: min(520px, 92vw); }
 #dlgNovidades { width: min(620px, 94vw); }
+.zoom-app { gap: 8px; margin: 4px 0; }
+.zoom-app button { padding: 6px 14px; font-weight: 700; }
+.zoom-app b { min-width: 52px; text-align: center; }
+.fechar-barra { width: 100%; height: 14px; accent-color: var(--acento); }
 .pix-cfg { display: flex; gap: 16px; flex-wrap: wrap; align-items: flex-start; }
 .pix-cfg > div { display: flex; flex-direction: column; gap: 6px; }
 .pix-prev { width: 140px; height: 140px; border: 1px dashed var(--borda); border-radius: var(--raio); background: #fff;
@@ -590,11 +608,11 @@ button.cards-sec:hover, button.cards-dia:hover { border-bottom-color: var(--bord
 .toast.on { opacity: 1; transform: translate(-50%, 0); }
 
 @media (max-width: 1450px) {
-  .layout { grid-template-columns: 70px 260px minmax(0, 1fr) 330px; }
+  .layout { --dir: 396px; grid-template-columns: 70px 260px minmax(0, 1fr) var(--dir-usuario, var(--dir)); }
   .liturgia > span:nth-child(2), .liturgia > span:nth-child(3) { display: none; }
 }
 @media (max-width: 1150px) {
-  .layout { grid-template-columns: 64px 230px minmax(0, 1fr) 290px; }
+  .layout { --dir: 348px; grid-template-columns: 64px 230px minmax(0, 1fr) var(--dir-usuario, var(--dir)); }
   .grade-slides { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); }
   .liturgia { display: none; }
 }

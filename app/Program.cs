@@ -301,6 +301,8 @@ namespace MiguelAngelus
                 else if (tipo == "celular") MensagemCelular(m);
                 else if (tipo == "ndiWebcam") AbrirNdiWebcam();
                 else if (tipo == "ptz") EnviarPtz(m);
+                // tamanho das letras da tela do operador (Ajustes → Aparência do app); o telão não muda
+                else if (tipo == "zoom") Web.ZoomFactor = Math.Max(0.8, Math.Min(2.0, Convert.ToDouble(m["fator"], System.Globalization.CultureInfo.InvariantCulture)));
             }
             catch (Exception ex) { erroNdi = ex.Message; InformarNdi(); }
         }

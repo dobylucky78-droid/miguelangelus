@@ -531,6 +531,77 @@ function limpar() {
   renderControles();
 }
 
+// Tamanho das letras da tela do operador (zoom do aplicativo; o telão não muda). Guardado neste computador.
+const PASSOS_ZOOM = [0.8, 0.9, 1, 1.1, 1.25, 1.4, 1.5, 1.75, 2];
+function aplicarZoomApp() {
+  const f = PASSOS_ZOOM.includes(+S.config.zoomApp) ? +S.config.zoomApp : 1;
+  if (NO_APP) window.chrome.webview.postMessage({ tipo: 'zoom', fator: f });
+  else document.documentElement.style.zoom = f;              // no navegador (testes): o mesmo efeito
+  const v = $('#zoomAppValor'); if (v) v.textContent = Math.round(f * 100) + '%';
+}
+function mudarZoomApp(passo) {
+  const atual = PASSOS_ZOOM.indexOf(PASSOS_ZOOM.includes(+S.config.zoomApp) ? +S.config.zoomApp : 1);
+  const i = passo === 0 ? PASSOS_ZOOM.indexOf(1) : Math.max(0, Math.min(PASSOS_ZOOM.length - 1, atual + passo));
+  S.config.zoomApp = PASSOS_ZOOM[i]; salvarConfig();
+  aplicarZoomApp();
+  toast(`Letras desta tela: ${Math.round(PASSOS_ZOOM[i] * 100)}%`);
+}
+function ligarZoomApp() {
+  aplicarZoomApp();
+  document.addEventListener('click', e => { const b = e.target.closest('[data-zoomapp]'); if (b) mudarZoomApp(+b.dataset.zoomapp); });
+  addEventListener('keydown', e => {
+    if (!e.ctrlKey || e.altKey) return;
+    if (e.key === '+' || e.key === '=') { e.preventDefault(); mudarZoomApp(1); }
+    else if (e.key === '-') { e.preventDefault(); mudarZoomApp(-1); }
+    else if (e.key === '0') { e.preventDefault(); mudarZoomApp(0); }
+  });
+}
+
+// Divisória entre o centro e a coluna da direita (ao vivo + roteiro): arrastar alarga/estreita; dois cliques volta ao
+// padrão. A largura fica guardada neste computador (cada um tem um monitor).
+function ligarDivisoria() {
+  const div = $('#divisorDireita'), layout = $('.layout');
+  const aplicar = px => {
+    if (!px) return layout.style.removeProperty('--dir-usuario');
+    const max = Math.max(320, Math.min(900, innerWidth * .55));
+    layout.style.setProperty('--dir-usuario', Math.round(Math.min(max, Math.max(280, px))) + 'px');
+  };
+  aplicar(+S.config.larguraDireita || 0);
+  div.addEventListener('pointerdown', e => {
+    e.preventDefault();
+    div.setPointerCapture(e.pointerId); div.classList.add('arrastando');
+    const mover = ev => aplicar(innerWidth - ev.clientX);
+    const soltar = () => {
+      div.classList.remove('arrastando');
+      div.removeEventListener('pointermove', mover); div.removeEventListener('pointerup', soltar);
+      S.config.larguraDireita = parseInt(layout.style.getPropertyValue('--dir-usuario')) || 0; salvarConfig();
+    };
+    div.addEventListener('pointermove', mover); div.addEventListener('pointerup', soltar);
+  });
+  div.addEventListener('dblclick', () => { S.config.larguraDireita = 0; salvarConfig(); aplicar(0); toast('Coluna da direita na largura padrão.'); });
+
+  // Altura da prévia do telão (puxador embaixo dela), em % da altura da janela; também guardada neste computador
+  const dh = $('#divisorPrevia'), prev = $('.preview');
+  const altura = vh => {
+    if (!vh) return layout.style.removeProperty('--previa');
+    layout.style.setProperty('--previa', Math.min(45, Math.max(10, vh)).toFixed(1) + 'vh');
+  };
+  altura(+S.config.alturaPrevia || 0);
+  dh.addEventListener('pointerdown', e => {
+    e.preventDefault();
+    dh.setPointerCapture(e.pointerId); dh.classList.add('arrastando');
+    const topo = prev.getBoundingClientRect().top;
+    const mover = ev => altura((ev.clientY - topo) / innerHeight * 100);
+    const soltar = () => {
+      dh.classList.remove('arrastando');
+      dh.removeEventListener('pointermove', mover); dh.removeEventListener('pointerup', soltar);
+      S.config.alturaPrevia = parseFloat(layout.style.getPropertyValue('--previa')) || 0; salvarConfig();
+    };
+    dh.addEventListener('pointermove', mover); dh.addEventListener('pointerup', soltar);
+  });
+  dh.addEventListener('dblclick', () => { S.config.alturaPrevia = 0; salvarConfig(); altura(0); toast('Prévia do telão no tamanho padrão.'); });
+}
+
 // Botão "Altar": slide "Todos dirijam seu olhar para o altar" (consagração), com a aparência atual do telão.
 // Clicar de novo devolve ao telão o que estava no ar antes.
 function alternarAltar() {
@@ -1743,7 +1814,7 @@ function ligarEventos() {
   $('#btnProjecao').addEventListener('click', alternarProjecao);
   $('#btnProx').addEventListener('click', proximo);
   $('#btnAnt').addEventListener('click', anterior);
-  $('#btnPreto').addEventListener('click', alternarPreto);
+  // (Tela preta: menu Projeção e tecla B — o botão saiu do painel para os outros caberem numa linha)
   $('#btnLimpar').addEventListener('click', limpar);
   $('#btnAltar').addEventListener('click', alternarAltar);
   $('#btnMsg').addEventListener('click', projetarMensagem);
@@ -2097,7 +2168,9 @@ function ligarEventos() {
 // =====================================================================
 
 function renderControles() {
-  $('#btnPreto').classList.toggle('ligado', S.live.preto);
+  // sem o botão, o aviso de tela preta fica no rótulo em cima da prévia
+  $('#rotuloVivo').textContent = S.live.preto ? 'TELA PRETA (B para voltar)' : 'AO VIVO';
+  $('.rotulo-vivo').classList.toggle('preto', !!S.live.preto);
   $('#btnAltar').classList.toggle('ligado', !!S.live.altar);
   $('#btnPix').classList.toggle('ligado', !!S.pixNoAr);
 }
@@ -2167,6 +2240,8 @@ async function iniciar() {
   ligarCifras();
   ligarCelular();
   ligarPix();
+  ligarDivisoria();
+  ligarZoomApp();
   lerPastaMidia('video'); lerPastaMidia('audio');     // pastas deste computador (os roteiros apontam para os arquivos delas)
   mostrarAba('roteiros', false);    // sempre abre nos Roteiros, com os cards das celebrações
   renderLiturgia();
@@ -2177,7 +2252,7 @@ async function iniciar() {
   renderBiblia();
   renderCabecalho();
   renderEstadoProj();
-  $('#versaoApp').textContent = NO_APP ? 'Versão 1.5.5 · aplicativo para Windows' : 'Versão 1.5.5 · no navegador';
+  $('#versaoApp').textContent = NO_APP ? 'Versão 1.5.6 · aplicativo para Windows' : 'Versão 1.5.6 · no navegador';
   // pede armazenamento permanente (o navegador não apaga os dados para liberar espaço)
   try { navigator.storage?.persist?.(); } catch (_) {}
   enviarConfigTelao(); renderTemasRapidos();
