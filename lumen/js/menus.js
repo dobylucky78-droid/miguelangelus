@@ -111,6 +111,10 @@ function acaoMenu(acao) {
     case 'temaLiturgico': return alternarTemaLiturgico();
     case 'roteirosRepetidos': return oferecerJuntarRoteiros(true);
     case 'avisosParoquiais': return abrirAvisosPar();
+    case 'imprimir': return abrirImpressao();
+    case 'desfazer': return desfazer();
+    case 'refazer': return refazer();
+    case 'localizar': return abrirLocalizar();
   }
 }
 

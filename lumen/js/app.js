@@ -54,6 +54,7 @@ function toast(msg) {
 const salvarConfig = debounce(() => DB.salvar('config', { id: 'geral', valor: S.config }), 300);
 
 function salvarRoteiroAgora() {
+  if (typeof registrarHistorico === 'function') registrarHistorico(S.roteiro);     // Desfazer (historico.js)
   S.roteiro.atualizado = Date.now();
   if (!S.roteiros.includes(S.roteiro)) S.roteiros.push(S.roteiro);
   return DB.salvar('roteiros', S.roteiro);
@@ -623,6 +624,14 @@ function alternarAltar() {
   renderControles();
 }
 
+// Texto do Altar mudou (Ajustes ou perfil) com o Altar no telão: troca na hora
+function atualizarAltarNoAr() {
+  if (!S.live.altar) return;
+  S.live.slide = { ...S.live.slide, texto: (S.config.textoAltar || CONFIG_PADRAO.textoAltar).trim() };
+  enviar({ tipo: 'slide', slide: S.live.slide });
+  renderControles();
+}
+
 function projetarMensagem() {
   const t = $('#msgRapida').value.trim();
   if (!t) return;
@@ -984,6 +993,7 @@ function trocarRoteiro(r) {
   if (S.atual && S.atual.rIdx >= 0) S.atual = null;
   renderRoteiroCab(); renderRoteiroLista(); renderCabecalho(); renderSlides();
   renderLocalRoteiro();
+  if (typeof baseHistorico === 'function') baseHistorico(r);
   aoTrocarCapela();   // tema escolhido na hora vale só para o roteiro em que foi escolhido
   enviarLayout();     // a apresentação do telão segue o local do roteiro
 }
@@ -1813,6 +1823,7 @@ function ligarAjustes() {
       S.config[k] = el.type === 'checkbox' ? el.checked : (el.type === 'range' || el.type === 'number') ? +el.value : el.value;
       salvarConfig();
       if (k === 'temaApp') return aplicarTemaApp();     // só o aplicativo; o telão não muda
+      if (k === 'textoAltar') return atualizarAltarNoAr();
       enviarConfigTelao(); renderTemasRapidos();
       if (['versosPorSlide', 'numerarVersos', 'quebraAuto', 'linhasPorSlide', 'caracteresPorLinha', 'quebraCantos', 'salmoCorrido'].includes(k)) atualizarSlides();
     });
@@ -2276,6 +2287,10 @@ async function iniciar() {
   ligarMenus();
   ligarAvisos();
   ligarAvisosPar();
+  ligarImpressao();
+  ligarPerfis();
+  ligarHistorico();
+  ligarLocalizar();
   ligarAgenda();
   ligarApresentacao();
   renderLocalRoteiro();
@@ -2308,7 +2323,7 @@ async function iniciar() {
   renderBiblia();
   renderCabecalho();
   renderEstadoProj();
-  $('#versaoApp').textContent = NO_APP ? 'Versão 1.6.0 · aplicativo para Windows' : 'Versão 1.6.0 · no navegador';
+  $('#versaoApp').textContent = NO_APP ? 'Versão 1.6.1 · aplicativo para Windows' : 'Versão 1.6.1 · no navegador';
   // pede armazenamento permanente (o navegador não apaga os dados para liberar espaço)
   try { navigator.storage?.persist?.(); } catch (_) {}
   enviarConfigTelao(); renderTemasRapidos();

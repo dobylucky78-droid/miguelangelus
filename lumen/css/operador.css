@@ -754,6 +754,20 @@ button.cards-sec:hover, button.cards-dia:hover { border-bottom-color: var(--bord
 
 .t-homilia { background: #3b2a12; color: #ffd27a; }
 .t-avisos { background: #46161b; color: #ff9aa2; }
+/* Configurações da tela salvas (Ajustes → Aparência) */
+.perfis-tela { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 6px; padding: 8px; margin-bottom: 8px; border: 1px solid var(--borda); border-radius: 8px; background: var(--painel2); }
+.perfis-tela select { min-width: 200px; }
+.aj-sub { margin-top: 18px; padding-top: 12px; border-top: 1px solid var(--borda); }
+.perfil-sel { display: inline-flex; align-items: center; gap: 4px; margin-left: auto; }
+.perfil-sel select { max-width: 170px; font-size: 12px; padding: 2px 4px; }
+/* Localizar em tudo */
+#dlgLocalizar { width: min(760px, 94vw); }
+#locTermo { font-size: 16px; padding: 8px 10px; }
+.loc-resultados { max-height: 60vh; overflow: auto; display: flex; flex-direction: column; gap: 3px; }
+.loc-grupo { margin-top: 8px; font-weight: 700; font-size: 13px; color: var(--acento-claro); }
+.loc-item { text-align: left; padding: 6px 10px; font-size: 13.5px; }
+.loc-trecho { font-size: 12.5px; color: var(--sutil); margin-top: 2px; white-space: normal; }
+.loc-trecho mark { background: #f2d16b; color: #111; border-radius: 2px; padding: 0 1px; }
 
 /* Sincronização (nuvem) */
 .sync-abertura { position: fixed; inset: 0; z-index: 50; background: rgba(10, 12, 16, .82); display: flex; align-items: center; justify-content: center; }

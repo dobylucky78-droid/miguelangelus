@@ -82,7 +82,8 @@ function renderTemasRapidos() {
   const atual = temaAtual(), capela = temaDaCapela();
   el.innerHTML = `<span class="sutil pequeno" title="Tema do telão. O da capela é o que tem o ponto.">Tema</span>` +
     TEMAS.map(t => `<span class="tema-wrap">${amostraTema(t, t.id === atual, 'data-tema')}${t.id === capela ? '<i class="tema-capela" title="Tema desta capela"></i>' : ''}</span>`).join('') +
-    `<span class="sutil pequeno tema-nome">${cameraNoTelao() ? '📷 Escuro (câmera)' : esc(temaPorId(atual).nome)}</span>`;
+    `<span class="sutil pequeno tema-nome">${cameraNoTelao() ? '📷 Escuro (câmera)' : esc(temaPorId(atual).nome)}</span>` +
+    (typeof htmlSeletorPerfil === 'function' ? htmlSeletorPerfil() : '');     // perfis.js
 }
 
 // Roteiro (e capela) mudou: volta para o tema da capela

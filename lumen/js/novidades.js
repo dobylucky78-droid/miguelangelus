@@ -5,6 +5,13 @@
  * A versão mais nova fica em cima. Ao gerar uma versão nova, acrescente a entrada dela aqui.
  */
 const NOVIDADES = [
+  { versao: '1.6.1', data: '2026-10-07', itens: [
+    '🖨 Imprimir roteiro (Arquivo → Imprimir roteiro…, ou Ctrl+P): Resumo (a ordem da celebração), Completo (com as letras, orações, leituras, preces e avisos) ou Músicos (os cantos com a cifra e o tom). Imprime no papel ou salva em PDF.',
+    '🔎 Localizar em tudo (Editar, ou Ctrl+F): uma busca só em cantos, orações, roteiros, avisos e Bíblia, com o trecho encontrado em destaque; um clique abre.',
+    '↶ Desfazer / Refazer (Editar, ou Ctrl+Z / Ctrl+Y) nas mudanças do roteiro aberto: item apagado, movido, canto trocado, textos…',
+    'Perfis: cada pessoa salva a configuração da tela com o seu nome (Perfil, ao lado dos temas, ou Ajustes → Aparência do telão) e escolhe na hora de projetar; "Padrão" volta ao que era. Guarda fonte, tamanho, cores, maiúsculas, negrito, alinhamento, linhas e letras por slide e o texto do Altar. Vão para os outros computadores pela nuvem.',
+    'Ajustes → Aparência do telão: opção "Texto em negrito", fontes estreitas (Arial Narrow e Impact) e o Tamanho dos slides junto.',
+  ] },
   { versao: '1.6.0', data: '2026-10-07', itens: [
     '✝ Santoral: o calendário agora conhece as memórias e festas dos santos (Calendário Romano e o próprio do Brasil — São José de Anchieta, Santa Paulina, Frei Galvão, Mártires de Cunhaú e Uruaçu…), com a cor certa: branco, ou vermelho para os mártires. Aparece no topo da tela, no calendário e nos cards dos roteiros, e o tema por tempo litúrgico acompanha.',
     'Regras: domingos e solenidades prevalecem; festas valem também no Advento e na Quaresma; memórias ficam só como lembrete na Quaresma e de 17 a 24 de dezembro; memória facultativa aparece como lembrete, sem mudar a cor.',

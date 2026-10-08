@@ -21,7 +21,7 @@
     </div>
     <div class="splash-info">
       <div class="splash-gratis"><b>Gratuito · uso livre</b></div>
-      <div>Versão 1.6.0</div>
+      <div>Versão 1.6.1</div>
       <div>© 2026 · PASCOM</div>
       <div><b>Paróquia São José Operário</b></div>
     </div>
@@ -48,18 +48,18 @@
         <button data-menu="exportar">Exportar backup…</button>
         <button data-menu="importar">Importar backup…</button>
         <hr>
-        <button disabled>Imprimir roteiro… <span class="em-breve">em breve</span></button>
+        <button data-menu="imprimir">🖨 Imprimir roteiro… <span class="atalho">Ctrl+P</span></button>
       </div>
     </div>
     <div class="menu"><button class="menu-titulo">Editar</button>
       <div class="menu-itens">
-        <button disabled>Desfazer <span class="atalho">Ctrl+Z</span></button>
-        <button disabled>Refazer <span class="atalho">Ctrl+Y</span></button>
+        <button data-menu="desfazer" disabled title="Desfaz a última mudança no roteiro aberto">↶ Desfazer <span class="atalho">Ctrl+Z</span></button>
+        <button data-menu="refazer" disabled>↷ Refazer <span class="atalho">Ctrl+Y</span></button>
         <hr>
         <button data-menu="novoCanto">Novo canto…</button>
         <button data-menu="novaOracao">Nova oração…</button>
         <hr>
-        <button disabled>Localizar em tudo… <span class="em-breve">em breve</span></button>
+        <button data-menu="localizar">🔎 Localizar em tudo… <span class="atalho">Ctrl+F</span></button>
       </div>
     </div>
     <div class="menu"><button class="menu-titulo">Exibir</button>
@@ -360,7 +360,6 @@
       <nav class="ajustes-nav">
         <button type="button" data-ajsec="app">🖥️ Aparência do app</button>
         <button type="button" data-ajsec="aparencia" class="ativa">🎨 Aparência do telão</button>
-        <button type="button" data-ajsec="slides">📏 Tamanho dos slides</button>
         <button type="button" data-ajsec="biblia">📖 Bíblia</button>
         <button type="button" data-ajsec="altar">⛪ Botão Altar</button>
         <button type="button" data-ajsec="pix">💠 Pix da paróquia</button>
@@ -392,6 +391,13 @@
 
         <section data-ajpainel="aparencia" class="ativa">
           <h3>🎨 Aparência do telão</h3>
+          <div class="perfis-tela">
+            <label class="campo">Configurações salvas
+              <select id="perfilSel"><option value="">— escolha para aplicar —</option></select></label>
+            <button type="button" id="perfilSalvar" title="Guarda a aparência atual (fonte, tamanho, cores, maiúsculas, negrito, alinhamento, linhas por slide…) com um nome">💾 Salvar a atual com um nome…</button>
+            <button type="button" id="perfilGravar" hidden title="Grava a aparência atual por cima da configuração escolhida">Gravar por cima</button>
+            <button type="button" id="perfilApagar" class="perigo" hidden>🗑</button>
+          </div>
           <label class="campo">Fonte
             <select data-cfg="fonte">
               <optgroup label="Sem serifa — as mais legíveis no telão">
@@ -419,6 +425,10 @@
               <option value='"Sitka Text", Georgia, serif' style='font-family:"Sitka Text", Georgia, serif'>Sitka</option>
               <option value='"Book Antiqua", "Palatino Linotype", serif' style='font-family:"Book Antiqua", "Palatino Linotype", serif'>Book Antiqua (com Office)</option>
               <option value='Garamond, "Palatino Linotype", serif' style='font-family:Garamond, "Palatino Linotype", serif'>Garamond (com Office)</option>
+              </optgroup>
+              <optgroup label="Estreitas — letra grande, cabe mais por linha">
+              <option value='"Arial Narrow", Impact, Arial, sans-serif' style='font-family:"Arial Narrow", Arial, sans-serif'>Arial Narrow (com Office)</option>
+              <option value='Impact, "Arial Narrow", sans-serif' style='font-family:Impact, "Arial Narrow", sans-serif'>Impact</option>
               </optgroup>
               <optgroup label="Destaque — títulos e avisos">
               <option value='"Segoe UI Black", "Arial Black", sans-serif' style='font-family:"Segoe UI Black", "Arial Black", sans-serif'>Segoe UI Black</option>
@@ -449,6 +459,7 @@
           <input type="file" id="arqFundo" accept="image/*" hidden>
           <label class="check"><input type="checkbox" data-cfg="sombra"> Sombra no texto</label>
           <label class="check"><input type="checkbox" data-cfg="maiusculas"> Texto em MAIÚSCULAS</label>
+          <label class="check"><input type="checkbox" data-cfg="negrito"> Texto em <b>negrito</b></label>
           <label class="check"><input type="checkbox" data-cfg="rodape"> Mostrar rodapé (título / referência)</label>
           <div class="linha">
             <label class="check" title="P. (presidente), T. (todos), L. (leitor), C. (comentarista), D. (diácono) — vêm do folheto"><input type="checkbox" data-cfg="mostrarRotulos"> Mostrar quem fala (P., T., L.…)</label>
@@ -457,10 +468,8 @@
           <label class="check" title="Um pequeno espaço antes e depois da linha do povo (T.), separando a resposta do que o padre diz"><input type="checkbox" data-cfg="espacoResposta"> Espaço entre as falas (separa a resposta do povo)</label>
           <label class="check" title="Junta os versos de cada estrofe do salmo num parágrafo, em vez de uma linha por verso como no folheto"><input type="checkbox" data-cfg="salmoCorrido"> Salmo em texto corrido (não quebra a linha a cada verso)</label>
           <p class="sutil pequeno">As imagens dos cantos da tela (brasão, padroeiro…) ficam em <b>Agenda → Paróquia</b>, para cada comunidade.</p>
-        </section>
 
-        <section data-ajpainel="slides">
-          <h3>📏 Tamanho dos slides</h3>
+          <h3 class="aj-sub">📏 Tamanho dos slides</h3>
           <label class="check"><input type="checkbox" data-cfg="quebraAuto"> Limitar linhas e caracteres por slide</label>
           <div class="linha">
             <label class="campo">Linhas por slide <input type="number" min="1" max="12" data-cfg="linhasPorSlide"></label>
@@ -782,6 +791,28 @@
   </form>
 </dialog>
 
+<!-- ============ Localizar em tudo ============ -->
+<dialog id="dlgLocalizar">
+  <form method="dialog" class="form">
+    <h2>🔎 Localizar em tudo</h2>
+    <input id="locTermo" type="search" placeholder="Canto, oração, roteiro, aviso ou trecho da Bíblia…" autocomplete="off">
+    <div id="locResultados" class="loc-resultados"></div>
+    <div class="linha"><span class="sutil pequeno">Enter abre o primeiro resultado.</span><span class="espaco"></span><button value="fechar">Fechar</button></div>
+  </form>
+</dialog>
+
+<!-- ============ Imprimir roteiro ============ -->
+<dialog id="dlgImprimir">
+  <form method="dialog" class="form">
+    <h2>🖨 Imprimir roteiro</h2>
+    <p class="sutil" style="margin:0"><b id="impRoteiro"></b> — imprime no papel ou salva em PDF ("Salvar como PDF" na janela de impressão).</p>
+    <label class="check"><input type="radio" name="modeloImp" value="resumo"> <b>Resumo</b> — só a ordem da celebração (uma folha para o padre e a equipe)</label>
+    <label class="check"><input type="radio" name="modeloImp" value="completo"> <b>Completo</b> — com os textos: letras dos cantos, orações, leituras, preces e avisos</label>
+    <label class="check"><input type="radio" name="modeloImp" value="musicos"> <b>Músicos</b> — os cantos com a cifra e o tom (ou a letra, se não houver cifra)</label>
+    <div class="linha"><span class="espaco"></span><button value="cancelar">Cancelar</button><button value="imprimir" class="primario">Imprimir…</button></div>
+  </form>
+</dialog>
+
 <!-- ============ Avisos paroquiais (programados + aparência da tela) ============ -->
 <dialog id="dlgAvisosPar">
   <form method="dialog" class="form">
@@ -899,7 +930,7 @@
       <figure><img src="img/brasao-paroquia.webp" alt="Brasão da Paróquia São José Operário"><figcaption>Paróquia São José Operário (RJ)</figcaption></figure>
       <figure><img src="img/brasao-pascom.webp" alt="Logotipo da PASCOM"><figcaption>PASCOM</figcaption></figure>
     </div>
-    <p class="sutil pequeno" id="versaoApp">Versão 1.6.0</p>
+    <p class="sutil pequeno" id="versaoApp">Versão 1.6.1</p>
     <div class="linha"><span class="espaco"></span><button value="ok" class="primario">OK</button></div>
   </form>
 </dialog>
@@ -1133,6 +1164,10 @@
 <script src="js/liturgiadia.js"></script>
 <script src="js/avisos.js"></script>
 <script src="js/avisosparoquiais.js"></script>
+<script src="js/impressao.js"></script>
+<script src="js/perfis.js"></script>
+<script src="js/historico.js"></script>
+<script src="js/localizar.js"></script>
 <script src="js/apresentacoes.js"></script>
 <script src="js/calendario.js"></script>
 <script src="js/transmissao.js"></script>
