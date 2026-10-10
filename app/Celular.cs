@@ -138,7 +138,9 @@ namespace MiguelAngelus
             List<object> lista;
             lock (trava) lista = aparelhos.OrderBy(kv => kv.Value.Desde)
                 .Select(kv => (object)new { id = kv.Key.Substring(0, 8), nome = kv.Value.Nome, desde = kv.Value.Desde, papel = kv.Value.Papel, online = online.Contains(kv.Key) }).ToList();
-            return new { tipo = "celularInfo", ligado = Ligado, erro = Erro, porta = Porta, codigo = Codigo, ips = Ips(), aparelhos = lista };
+            var redes = Redes();
+            return new { tipo = "celularInfo", ligado = Ligado, erro = Erro, porta = Porta, codigo = Codigo, ips = redes.Select(x => x.ip).ToList(),
+                redes = redes.Select(x => (object)new { ip = x.ip, nome = x.nome, internet = x.gw, publica = x.publica, bloqueada = x.bloqueada }).ToList(), aparelhos = lista };
         }
 
         internal void Tirar(string id)
@@ -158,9 +160,16 @@ namespace MiguelAngelus
         }
 
         // Endereços IPv4 deste computador na rede local (o da placa com gateway primeiro: é o Wi-Fi/cabo de verdade)
-        internal static List<string> Ips()
+        internal static List<string> Ips() => Redes().Select(x => x.ip).ToList();
+
+        // Cada rede do computador: endereço, nome da placa ("Wi-Fi 3", "Ethernet 3"), se tem internet, se o Windows a marcou como
+        // Pública e se o Firewall barra o MiguelAngelus nesse tipo de rede (a permissão é por tipo: Privada / Pública / Domínio;
+        // na 1ª vez o Windows pergunta e a pessoa marca uma delas — aí a rede do outro tipo fica barrada para os celulares).
+        internal static List<(string ip, string nome, bool gw, bool publica, bool bloqueada)> Redes()
         {
-            var r = new List<(string ip, bool gw)>();
+            var r = new List<(string ip, string nome, bool gw, bool publica, bool bloqueada)>();
+            var perfis = PerfisDeRede();
+            var liberados = PerfisLiberadosNoFirewall();
             try
             {
                 foreach (var ni in NetworkInterface.GetAllNetworkInterfaces())
@@ -168,14 +177,71 @@ namespace MiguelAngelus
                     if (ni.OperationalStatus != OperationalStatus.Up || ni.NetworkInterfaceType == NetworkInterfaceType.Loopback ||
                         ni.NetworkInterfaceType == NetworkInterfaceType.Tunnel) continue;
                     var p = ni.GetIPProperties();
-                    var gw = p.GatewayAddresses.Any(g => g.Address.AddressFamily == AddressFamily.InterNetwork && !g.Address.Equals(IPAddress.Any));
+                    // "tem internet": o que o Windows diz da rede (o roteador do MiguelAngelus anuncia gateway mesmo sem internet);
+                    // sem essa informação, vale ter gateway
+                    var gw = perfis.TryGetValue(ni.Name, out var pf) ? pf.internet
+                        : p.GatewayAddresses.Any(g => g.Address.AddressFamily == AddressFamily.InterNetwork && !g.Address.Equals(IPAddress.Any));
+                    var publica = pf.categoria == 0;
+                    // bit do perfil no Firewall: Domínio 1, Privada 2, Pública 4 (categoria da rede: 0 Pública, 1 Privada, 2 Domínio)
+                    var bit = pf.categoria == 2 ? 1 : pf.categoria == 1 ? 2 : 4;
+                    var bloqueada = liberados >= 0 && (liberados & bit) == 0;
                     foreach (var u in p.UnicastAddresses)
                         if (u.Address.AddressFamily == AddressFamily.InterNetwork && !IPAddress.IsLoopback(u.Address) && !u.Address.ToString().StartsWith("169.254."))
-                            r.Add((u.Address.ToString(), gw));
+                            r.Add((u.Address.ToString(), ni.Name, gw, publica, bloqueada));
                 }
             }
             catch { }
-            return r.OrderByDescending(x => x.gw).Select(x => x.ip).Distinct().ToList();
+            return r.OrderByDescending(x => x.gw).GroupBy(x => x.ip).Select(g => g.First()).ToList();
+        }
+
+        // O que o Windows sabe de cada rede (MSFT_NetConnectionProfile, o mesmo do Get-NetConnectionProfile; só leitura):
+        // Pública (NetworkCategory 0) e se chega à internet (IPv4Connectivity 4)
+        static Dictionary<string, (int categoria, bool internet)> perfisGuardados; static DateTime perfisQuando;
+        static Dictionary<string, (int categoria, bool internet)> PerfisDeRede()
+        {
+            if (perfisGuardados != null && (DateTime.UtcNow - perfisQuando).TotalSeconds < 5) return perfisGuardados;
+            var r = new Dictionary<string, (int categoria, bool internet)>(StringComparer.OrdinalIgnoreCase);
+            try
+            {
+                using (var s = new System.Management.ManagementObjectSearcher(@"root\StandardCimv2", "SELECT InterfaceAlias, NetworkCategory, IPv4Connectivity FROM MSFT_NetConnectionProfile"))
+                    foreach (System.Management.ManagementObject o in s.Get())
+                        r[Convert.ToString(o["InterfaceAlias"])] = (Convert.ToInt32(o["NetworkCategory"]), Convert.ToInt32(o["IPv4Connectivity"]) == 4);
+            }
+            catch { }
+            perfisQuando = DateTime.UtcNow;
+            return perfisGuardados = r;
+        }
+
+        // Tipos de rede (bits: Domínio 1, Privada 2, Pública 4) em que o Firewall do Windows deixa os celulares chegarem a ESTE
+        // programa: regras de entrada liberando o MiguelAngelus.exe, menos as que bloqueiam; perfil com o Firewall desligado
+        // conta como liberado. Só leitura (HNetCfg.FwPolicy2). -1 = não deu para ler (não avisa nada).
+        static int liberadosGuardado = -2; static DateTime liberadosQuando;
+        static int PerfisLiberadosNoFirewall()
+        {
+            if (liberadosGuardado != -2 && (DateTime.UtcNow - liberadosQuando).TotalSeconds < 5) return liberadosGuardado;
+            int libera = 0, bloqueia = 0;
+            try
+            {
+                var exe = System.Reflection.Assembly.GetExecutingAssembly().Location;
+                dynamic pol = Activator.CreateInstance(Type.GetTypeFromProgID("HNetCfg.FwPolicy2"));
+                foreach (var b in new[] { 1, 2, 4 }) if (!(bool)pol.FirewallEnabled[b]) libera |= b;
+                foreach (dynamic regra in pol.Rules)
+                {
+                    try
+                    {
+                        string app = regra.ApplicationName;
+                        if (string.IsNullOrEmpty(app) || !string.Equals(Path.GetFullPath(Environment.ExpandEnvironmentVariables(app)), exe, StringComparison.OrdinalIgnoreCase)) continue;
+                        if (!(bool)regra.Enabled || (int)regra.Direction != 1) continue;          // 1 = entrada
+                        int perfis = regra.Profiles;
+                        if ((int)regra.Action == 1) libera |= perfis; else bloqueia |= perfis;     // 1 = permitir
+                    }
+                    catch { }                                                                     // regra com caminho estranho: ignora
+                }
+                liberadosGuardado = libera & ~bloqueia & 7;
+            }
+            catch { liberadosGuardado = -1; }
+            liberadosQuando = DateTime.UtcNow;
+            return liberadosGuardado;
         }
 
         // ---------- HTTP ----------

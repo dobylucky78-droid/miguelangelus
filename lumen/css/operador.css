@@ -435,6 +435,8 @@ big.m-g { font-size: 1.3em; } big.m-gg { font-size: 1.7em; } small.m-pq { font-s
 .cel-end { font: 600 20px/1.2 Consolas, monospace; color: var(--acento); user-select: all; }
 .cel-digitar { margin: 4px 0 8px; padding: 8px 10px; border: 1px dashed var(--borda); border-radius: 8px; background: var(--painel2); display: flex; flex-direction: column; gap: 4px; }
 .cel-digitar .cel-end { font-size: 24px; }
+.cel-rede .linha { display: flex; gap: 6px; align-items: center; }
+.cel-rede select { flex: 1; min-width: 0; }
 .cel-cod { font: 700 22px/1 Consolas, monospace; letter-spacing: 2px; color: var(--acento); }
 .cel-lista { display: flex; flex-direction: column; gap: 4px; margin-bottom: 8px; }
 .cel-ap { display: flex; align-items: center; gap: 8px; padding: 5px 8px; border: 1px solid var(--borda); border-radius: 7px; }

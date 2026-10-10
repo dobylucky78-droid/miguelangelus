@@ -16,7 +16,7 @@
     <RootNamespace>MiguelAngelus</RootNamespace>
     <ApplicationIcon>..\lumen\img\miguelangelus.ico</ApplicationIcon>
     <ApplicationManifest>app.manifest</ApplicationManifest>
-    <Version>1.6.3</Version>
+    <Version>1.6.4</Version>
     <Product>MiguelAngelus</Product>
     <Description>MiguelAngelus — projeção para a Missa</Description>
     <Copyright>Paróquia São José Operário — PASCOM</Copyright>
@@ -32,6 +32,8 @@
     <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.*" />
     <!-- leitura das mensagens da página (JSON) -->
     <Reference Include="System.Web.Extensions" />
+    <Reference Include="System.Management" />
+    <Reference Include="Microsoft.CSharp" />
     <!-- download dos folhetos -->
     <Reference Include="System.Net.Http" />
     <!-- acesso ao Google guardado criptografado (DPAPI) -->

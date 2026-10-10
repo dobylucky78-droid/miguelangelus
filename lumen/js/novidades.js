@@ -5,6 +5,10 @@
  * A versão mais nova fica em cima. Ao gerar uma versão nova, acrescente a entrada dela aqui.
  */
 const NOVIDADES = [
+  { versao: '1.6.4', data: '2026-10-10', itens: [
+    '📱 Rede só para os celulares: com o computador em duas redes (ex.: Wi-Fi da igreja com internet + um roteador só do MiguelAngelus no cabo), escolha em Controle pelo celular qual rede vai no QR code — fica lembrada neste computador. Assim os celulares dos músicos e da PASCOM não usam a internet da igreja (nem pesam na transmissão).',
+    'Controle pelo celular avisa quando o Firewall do Windows não libera o MiguelAngelus no tipo da rede escolhida (Privada ou Pública) e diz qual caixinha marcar. Também mostra quais redes têm internet de verdade.',
+  ] },
   { versao: '1.6.3', data: '2026-10-10', itens: [
     '📿 Terço: em Roteiros → 📿 Terço (ou Adicionar → 📿 Terço) o roteiro vem pronto — abertura, os 5 mistérios do dia e o encerramento. Os mistérios seguem o dia da semana (domingos do Advento: Gozosos; da Quaresma: Dolorosos) e dá para trocar. Em cada Ave-Maria o telão mostra a dezena de contas com a da vez acesa; cada Próximo é uma conta.',
     'Terço — opções: trecho da Bíblia em cada mistério; oração depois do Glória (vem a Jaculatória de Fátima; escolha outra cadastrada em Orações, ou nenhuma); Ladainha de Nossa Senhora no encerramento.',
