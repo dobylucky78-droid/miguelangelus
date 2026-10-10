@@ -5,6 +5,15 @@
  * A versão mais nova fica em cima. Ao gerar uma versão nova, acrescente a entrada dela aqui.
  */
 const NOVIDADES = [
+  { versao: '1.6.3', data: '2026-10-10', itens: [
+    '📿 Terço: em Roteiros → 📿 Terço (ou Adicionar → 📿 Terço) o roteiro vem pronto — abertura, os 5 mistérios do dia e o encerramento. Os mistérios seguem o dia da semana (domingos do Advento: Gozosos; da Quaresma: Dolorosos) e dá para trocar. Em cada Ave-Maria o telão mostra a dezena de contas com a da vez acesa; cada Próximo é uma conta.',
+    'Terço — opções: trecho da Bíblia em cada mistério; oração depois do Glória (vem a Jaculatória de Fátima; escolha outra cadastrada em Orações, ou nenhuma); Ladainha de Nossa Senhora no encerramento.',
+    '🔔 Ângelus (Adicionar → Ângelus): no Tempo Pascal entra sozinha a Regina Caeli. Novas em Orações: Pai-Nosso, Ângelus, Regina Caeli, Jaculatória de Fátima e Ladainha de Nossa Senhora (todas editáveis).',
+    '📅 Agenda: tipos novos Crisma e Primeira Eucaristia — o roteiro vem com o modelo da Missa e o rito próprio depois da homilia (Crisma: apresentação dos crismandos, renovação das promessas do Batismo, imposição das mãos, canto e crismação; Primeira Eucaristia: renovação das promessas). O folheto também monta, como numa Missa.',
+    '📅 Agenda: tipos Terço, Ângelus e Adoração ao Santíssimo com o roteiro já montado. A Adoração vem com exposição, Graças e louvores, Oração do Anjo, Leitura, silêncio, Preces, Tão Sublime, Oração diante do Santíssimo, Bênção e Louvores Divinos — os cantos ficam para escolher.',
+    '🎨 Cor e tamanho no texto: a barrinha de formatação ganhou A+ / A− (grande e título — bom para títulos) e a paleta de cores (vermelho, dourado, azul, verde, roxo, branco e preto). Vale nos cantos, orações, textos e avisos, no telão, no celular e na impressão. Atalhos: Ctrl+Shift+> e Ctrl+Shift+<.',
+    '📖 A Bíblia (tradução do Pe. Antônio Pereira de Figueiredo, domínio público) agora vem junto com o programa: computador novo já abre com ela.',
+  ] },
   { versao: '1.6.2', data: '2026-10-09', itens: [
     '🌐 Folheto da diocese: em Agenda → Paróquia, informe a (arqui)diocese e a página onde ela publica os folhetos. O botão 🌐 busca lá e monta os roteiros. O Rio continua como antes; em outras dioceses aparecem os PDFs da página com nome e data, para escolher.',
     'Quando a Arquidiocese ainda não publicou a versão Celular do folheto, o 🌐 oferece a versão da Assembleia (em colunas) — o MiguelAngelus separa as colunas e monta o roteiro. Dê uma conferida.',

@@ -74,6 +74,17 @@
   #texto .resp { font-weight: 700; }
   #texto .entre { display: block; height: .45em; }
   #texto .quem { font-weight: 700; color: var(--cor-quem, #ff5a4f); }
+  font.m-vermelho { color: #ff5a4f; } font.m-dourado { color: #f2c14e; } font.m-azul { color: #5aa9ff; } font.m-verde { color: #5cc46a; }
+  font.m-roxo { color: #b57cf0; } font.m-branco { color: #fff; } font.m-preto { color: #111; }
+  big.m-g { font-size: 1.3em; } small.m-pq { font-size: .75em; }
+  /* título: um bloco centralizado (o justificado do telão não espalha as palavras dele) */
+  big.m-gg { font-size: 1.7em; line-height: 1.1; display: inline-block; max-width: 100%; text-align: center; text-align-last: center; }
+  /* Terço: a dezena de contas embaixo da Ave-Maria; a da vez acesa, as já rezadas cheias, as que faltam vazias */
+  #texto .contas { display: flex; justify-content: center; align-items: center; gap: .42em; margin-top: .55em; font-size: .62em; }
+  #texto .conta { width: .9em; height: .9em; border-radius: 50%; border: .12em solid currentColor; opacity: .45; box-sizing: border-box; flex: none; }
+  #texto .conta.feita { background: currentColor; opacity: .7; }
+  #texto .conta.agora { width: 1.35em; height: 1.35em; border: 0; opacity: 1; background: var(--cor-quem, #ff5a4f);
+    box-shadow: 0 0 .5em var(--cor-quem, #ff5a4f); }
   #rodape { position: fixed; left: 5vw; right: 5vw; bottom: 3.5vh; text-align: center; font-size: 3.3vh; color: #fff; opacity: .8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: opacity .14s ease; }
   #video { position: fixed; inset: 0; width: 100%; height: 100%; object-fit: contain; background: #000; display: none; }
   #video.on { display: block; }
@@ -192,14 +203,21 @@ function htmlSlide(s) {
   // Espaço entre as falas: um respiro antes e depois da resposta do povo
   const separar = cfg.espacoResposta !== false;
   const html = acabamento(linhas.map((l, i) => i === 0 ? l : (separar && trocas[i] ? '<span class="entre"></span>' : '<br>') + l).join(''));
-  return s.refrao ? `<span class="resp">${html}</span>` : html;
+  const contas = s.contas ? `<span class="contas">${Array.from({ length: +s.contas.total || 0 }, (_, k) =>
+    `<span class="conta ${k + 1 < s.contas.atual ? 'feita' : k + 1 === +s.contas.atual ? 'agora' : ''}"></span>`).join('')}</span>` : '';
+  return (s.refrao ? `<span class="resp">${html}</span>` : html) + contas;
 }
 
 // Negrito/itálico/sublinhado digitados como <b> <i> <u> (botões N I S na edição) e referências bíblicas sem quebrar:
 // "(Fl 4,6-9)" fica sempre inteira na mesma linha (espaço e hífen que não quebram).
+// Cor e tamanho (barrinha de formatação): <vermelho>…</vermelho> vira <font class="m-vermelho">, <g>/<gg> vira <big>, <pq> <small>
 function acabamento(html) {
   return html
     .replace(/&lt;(\/?)(b|i|u)&gt;/gi, '<$1$2>')
+    .replace(/&lt;(vermelho|dourado|azul|verde|roxo|branco|preto)&gt;/gi, (_, c) => `<font class="m-${c.toLowerCase()}">`)
+    .replace(/&lt;\/(vermelho|dourado|azul|verde|roxo|branco|preto)&gt;/gi, '</font>')
+    .replace(/&lt;(gg|g)&gt;/gi, (_, t) => `<big class="m-${t.toLowerCase()}">`).replace(/&lt;\/(gg|g)&gt;/gi, '</big>')
+    .replace(/&lt;pq&gt;/gi, '<small class="m-pq">').replace(/&lt;\/pq&gt;/gi, '</small>')
     .replace(/\(([^()<>]{0,40}\d[^()<>]{0,40})\)/g, (_, r) => '(' + r.replace(/ /g, ' ').replace(/-/g, '‑') + ')');
 }
 

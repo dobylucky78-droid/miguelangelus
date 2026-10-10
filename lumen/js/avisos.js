@@ -8,7 +8,7 @@
 
 const Avisos = { atual: null, timer: 0, tique: 0, recentes: [], tipo: 'veiculo', editado: false };
 
-const semMarcasAviso = t => String(t || '').replace(/<\/?[biu]>/gi, '');
+const semMarcasAviso = t => tirarMarcas(t);
 const ICONE_AVISO = { veiculo: '🚗', crianca: '🧒', livre: '📢' };
 
 function textoDoModelo() {

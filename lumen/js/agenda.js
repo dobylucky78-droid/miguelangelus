@@ -15,7 +15,12 @@
 const DIAS = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
 const DIAS_CURTOS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 const MESES = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
-const TIPOS_CELEBRACAO = ['Missa', 'Adoração', 'Celebração da Palavra', 'Terço', 'Batizado', 'Casamento', 'Confissões', 'Outro'];
+const TIPOS_CELEBRACAO = ['Missa', 'Crisma', 'Primeira Eucaristia', 'Adoração', 'Celebração da Palavra', 'Terço', 'Ângelus', 'Batizado', 'Casamento', 'Confissões', 'Outro'];
+// Crisma e Primeira Eucaristia são Missas: roteiro do modelo de Missa, avisos, e entram na distribuição dos folhetos
+const ehMissa = t => t === 'Missa' || t === 'Crisma' || t === 'Primeira Eucaristia';
+// nome mostrado (o valor guardado continua o mesmo, para as celebrações já cadastradas)
+const NOME_TIPO_CEL = { 'Adoração': 'Adoração ao Santíssimo' };
+const opcoesTipoCel = () => TIPOS_CELEBRACAO.map(t => `<option value="${t}">${NOME_TIPO_CEL[t] || t}</option>`).join('');
 const TIPOS_LOCAL = ['Matriz', 'Capela', 'Comunidade', 'Santuário', 'Outro'];
 const SEMANAS = [['todas', 'Todas'], ['1', '1ª'], ['2', '2ª'], ['3', '3ª'], ['4', '4ª'], ['ultima', 'Última']];
 const CORES_LOCAL = ['#d4a93a', '#4f95ec', '#57b36f', '#e0609a', '#b784e6', '#e67e3a', '#3ac2c2', '#c0c0c0'];
@@ -179,7 +184,7 @@ function renderCelebracoes() {
       <label class="check" title="Ativa"><input type="checkbox" data-ag-ativa ${r.ativa === false ? '' : 'checked'}></label>
       <span class="ag-regra-txt">${esc(descricaoRegra(r))} <b>(${esc(textoCelebracao(r.tipo, r.descricao, r.localId))})</b></span>
       ${loc ? `<span class="pilula-local" style="--cor-local:${loc.cor}" title="${esc(loc.endereco || '')}">${esc(loc.tipo)} ${esc(loc.nome)}</span>` : ''}
-      <span class="tag t-cel-${classeTipo(r.tipo)}">${esc(r.tipo)}</span>
+      <span class="tag t-cel-${classeTipo(r.tipo)}">${esc(NOME_TIPO_CEL[r.tipo] || r.tipo)}</span>
       <button data-ag-editar title="Editar">✎</button>
       <button data-ag-excluir class="perigo" title="Excluir">✕</button>
     </div>`;
@@ -188,7 +193,7 @@ function renderCelebracoes() {
   atualizarDicaDescricao();
 }
 
-const classeTipo = t => ({ 'Missa': 'missa', 'Adoração': 'adoracao', 'Terço': 'terco' }[t] || 'outro');
+const classeTipo = t => ({ 'Missa': 'missa', 'Crisma': 'missa', 'Primeira Eucaristia': 'missa', 'Adoração': 'adoracao', 'Terço': 'terco', 'Ângelus': 'angelus' }[t] || 'outro');
 
 function atualizarDicaDescricao() {
   const auto = textoCelebracao($('#agTipo').value, '', $('#agLocal').value);
@@ -268,7 +273,7 @@ function abrirEvento(ocorrencia, isoNovo) {
   f.data.value = isoData(d);
   f.data.disabled = !!regra;                     // recorrente: só muda neste dia
   f.hora.value = ocorrencia?.hora || '19:00';
-  f.tipo.innerHTML = TIPOS_CELEBRACAO.map(t => `<option>${t}</option>`).join('');
+  f.tipo.innerHTML = opcoesTipoCel();
   f.tipo.value = ocorrencia?.tipo || 'Missa';
   f.tipo.disabled = !!regra;
   f.local.innerHTML = opcoesLocais(ocorrencia ? ocorrencia.localId : (Agenda.filtroLocal || ''));
@@ -295,7 +300,7 @@ function atualizarDicaEvento() {
 function salvarEvento() {
   const f = $('#formEvento'), o = Agenda.evento;
   const hora = f.hora.value || '19:00', descricao = f.descricao.value.trim(), localId = f.local.value;
-  if (!descricao && !localId) return toast('Escolha o local ou escreva a descrição.');
+  // sem local nem descrição: a celebração se chama pelo tipo ("Terço", "Adoração ao Santíssimo"…)
   if (o?.regraId) {
     const r = Agenda.dados.regras.find(x => x.id === o.regraId);
     const ex = { ...(Agenda.dados.excecoes[o.chave] || {}) };
@@ -396,17 +401,41 @@ async function oferecerJuntarRoteiros(pedido) {
   toast(`${n} roteiro(s) repetido(s) apagado(s).`);
 }
 
+// Crisma e Primeira Eucaristia: o rito próprio entra depois da homilia (itens para preencher com o folheto ou à mão)
+function comRitoProprio(tipo, itens) {
+  const texto = (titulo, t = '') => ({ id: uid(), tipo: 'texto', titulo, texto: t });
+  const rito = tipo === 'Crisma' ? [
+    texto('Apresentação dos crismandos'),
+    texto('Renovação das promessas do Batismo'),
+    texto('Imposição das mãos'),
+    { id: uid(), tipo: 'canto', momento: 'Outros', cantoId: '' },     // canto ao Espírito Santo durante a crismação
+    texto('Crismação', 'N., recebe, por este sinal, o Espírito Santo, o Dom de Deus.\n— Amém.\n\nA paz esteja contigo.\n— E contigo também.'),
+  ] : tipo === 'Primeira Eucaristia' ? [
+    texto('Renovação das promessas do Batismo'),
+  ] : [];
+  if (!rito.length) return itens;
+  const k = itens.findIndex(i => i.tipo === 'homilia');
+  const novo = itens.slice();
+  novo.splice(k < 0 ? novo.length : k + 1, 0, ...rito);
+  return novo;
+}
+
 // Cria o roteiro de uma celebração (ligado a ela na Agenda). Sem `itens`, usa o modelo de Missa.
 async function criarRoteiroDaCelebracao(o, itens) {
   const d = deIso(o.iso);
   const r = novoRoteiro(`${DIAS_CURTOS[d.getDay()]} ${dataCurta(d)} ${o.hora} — ${o.texto}`);
   if (itens) r.itens = itens.map(x => ({ ...structuredClone(x), id: uid() }));
   else {
-    // Missa: modelo dominical aos domingos, semanal nos outros dias; outras celebrações começam vazias
-    const modelo = o.tipo === 'Missa' ? (d.getDay() === 0 ? 'dominical' : 'semanal') : null;
-    r.itens = modelo ? Ordinario.modelos[modelo].map(x => ({ id: uid(), ...structuredClone(x) })) : [];
+    // Missa: modelo dominical aos domingos, semanal nos outros dias; Terço, Ângelus e Adoração já vêm montados (terco.js);
+    // outras celebrações começam vazias
+    const modelo = ehMissa(o.tipo) ? (d.getDay() === 0 ? 'dominical' : 'semanal') : null;
+    r.itens = modelo ? comRitoProprio(o.tipo, Ordinario.modelos[modelo].map(x => ({ id: uid(), ...structuredClone(x) })))
+      : o.tipo === 'Terço' ? itensDoTerco(d)
+      : o.tipo === 'Ângelus' ? [novoItem('angelus')]
+      : o.tipo === 'Adoração' ? itensDaAdoracao()
+      : [];
   }
-  if (o.tipo === 'Missa' && typeof comAvisos === 'function') r.itens = comAvisos(r.itens);   // item Avisos antes da bênção
+  if (ehMissa(o.tipo) && typeof comAvisos === 'function') r.itens = comAvisos(r.itens);   // item Avisos antes da bênção
   r.celebracao = o.chave;
   r.data = o.iso;
   r.hora = o.hora;
@@ -452,7 +481,7 @@ function acharOcorrencia(el) {
 function ligarAgenda() {
   $('#agDia').innerHTML = DIAS.map((d, i) => `<option value="${i}">${d}</option>`).join('');
   $('#agSemana').innerHTML = SEMANAS.map(([v, t]) => `<option value="${v}">${t}</option>`).join('');
-  $('#agTipo').innerHTML = TIPOS_CELEBRACAO.map(t => `<option>${t}</option>`).join('');
+  $('#agTipo').innerHTML = opcoesTipoCel();
   $('#parLocTipo').innerHTML = TIPOS_LOCAL.map(t => `<option>${t}</option>`).join('');
 
   $$('.agenda-abas button').forEach(b => b.addEventListener('click', () => mostrarAbaAgenda(b.dataset.ag)));

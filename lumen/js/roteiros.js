@@ -128,6 +128,7 @@ function renderCardsRoteiros() {
       <button class="card-novo" data-card-novo><span>＋</span>Novo roteiro</button>
       <button class="card-novo" data-card-folheto><span>📄</span>Do folheto (PDF, Word, TXT)</button>
       <button class="card-novo" data-card-agenda><span>📅</span>Pela Agenda</button>
+      <button class="card-novo" data-card-terco><span>📿</span>Terço</button>
     </div>
     ${secao('Próximas', proximas)}${secao('Sem data', semData)}${secao('Anteriores', anteriores, true)}
     ${!lista.length && (termo || capela) ? `<p class="vazio">Nenhum roteiro${capela ? ' desta comunidade' : ''} encontrado.</p>` : ''}`;
@@ -180,6 +181,7 @@ function ligarRoteiros() {
     if (e.target.closest('[data-card-novo]')) return $('#btnNovoRoteiro').click();
     if (e.target.closest('[data-card-folheto]')) return $('#arqFolheto').click();
     if (e.target.closest('[data-card-agenda]')) return abrirAgenda('calendario');
+    if (e.target.closest('[data-card-terco]')) return novoRoteiroTerco();
     const cap = e.target.closest('[data-capela]');
     if (cap) { try { localStorage.setItem('lumen.filtroCapela', cap.dataset.capela); } catch {} return renderCardsRoteiros(); }
     const rec = e.target.closest('[data-recolher]');

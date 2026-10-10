@@ -43,6 +43,9 @@ const S = {
 
 function toast(msg) {
   const el = $('#toast');
+  // com uma janela aberta (Agenda, editor…), o aviso vai para dentro dela: senão fica escondido atrás
+  const casa = [...document.querySelectorAll('dialog[open]')].pop() || document.body;
+  if (el.parentNode !== casa) casa.appendChild(el);
   el.textContent = msg; el.classList.add('on');
   clearTimeout(toast.t); toast.t = setTimeout(() => el.classList.remove('on'), 2800);
 }
@@ -193,7 +196,7 @@ const sobrescrito = n => String(n).replace(/\d/g, d => '⁰¹²³⁴⁵⁶⁷⁸
 // e só em último caso no meio da frase; 3) reparte por igual. Referências entre parênteses "(cf. Jo 17,21)" nunca se partem.
 const ABREVIACOES = /^(cf|Cf|S|Sto|Sta|Sr|Sra|Pe|Dom|Fr|Ir|Mons|Pr|n|nº|p|pp|v|vv|cap|ex|etc|séc)\.$/;
 function unidadesTexto(texto) {
-  const tam = s => s.replace(/<\/?[biu]>/gi, '').length;
+  const tam = s => tirarMarcas(s).length;
   // palavras; o que está entre parênteses (até ~40 letras) vira uma palavra só
   const palavras = [];
   let grupo = null;
@@ -208,7 +211,7 @@ function unidadesTexto(texto) {
   // tipo do corte DEPOIS de cada palavra: 0 = fim de frase, 1 = vírgula/pausa, 2 = meio da frase (ou dentro de aspas)
   let aspas = 0;
   return palavras.map(p => {
-    const limpo = p.replace(/<\/?[biu]>/gi, '');
+    const limpo = tirarMarcas(p);
     aspas += (limpo.match(/[“«]/g) || []).length - (limpo.match(/[”»]/g) || []).length;
     const fim = /[.!?…;:]["”’»)]*$/.test(limpo) && !ABREVIACOES.test(limpo.replace(/^\(/, ''));
     return { t: p, n: tam(p), corte: aspas > 0 ? 2 : fim ? 0 : (/[,—–]["”’»)]*$/.test(limpo) ? 1 : 2) };
@@ -259,7 +262,8 @@ function limitarSlide(s) {
   const texto = s.versos
     ? s.versos.map(v => (S.config.numerarVersos ? sobrescrito(v.n) + ' ' : '') + v.t).join(' ')
     : s.texto;
-  const tam = l => l.replace(/<\/?[biu]>/gi, '').length;      // negrito/itálico/sublinhado não ocupam espaço
+  // as marcas (negrito, cor…) não ocupam espaço; letra grande/título ocupa mais (conta 1,3× / 1,7×)
+  const tam = l => tirarMarcas(l).length + Math.round(0.3 * (l.match(/<g>([^<]*)/g) || []).join('').length + 0.7 * (l.match(/<gg>([^<]*)/g) || []).join('').length);
   const visuaisDe = l => Math.max(1, Math.ceil(tam(l) / C));
   // Empacota as linhas em slides de no máximo `lim` linhas visuais. Com `n` (nº de slides desejado), reparte por igual:
   // cada slide recebe mais ou menos (linhas que faltam ÷ slides que faltam).
@@ -327,7 +331,8 @@ function gerarSlides(item) {
   // (e a "Capa do folheto" também: título, linha e edição juntos)
   if (!S.config.quebraAuto || item.tipo === 'homilia' || item.tipo === 'avisos' || (item.tipo === 'imagem' && item.layout === 'capa') ||
     (item.tipo === 'canto' && !S.config.quebraCantos)) return slides;
-  return slides.flatMap(limitarSlide);
+  // Ave-Maria do terço (com as contas) fica inteira num slide: cada Próximo é uma conta
+  return slides.flatMap(s => s.contas ? [s] : limitarSlide(s));
 }
 
 // Refrão no início e depois de cada estrofe (sem refrão: só as estrofes).
@@ -420,6 +425,8 @@ function gerarSlidesBase(item) {
       const o = oracaoDe(item);
       return o ? dividir(o.texto).map(t => ({ texto: t, rodape: o.titulo })) : [];
     }
+    case 'terco': return slidesTerco(item);          // terco.js
+    case 'angelus': return slidesAngelus(item);
     case 'preces': {
       // Oração dos Fiéis: a resposta do povo entra no fim do convite e de cada prece (como o refrão no salmo)
       const rodape = item.titulo || 'Oração dos Fiéis';
@@ -663,20 +670,20 @@ function tratarTecla(key) {
 
 function htmlCartao(s) {
   if (s.avisos) {
-    const fmt = t => esc(t).replace(/&lt;(\/?)(b|i|u)&gt;/gi, '<$1$2>').replace(/\n/g, ' ');
+    const fmt = t => marcasEmHtml(esc(t)).replace(/\n/g, ' ');
     return `<b style="color:${s.avisos.corTitulo}">${esc(s.avisos.icone)} ${esc(s.avisos.titulo)}</b>${s.avisos.pag ? ` <small>${s.avisos.pag}</small>` : ''}` +
       (s.avisos.itens.length ? s.avisos.itens.map(t => '<br>• ' + fmt(t)).join('') : '<br><i>(só o título)</i>');
   }
   if (s.versos) return s.versos.map(v => `<sup>${esc(v.n)}</sup>${esc(v.t)}`).join(' ');
   let povo = false;
-  const html = esc(s.texto).split('\n').map((l, i) => {
+  let html = esc(s.texto).split('\n').map((l, i) => {
     povo = povoDaLinha(l, povo);
     const m = RX_QUEM.exec(l) || (i === 0 && s.numerado ? /^\s*(\d+)\.\s+/.exec(l) : null);   // P./T./L. ou nº da prece/estrofe
     const quem = m ? `<b class="quem">${m[1]}.</b> ` : '';
     if (m) l = l.slice(m[0].length);
     return quem + (povo ? `<b>${l}</b>` : l);
-  }).join('<br>')
-    .replace(/&lt;(\/?)(b|i|u)&gt;/gi, '<$1$2>')     // negrito/itálico/sublinhado (botões N I S)
+  }).join('<br>');
+  html = marcasEmHtml(html)     // negrito/itálico/sublinhado, cor e tamanho (barrinha de formatação)
     .replace(/\(([^()<>]{0,40}\d[^()<>]{0,40})\)/g, (_, r) => '(' + r.replace(/ /g, ' ').replace(/-/g, '‑') + ')');
   return s.refrao ? `<b>${html}</b>` : html;
 }
@@ -856,6 +863,16 @@ function renderCabecalho() {
              <span class="espaco"></span><button data-cmd="editarOracao">Editar</button>${btnAdd}</div>`;
       break;
     }
+    case 'terco':
+      h = htmlCabTerco(it);
+      break;
+    case 'angelus': {
+      const r = resumoAngelus(it);
+      h = `<div class="cab-linha"><span class="tag t-oracao">Oração</span><h2>${esc(r.tit)}</h2></div>
+           <p class="sutil pequeno" style="margin:0">No Tempo Pascal (da Páscoa a Pentecostes) entra sozinha a Regina Caeli, pela data do roteiro.
+             Os textos estão em Orações ("Ângelus" e "Regina Caeli").</p>`;
+      break;
+    }
     case 'preces':
       h = `<div class="cab-linha"><span class="tag t-texto">Preces</span>
              <input data-campo="titulo" class="estreito" value="${esc(it.titulo)}" placeholder="Oração dos Fiéis">
@@ -940,6 +957,8 @@ function resumoItem(it) {
       return { rot: 'Oração', tit: o ? o.titulo : 'escolher oração…', vazio: !o };
     }
     case 'preces': return { rot: 'Preces', tit: it.titulo || 'Oração dos Fiéis', vazio: !(it.texto || '').trim() };
+    case 'terco': return resumoTerco(it);
+    case 'angelus': return resumoAngelus(it);
     case 'avisos': {
       const n = avisosDoItem(it).length;
       return { rot: 'Avisos', tit: `${it.titulo || estiloAvisos().titulo} · ${n ? n + ' aviso(s)' : 'só o título'}`, vazio: false };
@@ -1039,6 +1058,7 @@ function novoItem(tipo) {
     case 'ordinario': return { ...base, parte: 'saudacao' };
     case 'midia': return { ...base, midiaId: '', loop: false };
     case 'oracao': return { ...base, oracaoId: '' };
+    case 'angelus': return base;
     case 'preces': return { ...base, titulo: 'Oração dos Fiéis', resposta: 'Senhor, escutai a nossa prece.', convite: '', texto: '', conclusao: '' };
     case 'avisos': return { ...base, titulo: '', extras: '', programados: true };
   }
@@ -1361,6 +1381,31 @@ function buscarNaBiblia() {
       const t = r.t.length > 150 ? r.t.slice(0, 150) + '…' : r.t;
       return `<div class="it" data-li="${r.li}" data-c="${r.c}" data-n="${r.n}"><span class="tag t-leitura">${esc(refLivro(l))} ${r.c},${r.n}</span><span class="tit">${esc(t)}</span></div>`;
     }).join('');
+}
+
+// A Bíblia do Pe. Antônio Pereira de Figueiredo (domínio público) vem junto com o programa (dados/biblia-figueiredo.xml).
+// Entra sozinha quando o computador não tem nenhuma Bíblia. Fica só neste computador (não sobe para a nuvem: todos já a têm)
+// e com data zero, para perder para qualquer Bíblia que venha da nuvem; se a nuvem trouxer a mesma Bíblia, esta sai.
+const ID_BIBLIA_JUNTO = 'figueiredo-1866';
+async function bibliaQueVemJunto() {
+  try {
+    const todas = await DB.todos('biblias');
+    const junto = todas.find(b => b.id === ID_BIBLIA_JUNTO);
+    if (junto && todas.some(b => b.id !== ID_BIBLIA_JUNTO && b.nome === junto.nome)) {
+      await DB.remover('biblias', ID_BIBLIA_JUNTO, { daNuvem: true });
+      if (S.config.bibliaAtiva === ID_BIBLIA_JUNTO) { delete S.config.bibliaAtiva; salvarConfig(); }
+      return;
+    }
+    if (todas.length) return;
+    statusAbertura('Preparando a Bíblia…');
+    const r = await fetch('dados/biblia-figueiredo.xml');
+    if (!r.ok) return;
+    const b = Biblia.parseZefania(await r.text(), 'Bíblia Sagrada');
+    b.id = ID_BIBLIA_JUNTO;
+    b.atualizado = 0;
+    b.junto = true;
+    await DB.salvar('biblias', b, { daNuvem: true });
+  } catch (e) { console.warn('Bíblia que vem junto:', e); }
 }
 
 async function importarBiblia(arquivo) {
@@ -1717,7 +1762,7 @@ function renderDistribuicao() {
   $('#distAviso').textContent = passado ? 'Este folheto é de uma data que já passou. Se for reaproveitá-lo, escolha a data da Missa acima.' : '';
   $('#distLista').innerHTML = !candidatas.length ? '<p class="sutil">Nenhuma celebração na Agenda nesta data. Use "Só um roteiro".</p>' : candidatas.map((o, i) => {
     const existente = roteiroDaCelebracao(o);
-    const marcado = o.tipo === 'Missa' && !existente;
+    const marcado = ehMissa(o.tipo) && !existente;
     const loc = localDe(o.localId);
     const dia = deIso(o.iso);
     return `<label class="dist-item">
@@ -1922,7 +1967,9 @@ function ligarEventos() {
     if (!campo || !S.atual) return;
     const it = S.atual.item;
     it[campo] = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
+    if (it.tipo === 'terco') aoMudarTerco(it, campo);
     if (S.atual.rIdx >= 0) { salvarRoteiro(); renderRoteiroLista(); }
+    if (it.tipo === 'terco' && e.target.type === 'checkbox') { atualizarSlides(); return renderCabecalho(); }
     atualizarSlides();
     if (e.target.tagName === 'SELECT') renderCabecalho();
     else if (campo === 'ref') atualizarStatusRef();
@@ -2065,6 +2112,7 @@ function ligarEventos() {
     abrirItem(itens[i], i);
   });
   for (const b of $$('[data-add]')) b.addEventListener('click', () => {
+    if (b.dataset.add === 'terco') return adicionarTercoAoRoteiro();
     const it = novoItem(b.dataset.add);
     const pos = adicionarAoRoteiro(it);
     abrirItem(it, pos);
@@ -2264,8 +2312,10 @@ async function iniciar() {
   Midia.lista = await DB.todos('midias');
   statusAbertura('Carregando orações, Agenda e Bíblia…');
   await carregarOracoes();
+  await semearOracoesTerco();           // terco.js: Pai-Nosso, Ângelus, Regina Caeli, Jaculatória de Fátima, Ladainha
   await carregarAgenda();
   await carregarEucaristia();
+  await bibliaQueVemJunto();
   S.biblias = (await DB.todos('biblias')).map(Biblia.indexar);
   S.biblia = S.biblias.find(b => b.id === S.config.bibliaAtiva) || S.biblias[0] || null;
 
@@ -2325,7 +2375,7 @@ async function iniciar() {
   renderBiblia();
   renderCabecalho();
   renderEstadoProj();
-  $('#versaoApp').textContent = NO_APP ? 'Versão 1.6.2 · aplicativo para Windows' : 'Versão 1.6.2 · no navegador';
+  $('#versaoApp').textContent = NO_APP ? 'Versão 1.6.3 · aplicativo para Windows' : 'Versão 1.6.3 · no navegador';
   // pede armazenamento permanente (o navegador não apaga os dados para liberar espaço)
   try { navigator.storage?.persist?.(); } catch (_) {}
   enviarConfigTelao(); renderTemasRapidos();

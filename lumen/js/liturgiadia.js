@@ -242,7 +242,7 @@ function renderLiturgiaReconhecida() {
   $('#litCelebracoes').innerHTML = ocs.length
     ? ocs.map((o, i) => {
         const existe = roteiroDaCelebracao(o), loc = localDe(o.localId);
-        return `<label class="dist-item"><input type="checkbox" data-i="${i}" ${o.tipo === 'Missa' && !existe ? 'checked' : ''}>
+        return `<label class="dist-item"><input type="checkbox" data-i="${i}" ${ehMissa(o.tipo) && !existe ? 'checked' : ''}>
           <span class="dist-quando">${o.hora}</span>${loc ? `<span class="card-ponto" style="background:${loc.cor}"></span>` : ''}
           <span class="dist-txt">${esc(o.texto)}</span>${existe ? '<span class="dist-existe">já tem roteiro — marque para refazer</span>' : ''}</label>`;
       }).join('')

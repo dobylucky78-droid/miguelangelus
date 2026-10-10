@@ -167,6 +167,9 @@
   .sem-gap .rc .ln > * + *, .sem-gap .m-barra > * + *, .sem-gap .mc-cab > * + *, .sem-gap .mc-tom > * + *, .sem-gap .ptz-ctl > * + * { margin-left: 8px; }
   .sem-gap .lista > * + *, .sem-gap .tela-cheia > * + *, .sem-gap .ptz-zm > * + * { margin-top: 8px; }
   .sem-gap .linha > *, .sem-gap .temas > *, .sem-gap .ptz-pos > * { margin: 3px; }
+  font.m-vermelho { color: #ff5a4f; } font.m-dourado { color: #f2c14e; } font.m-azul { color: #5aa9ff; } font.m-verde { color: #5cc46a; }
+  font.m-roxo { color: #b57cf0; } font.m-branco { color: #fff; } font.m-preto { color: #111; }
+  big.m-g { font-size: 1.25em; } big.m-gg { font-size: 1.5em; } small.m-pq { font-size: .8em; }
 </style>
 </head>
 <body>
@@ -293,6 +296,17 @@
 <video id="acordado" src="acordado.mp4" muted loop playsinline webkit-playsinline preload="auto"></video>
 
 <script>
+// marcas de formatação do MiguelAngelus (negrito… cor, tamanho) já escapadas → HTML; ES5 (aparelhos antigos)
+var RX_MARCA = /&lt;(\/?)(b|i|u|gg|g|pq|vermelho|dourado|azul|verde|roxo|branco|preto)&gt;/gi;
+var RX_MARCA_CRUA = /<\/?(b|i|u|gg|g|pq|vermelho|dourado|azul|verde|roxo|branco|preto)>/gi;
+function trocaMarca(_, f, t) {
+  t = t.toLowerCase();
+  if (t === "b" || t === "i" || t === "u") return "<" + f + t + ">";
+  var el = "vermelho dourado azul verde roxo branco preto".indexOf(t) >= 0 ? "font" : t === "pq" ? "small" : "big";
+  return f ? "</" + el + ">" : "<" + el + " class=\"m-" + t + "\">";
+}
+</script>
+<script>
 // Navegador antigo demais para esta página (iOS 9/10, Android antigo: sem fetch, funções de seta, async…): vai para a
 // versão simples, feita em JavaScript da época. Escrito em JavaScript antigo, para rodar até lá.
 (function () {
@@ -329,7 +343,7 @@ function nomePadrao() {
 function htmlSlide(s, curto) {
   if (!s) return '';
   if (s.avisos) return `<div><b>${esc(s.avisos.icone)} ${esc(s.avisos.titulo)}</b>${s.avisos.pag ? ` <small>${esc(s.avisos.pag)}</small>` : ''}` +
-    s.avisos.itens.map(t => '<br>• ' + esc(t).replace(/&lt;(\/?)(b|i|u)&gt;/gi, '<$1$2>')).join('') + '</div>';
+    s.avisos.itens.map(t => '<br>• ' + esc(t).replace(RX_MARCA, trocaMarca)).join('') + '</div>';
   if (s.versos) return '<div>' + s.versos.map(v => `<sup>${esc(v.n)}</sup>${esc(v.t)}`).join(' ') + '</div>';
   const cfg = (est && est.cfg) || {};
   let povo = false;
@@ -346,7 +360,7 @@ function htmlSlide(s, curto) {
   });
   const separar = !curto && cfg.espacoResposta !== false;
   let html = linhas.map((l, i) => i === 0 ? l : (separar && trocas[i] ? '<span class="entre"></span>' : '<br>') + l).join('')
-    .replace(/&lt;(\/?)(b|i|u)&gt;/gi, '<$1$2>');
+    .replace(RX_MARCA, trocaMarca);
   if (s.refrao) html = `<span class="resp">${html}</span>`;
   if (s.img && !s.texto) html = '<span class="aviso-img">🖼 Imagem</span>';
   return `<div>${html}</div>`;      // um bloco só (a caixa do telão centraliza com flex)
@@ -473,7 +487,7 @@ function transpLinha(l, p) {
   }
   return out;
 }
-const palavras = t => (t || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/<\/?[biu]>/g, '').replace(/^\s*([ptlcd]\.|\d+\.|—)\s*/, '').replace(/[^a-z ]+/g, ' ').split(/\s+/).filter(w => w.length > 1);
+const palavras = t => (t || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(RX_MARCA_CRUA, '').replace(/^\s*([ptlcd]\.|\d+\.|—)\s*/, '').replace(/[^a-z ]+/g, ' ').split(/\s+/).filter(w => w.length > 1);
 
 function htmlCifra(m, passos) {
   return m.cifra.split('\n').map((l, k) => {
@@ -502,7 +516,7 @@ function renderMusico(refazer) {
           <span class="noar" hidden>no telão</span>
           ${m.cifra ? `<div class="mc-tom"><button data-tr="${esc(m.titulo)}" data-p="-1">−</button><b title="Tom">${esc(tom)}</b><button data-tr="${esc(m.titulo)}" data-p="1">+</button></div>` : ''}</div>
         ${m.cifra ? `<pre class="cifra">${htmlCifra(m, p)}</pre>`
-          : `<div class="sem">${(m.letra || 'Sem letra.').split('\n').map((l, k) => `<span class="l" data-k="${k}">${esc(l).replace(/&lt;(\/?)(b|i|u)&gt;/gi, '<$1$2>') || ' '}</span>`).join('\n')}</div>
+          : `<div class="sem">${(m.letra || 'Sem letra.').split('\n').map((l, k) => `<span class="l" data-k="${k}">${esc(l).replace(RX_MARCA, trocaMarca) || ' '}</span>`).join('\n')}</div>
              ${m.rezado ? '' : `<a class="cc" href="https://www.cifraclub.com.br/?q=${encodeURIComponent(m.titulo)}" target="_blank" rel="noopener">🔎 Abrir no Cifra Club</a>`}`}
       </div>`;
     }).join('') : '<p class="sutil">Nenhum canto no roteiro aberto.</p>';

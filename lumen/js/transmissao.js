@@ -22,7 +22,7 @@ function categoriaAoVivo() {
     case 'canto': case 'salmo': return 'cantos';
     case 'leitura': case 'biblia': return 'leituras';
     case 'texto': return /leitura|evangelho/i.test(it.titulo || '') ? 'leituras' : 'respostas';
-    case 'ordinario': case 'oracao': case 'preces': case 'prefacio': case 'eucaristica': return 'respostas';
+    case 'ordinario': case 'oracao': case 'terco': case 'angelus': case 'preces': case 'prefacio': case 'eucaristica': return 'respostas';
     case 'avisos': return 'avisos';
     default: return null;
   }
@@ -34,7 +34,7 @@ const CAMPO_CATEGORIA = { cantos: 'faixaCantos', respostas: 'faixaRespostas', le
 function linhasDoSlide(s) {
   const maius = t => S.config.maiusculas ? t.toLocaleUpperCase('pt-BR') : t;
   if (s.versos) return { linhas: [maius(s.versos.map(v => v.t).join(' '))], negrito: [false] };
-  const semMarcas = t => t.replace(/<\/?[biu]>/gi, '').replace(/\s*\n\s*/g, ' ').trim();
+  const semMarcas = t => tirarMarcas(t).replace(/\s*\n\s*/g, ' ').trim();
   if (s.avisos) return { linhas: [maius(s.avisos.titulo), ...s.avisos.itens.map(t => maius(semMarcas(t)))],
     negrito: [true, ...s.avisos.itens.map(() => false)] };
   let povo = false;
@@ -42,7 +42,7 @@ function linhasDoSlide(s) {
   for (const [i, l] of (s.texto || '').split('\n').entries()) {
     if (!l.trim()) continue;
     povo = povoDaLinha(l, povo);
-    const sem = (i === 0 && s.numerado ? l.replace(/^\s*\d+\.\s+/, '') : l).replace(/<\/?[biu]>/gi, '');   // sem o nº da prece/estrofe e sem as marcas de negrito/itálico
+    const sem = (i === 0 && s.numerado ? l.replace(/^\s*\d+\.\s+/, '') : l).replace(RX_MARCAS, '');   // sem o nº da prece/estrofe e sem as marcas de negrito/itálico
     linhas.push(maius(sem.replace(/^\s*—\s*/, '').replace(RX_QUEM, '').trim()));   // … e sem "P."/"T."
     negrito.push(povo || !!s.refrao);
   }
@@ -52,7 +52,7 @@ function linhasDoSlide(s) {
 function conteudoFaixa() {
   if (S.live.preto) return { linhas: [], negrito: [] };
   // aviso na tela (placa, criança…) tem prioridade, se estiver ligado para a transmissão
-  if (Avisos.atual && S.config.faixaAvisos) return { linhas: [Avisos.atual.texto.replace(/<\/?[biu]>/gi, '')], negrito: [true] };
+  if (Avisos.atual && S.config.faixaAvisos) return { linhas: [Avisos.atual.texto.replace(RX_MARCAS, '')], negrito: [true] };
   const cat = categoriaAoVivo();
   if (!cat || !S.config[CAMPO_CATEGORIA[cat]] || !S.live.slide) return { linhas: [], negrito: [] };
   if (S.live.slide.img && S.live.slide.layout === 'so') return { linhas: [], negrito: [] };

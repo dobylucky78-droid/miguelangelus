@@ -93,7 +93,7 @@ function situacao(a) {
   if (a.inicio && a.inicio > h) return ['agendado', 'começa em ' + dataBR(a.inicio) + (a.fim ? ', até ' + dataBR(a.fim) : '')];
   return ['ativo', 'valendo ' + (a.fim ? (a.fim === h ? 'só hoje' : 'até ' + dataBR(a.fim)) : 'sem data para sair')];
 }
-const htmlAviso = t => esc(t).replace(/&lt;(\/?)(b|i|u)&gt;/gi, '<$1$2>');
+const htmlAviso = t => marcasEmHtml(esc(t));
 
 function renderAvisosPar() {
   const lista = [...AvPar.lista].sort((a, b) => {

@@ -210,6 +210,7 @@ code { background: var(--painel2); padding: 1px 4px; border-radius: 4px; }
 /* ---------- Player de mídia ---------- */
 .t-midia { background: #3a2342; color: #e6b3ff; }
 .t-oracao { background: #2c3a1c; color: #cde39a; }
+.t-terco, .t-angelus { background: #1c2f4a; color: #a9cdf5; }
 .grade-slides.modo-player { display: block; }
 .player { max-width: 640px; margin: 10px auto; background: var(--painel); border: 1px solid var(--borda); border-radius: 12px; padding: 18px 20px; display: flex; flex-direction: column; gap: 12px; }
 .pl-topo { display: flex; gap: 8px; align-items: center; font-size: 12.5px; }
@@ -379,6 +380,18 @@ button.cards-sec:hover, button.cards-dia:hover { border-bottom-color: var(--bord
 /* barrinha N I S ao editar textos (formatacao.js) */
 .barra-formato { position: fixed; z-index: 120; display: flex; gap: 2px; padding: 2px; background: var(--painel); border: 1px solid var(--borda); border-radius: 7px; box-shadow: 0 4px 14px rgba(0,0,0,.35); }
 .barra-formato button { width: 28px; height: 24px; padding: 0; font-size: 14px; border-radius: 5px; }
+.barra-formato { align-items: center; }
+.barra-formato sup { font-size: 9px; }
+.bf-sep { width: 1px; align-self: stretch; margin: 2px 2px; background: var(--borda); }
+.bf-cor { font-weight: 800; text-decoration: underline 3px; text-decoration-color: #ff5a4f; text-underline-offset: 2px; }
+.bf-paleta { display: flex; gap: 3px; padding-left: 4px; }
+.bf-paleta[hidden] { display: none; }
+.bf-paleta button { width: 20px; height: 20px; border-radius: 50%; border: 1px solid rgba(128,128,128,.6); }
+.bf-paleta .bf-semcor { background: transparent; font-size: 11px; }
+/* cor e tamanho no texto (marcas <vermelho>, <g>, <gg>, <pq>) — na lista de slides e nas prévias */
+font.m-vermelho { color: #ff5a4f; } font.m-dourado { color: #f2c14e; } font.m-azul { color: #5aa9ff; } font.m-verde { color: #5cc46a; }
+font.m-roxo { color: #b57cf0; } font.m-branco { color: #fff; } font.m-preto { color: #111; }
+big.m-g { font-size: 1.3em; } big.m-gg { font-size: 1.7em; } small.m-pq { font-size: .75em; }
 /* Câmera PTZ */
 .ptz-cx { border: 1px solid var(--borda); border-radius: 8px; padding: 6px 10px; margin-top: 10px; }
 .ptz-cx summary { cursor: pointer; font-weight: 600; }
@@ -547,6 +560,7 @@ button.cards-sec:hover, button.cards-dia:hover { border-bottom-color: var(--bord
 .t-cel-missa { --cor-cel: #d4a93a; }
 .t-cel-adoracao { --cor-cel: #b784e6; }
 .t-cel-terco { --cor-cel: #5fa8e6; }
+.t-cel-angelus { --cor-cel: #e6a25f; }
 .t-cel-outro { --cor-cel: #7fbf8f; }
 .tag[class*="t-cel-"] { background: color-mix(in srgb, var(--cor-cel) 22%, transparent); color: var(--cor-cel); }
 
@@ -809,6 +823,7 @@ html[data-tema-app="claro"] .t-texto { background: #f8f0d8; color: #8a6510; }
 html[data-tema-app="claro"] .t-ordinario { background: #fbe4e4; color: #a63a3a; }
 html[data-tema-app="claro"] .t-midia { background: #f5e6fb; color: #8a3aa8; }
 html[data-tema-app="claro"] .t-oracao { background: #edf5dc; color: #5a7a1c; }
+html[data-tema-app="claro"] .t-terco, html[data-tema-app="claro"] .t-angelus { background: #e1edfb; color: #1d4f8c; }
 html[data-tema-app="claro"] .t-imagem, html[data-tema-app="claro"] .t-apres { background: #e1f0fa; color: #1f6a99; }
 html[data-tema-app="claro"] .t-homilia { background: #fbefd6; color: #8a5a10; }
 html[data-tema-app="claro"] .t-avisos { background: #fde3e5; color: #9b1c27; }

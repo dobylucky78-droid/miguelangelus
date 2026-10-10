@@ -18,7 +18,7 @@ const GRUPOS_SYNC = [
   { sub: 'cantos', store: 'cantos' },
   { sub: 'oracoes', store: 'oracoes' },
   { sub: 'apresentacoes', store: 'midias', filtro: r => r.tipo === 'apresentacao' },
-  { sub: 'biblias', store: 'biblias' },
+  { sub: 'biblias', store: 'biblias', filtro: r => !r.junto },   // a Bíblia que vem com o programa não sobe (todos já a têm)
 ];
 const ligadaSync = () => NO_APP && (S.config.syncModo === 'google' || (S.config.syncModo === 'pasta' && S.config.syncPasta));
 

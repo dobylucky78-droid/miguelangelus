@@ -10,7 +10,7 @@ const MAX_POR_GRUPO = 25;
 
 // Trecho do texto em volta do termo encontrado (com o termo em destaque)
 function trechoCom(texto, termo) {
-  const t = String(texto || '').replace(/<\/?[biu]>/gi, '').replace(/\s+/g, ' ');
+  const t = tirarMarcas(texto).replace(/\s+/g, ' ');
   const i = semAcento(t).indexOf(termo);
   if (i < 0) return esc(t.slice(0, 90));
   const ini = Math.max(0, i - 40), fim = Math.min(t.length, i + termo.length + 50);

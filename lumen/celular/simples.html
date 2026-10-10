@@ -75,6 +75,9 @@
   .cobre .erro { color: #ff8a80; min-height: 20px; }
   .toast { position: fixed; left: 10%; right: 10%; bottom: 130px; background: #2d323b; padding: 10px; border-radius: 10px; text-align: center; opacity: 0; -webkit-transition: opacity .3s; transition: opacity .3s; pointer-events: none; }
   [hidden] { display: none !important; }
+  font.m-vermelho { color: #ff5a4f; } font.m-dourado { color: #f2c14e; } font.m-azul { color: #5aa9ff; } font.m-verde { color: #5cc46a; }
+  font.m-roxo { color: #b57cf0; } font.m-branco { color: #fff; } font.m-preto { color: #111; }
+  big.m-g { font-size: 1.25em; } big.m-gg { font-size: 1.5em; } small.m-pq { font-size: .8em; }
 </style>
 </head>
 <body>
@@ -137,6 +140,17 @@
 <div class="toast" id="toast"></div>
 
 <script>
+// marcas de formatação do MiguelAngelus (negrito… cor, tamanho) já escapadas → HTML; ES5 (aparelhos antigos)
+var RX_MARCA = /&lt;(\/?)(b|i|u|gg|g|pq|vermelho|dourado|azul|verde|roxo|branco|preto)&gt;/gi;
+var RX_MARCA_CRUA = /<\/?(b|i|u|gg|g|pq|vermelho|dourado|azul|verde|roxo|branco|preto)>/gi;
+function trocaMarca(_, f, t) {
+  t = t.toLowerCase();
+  if (t === "b" || t === "i" || t === "u") return "<" + f + t + ">";
+  var el = "vermelho dourado azul verde roxo branco preto".indexOf(t) >= 0 ? "font" : t === "pq" ? "small" : "big";
+  return f ? "</" + el + ">" : "<" + el + " class=\"m-" + t + "\">";
+}
+</script>
+<script>
 'use strict';
 var CHAVE = 'mgl.celular.token';
 function ler(k, padrao) { try { var v = localStorage.getItem(k); return v === null ? padrao : v; } catch (e) { return padrao; } }
@@ -178,7 +192,7 @@ function htmlSlide(s) {
     if (m) { povo = m[1] === 'T'; quem = '<span class="quem">' + m[1] + '.</span> '; l = l.slice(m[0].length); }
     else if (/^\s*(—|R\.)/.test(l)) povo = true;
     return quem + (povo ? '<span class="resp">' + l + '</span>' : l);
-  }).join('<br>').replace(/&lt;(\/?)(b|i|u)&gt;/gi, '<$1$2>');
+  }).join('<br>').replace(RX_MARCA, trocaMarca);
   return s.refrao ? '<span class="resp">' + html + '</span>' : html;
 }
 
@@ -227,7 +241,7 @@ function renderCifras(rolar) {
       '<div class="mom">' + esc(m.momento) + '</div><div class="tt">' + esc(m.titulo) + '</div>' +
       (m.autor ? '<div class="sutil">' + esc(m.autor) + '</div>' : '') + (m.deOutro ? '<div class="sutil">cifra de: ' + esc(m.deOutro) + '</div>' : '') + soa + '</div>' +
       (m.cifra ? '<pre class="cifra" style="font-size:' + tamCifra + 'px">' + htmlCifra(m.cifra, p) + '</pre>'
-        : '<div class="letra" style="font-size:' + tamCifra + 'px">' + esc(m.letra || 'Sem letra.').replace(/&lt;(\/?)(b|i|u)&gt;/gi, '<$1$2>').replace(/\n/g, '<br>') + '</div>') + '</div>';
+        : '<div class="letra" style="font-size:' + tamCifra + 'px">' + esc(m.letra || 'Sem letra.').replace(RX_MARCA, trocaMarca).replace(/\n/g, '<br>') + '</div>') + '</div>';
   }).join('') : '<span class="vazia">Nenhum canto no roteiro aberto.</span>';
   // o canto que entrou no telão: a tela rola até ele
   if (rolar && vivo !== ultimoVivo) { ultimoVivo = vivo; var c = $('mc' + vivo); if (c) c.scrollIntoView(true); }
