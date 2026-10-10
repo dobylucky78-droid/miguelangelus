@@ -21,7 +21,7 @@
     </div>
     <div class="splash-info">
       <div class="splash-gratis"><b>Gratuito · uso livre</b></div>
-      <div>Versão 1.6.1</div>
+      <div>Versão 1.6.2</div>
       <div>© 2026 · PASCOM</div>
       <div><b>Paróquia São José Operário</b></div>
     </div>
@@ -619,6 +619,7 @@
           <label class="campo">Nome da paróquia <input data-par="nome" placeholder="Ex.: Paróquia São José Operário"></label>
           <label class="campo">Padroeiro(a) <input data-par="padroeiro" placeholder="Ex.: São José Operário"></label>
           <label class="campo">(Arqui)diocese <input data-par="diocese" placeholder="Ex.: Arquidiocese de São Sebastião do Rio de Janeiro"></label>
+          <label class="campo">Página dos folhetos da (arqui)diocese <input data-par="siteFolhetos" type="url" placeholder="https://arqrio.org.br/folhetos/"></label>
           <label class="campo">Endereço da secretaria <input data-par="endereco"></label>
           <div class="linha">
             <label class="campo">Telefone <input data-par="telefone"></label>
@@ -865,9 +866,11 @@
 <!-- ============ Folhetos da Arquidiocese ============ -->
 <dialog id="dlgFolhetoOnline">
   <form method="dialog" class="form">
-    <h2>🌐 Folhetos da Arquidiocese</h2>
-    <p class="sutil pequeno">Os folhetos "A Missa" publicados em <b>arqrio.org.br/folhetos</b> (versão Celular). Escolha um: o MiguelAngelus
-      baixa e monta os roteiros das celebrações, como no botão 📄 Folheto.</p>
+    <h2 id="folOnlineTitulo">🌐 Folhetos da Arquidiocese</h2>
+    <p class="sutil pequeno">Os folhetos publicados em <b id="folOnlineSite">arqrio.org.br/folhetos</b> (a página é configurada em Agenda → Paróquia).
+      Escolha um: o MiguelAngelus baixa e monta os roteiros das celebrações, como no botão 📄 Folheto.</p>
+    <p id="folOnlineGenerico" class="sutil pequeno" hidden>Aqui aparecem todos os PDFs com link nessa página. Se houver, prefira a versão
+      para celular; folhetos em colunas também montam, mas dê uma conferida no roteiro.</p>
     <div id="folOnlineLista" class="fol-lista"></div>
     <div class="linha">
       <span class="espaco"></span>
@@ -930,7 +933,7 @@
       <figure><img src="img/brasao-paroquia.webp" alt="Brasão da Paróquia São José Operário"><figcaption>Paróquia São José Operário (RJ)</figcaption></figure>
       <figure><img src="img/brasao-pascom.webp" alt="Logotipo da PASCOM"><figcaption>PASCOM</figcaption></figure>
     </div>
-    <p class="sutil pequeno" id="versaoApp">Versão 1.6.1</p>
+    <p class="sutil pequeno" id="versaoApp">Versão 1.6.2</p>
     <div class="linha"><span class="espaco"></span><button value="ok" class="primario">OK</button></div>
   </form>
 </dialog>

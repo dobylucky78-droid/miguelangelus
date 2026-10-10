@@ -419,7 +419,9 @@ button.cards-sec:hover, button.cards-dia:hover { border-bottom-color: var(--bord
 .cel-qr svg { width: 100%; height: 100%; display: block; }
 .cel-txt { flex: 1; min-width: 220px; }
 .cel-txt p { margin: 0 0 6px; }
-.cel-end { font: 600 20px/1.2 Consolas, monospace; color: var(--acento); }
+.cel-end { font: 600 20px/1.2 Consolas, monospace; color: var(--acento); user-select: all; }
+.cel-digitar { margin: 4px 0 8px; padding: 8px 10px; border: 1px dashed var(--borda); border-radius: 8px; background: var(--painel2); display: flex; flex-direction: column; gap: 4px; }
+.cel-digitar .cel-end { font-size: 24px; }
 .cel-cod { font: 700 22px/1 Consolas, monospace; letter-spacing: 2px; color: var(--acento); }
 .cel-lista { display: flex; flex-direction: column; gap: 4px; margin-bottom: 8px; }
 .cel-ap { display: flex; align-items: center; gap: 8px; padding: 5px 8px; border: 1px solid var(--borda); border-radius: 7px; }
@@ -744,6 +746,7 @@ button.cards-sec:hover, button.cards-dia:hover { border-bottom-color: var(--bord
 .fol-nome { flex: 1; min-width: 0; }
 .fol-tag { color: var(--acento-claro); font-size: 11px; text-transform: uppercase; margin-left: 4px; }
 .fol-ja { color: var(--ok); font-size: 12px; margin-left: 6px; }
+.fol-assembleia { display: inline-block; color: #f0b35a; font-size: 12px; margin-left: 6px; }
 #btnFolhetoOnline { position: relative; overflow: visible; }
 #btnFolhetoOnline.tem-novo::after { content: 'novo'; position: absolute; top: -8px; right: 8px; padding: 1px 7px; border-radius: 999px;
   background: #2e7d45; color: #fff; font-size: 10.5px; font-weight: 700; letter-spacing: .3px; box-shadow: 0 0 0 2px var(--painel); }

@@ -19,7 +19,7 @@ const TIPOS_CELEBRACAO = ['Missa', 'Adoração', 'Celebração da Palavra', 'Ter
 const TIPOS_LOCAL = ['Matriz', 'Capela', 'Comunidade', 'Santuário', 'Outro'];
 const SEMANAS = [['todas', 'Todas'], ['1', '1ª'], ['2', '2ª'], ['3', '3ª'], ['4', '4ª'], ['ultima', 'Última']];
 const CORES_LOCAL = ['#d4a93a', '#4f95ec', '#57b36f', '#e0609a', '#b784e6', '#e67e3a', '#3ac2c2', '#c0c0c0'];
-const CAMPOS_PAROQUIA = ['nome', 'padroeiro', 'diocese', 'endereco', 'telefone', 'contato', 'paroco'];
+const CAMPOS_PAROQUIA = ['nome', 'padroeiro', 'diocese', 'siteFolhetos', 'endereco', 'telefone', 'contato', 'paroco'];
 
 const Agenda = {
   dados: { paroquia: {}, locais: [], regras: [], excecoes: {}, avulsos: [], vinculos: {} },
@@ -39,6 +39,13 @@ async function carregarAgenda() {
   if (reg?.valor) Object.assign(Agenda.dados, reg.valor);
   Agenda.dados.paroquia ||= {};
   Agenda.dados.locais ||= [];
+  // antes da 1.6.2 os folhetos vinham sempre da Arquidiocese do Rio: quem já usava fica com ela preenchida
+  const p = Agenda.dados.paroquia;
+  if (p.siteFolhetos === undefined && reg?.valor) {
+    p.siteFolhetos = 'https://arqrio.org.br/folhetos/';
+    p.diocese ||= 'Arquidiocese de São Sebastião do Rio de Janeiro';
+    salvarAgenda();
+  }
 }
 
 let timerAgenda = 0;

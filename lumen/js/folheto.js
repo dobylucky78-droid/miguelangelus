@@ -1,7 +1,7 @@
 'use strict';
 /*
  * Importação do folheto "A Missa" (Arquidiocese do Rio de Janeiro) em PDF.
- * Feito para a versão "Celular" (uma coluna). Usa o pdf.js (lib/pdfjs), carregado só quando necessário.
+ * Feito para a versão "Celular" (uma coluna); lê também a da "Assembleia" e folhetos de outras dioceses, em colunas. Usa o pdf.js (lib/pdfjs), carregado só quando necessário.
  *
  * Como o folheto é lido:
  *  - letra grande             → título de uma parte ("6. Primeira Leitura (Ez 18,25-28)")
@@ -166,21 +166,26 @@ const Folheto = (() => {
       const passo = 2, x0 = Math.min(...rs.map(r => r.x)), x1 = Math.max(...rs.map(r => r.x + (r.w || 0)));
       const n = Math.ceil((x1 - x0) / passo) + 1;
       if (!isFinite(n) || n < 10) continue;
-      // quantos trechos de texto passam por cada faixa de 2 pt
-      const cob = new Float64Array(n);
+      // quantos trechos de texto passam por cada faixa de 2 pt — os LARGOS (mais da metade da largura do texto) contados à
+      // parte: no folheto da Assembleia, o comentário inicial e alguns títulos atravessam duas colunas e "tampavam" o corredor
+      // entre elas (as letras dos cantos da coluna ao lado se misturavam com a Saudação). Poucos trechos largos (até 15%)
+      // não impedem o corredor; muitos (texto corrido de uma coluna só, como o folheto Celular) impedem.
+      const cob = new Float64Array(n), cobLargo = new Float64Array(n), largo = (x1 - x0) * 0.5;
       let total = 0;
       for (const r of rs) {
         const a = Math.floor((r.x - x0) / passo), b = Math.floor((r.x + (r.w || 0) - x0) / passo);
-        for (let i = a; i <= b && i < n; i++) cob[i]++;
+        // largo, título (letra grande) ou letra miúda (rodapé "Com aprovação eclesiástica…", créditos): pode atravessar colunas
+        const alvo = (r.w || 0) > largo || r.h >= corpo * 1.2 || r.h <= corpo * 0.9 ? cobLargo : cob;
+        for (let i = a; i <= b && i < n; i++) alvo[i]++;
         total += r.s.length;
       }
       // corredores: faixas por onde (quase) nenhum trecho passa (um título atravessando as colunas é tolerado);
       // o espaço entre colunas costuma ser estreito, ~1/3 da altura da letra
-      const limiar = Math.max(1, rs.length * 0.01), minLarg = Math.max(2, Math.ceil(corpo * 0.35 / passo));
+      const limiar = Math.max(1, rs.length * 0.01), limiarLargo = Math.max(1, rs.length * 0.15), minLarg = Math.max(2, Math.ceil(corpo * 0.35 / passo));
       const cortes = [];
       let ini = -1;
       for (let i = 0; i <= n; i++) {
-        const vazio = i < n && cob[i] <= limiar;
+        const vazio = i < n && cob[i] <= limiar && cobLargo[i] <= limiarLargo;
         if (vazio && ini < 0) ini = i;
         if (!vazio && ini >= 0) {
           if (i - ini >= minLarg && ini > 0 && i < n) cortes.push(x0 + (ini + i) / 2 * passo);
@@ -211,6 +216,29 @@ const Folheto = (() => {
       }
       if (!cortes.length) continue;
       for (const r of rs) r.col = col(r.x + 1);
+      // faixa do alto que atravessa colunas (a capa do folheto da Assembleia: título + comentário inicial sobre duas colunas):
+      // tudo o que está nela, no trecho de largura que ela ocupa, fica junto — antes das colunas — em vez de ser repartido
+      const cruza = r => cortes.some(c => r.x + 1 < c && r.x + (r.w || 0) - 1 > c);
+      // só o bloco de CIMA (linhas seguidas, sem buraco grande): um rodapé que também atravessa (créditos dos cantos) não conta
+      const todasAtravessam = rs.filter(r => cruza(r) && ((r.w || 0) > largo || r.h >= corpo * 1.2 || r.h <= corpo * 0.9)).sort((a, b) => b.y - a.y);
+      const bloco = lista => { const b = []; for (const r of lista) { if (b.length && Math.abs(b[b.length - 1].y - r.y) > corpo * 6) break; b.push(r); } return b; };
+      const atravessam = bloco(todasAtravessam).filter(r => r.h > corpo * 0.9);    // capa: título e comentário (não letra miúda)
+      // rodapé (bloco de BAIXO que atravessa): vai para o fim da página, depois de todas as colunas
+      const rodape = bloco([...todasAtravessam].reverse());
+      if (rodape.length && !rodape.some(r => atravessam.includes(r))) {
+        const yTopo = Math.max(...rodape.map(r => r.y)) + corpo * 0.5;
+        const xa = Math.min(...rodape.map(r => r.x)) - 1, xb = Math.max(...rodape.map(r => r.x + (r.w || 0))) + 1;
+        if (rs.some(r => r.y > yTopo && r.x >= xa && r.x < xb))
+          for (const r of rs) if (r.y <= yTopo && r.x >= xa && r.x + (r.w || 0) <= xb) r.col = cortes.length;
+      }
+      if (atravessam.length) {
+        const yBase = Math.min(...atravessam.map(r => r.y)) - corpo * 0.5;
+        const xa = Math.min(...atravessam.map(r => r.x)) - 1, xb = Math.max(...atravessam.map(r => r.x + (r.w || 0))) + 1;
+        const colTopo = col(xa + 2);
+        // só se a faixa está mesmo no alto: abaixo dela tem que haver texto nas colunas que ela cobre
+        if (rs.some(r => r.y < yBase && r.x >= xa && r.x < xb))
+          for (const r of rs) if (r.y >= yBase && r.x >= xa && r.x + (r.w || 0) <= xb) r.col = colTopo;
+      }
     }
   }
 
@@ -296,6 +324,8 @@ const Folheto = (() => {
         parte.titulo += ' ' + semCaixaAlta(t.replace(/\s*\([^)]*\)/g, '')) + (ref ? ' ' + ref : '');
         continue;
       }
+      // a linha da edição da capa ("Ano A – nº 57 – 12 de outubro de 2026") não é comentário
+      if ((!parte || (parte.comentario && !parte.pars.length)) && /^Ano [ABC]\s*[–-]\s*n/i.test(t)) continue;
       if (!parte) {
         // antes da primeira parte: o comentário inicial (texto comum). O título e o "Ano Jubilar…" em negrito ficam de fora.
         if (l.estilo !== 'regular' || l.soRef || l.soSub) continue;
@@ -324,7 +354,7 @@ const Folheto = (() => {
     // o que vem depois da Missa no folheto (leituras da semana, hino da campanha, avisos) não entra no roteiro
     return partes.filter(p => p.pars.length && !FORA_DA_MISSA.test(p.titulo));
   }
-  const FORA_DA_MISSA = /^(leituras da semana|vivamos a semana santa|hino da (cf|campanha)|avisos|expediente)\b/i;
+  const FORA_DA_MISSA = /^(leituras da semana|vivamos a semana santa|hino da (cf|campanha)|avisos|expediente|com aprova[cç][aã]o eclesi[aá]stica)\b/i;
 
   const versos = s => s
     .replace(/\s*(\/\/:|:\/\/|\/\/)\s*/g, '\n')

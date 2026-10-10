@@ -1604,16 +1604,18 @@ function itemAbertura(r) {
     texto: texto.replace(/\n\n/g, '\n') }];
 }
 
-async function importarFolheto(arquivo) {
+// dica: {nome, data} de quem baixou o folheto (🌐 site da diocese), para quando o PDF não traz a data no título
+async function importarFolheto(arquivo, dica = {}) {
   try {
     toast('Lendo o folheto…');
     const r = await Folheto.importar(arquivo);
     if (!r.itens.length) throw new Error('Não encontrei as partes da Missa neste PDF. Use a versão "Celular" do folheto.');
     const cantos = await salvarCantosDoFolheto(r.itens, r.creditos || {});
     renderCantos();
+    const dataPdf = dataDoTexto(r.nome);
     const pacote = {
-      nome: r.nome || arquivo.name.replace(/\.(pdf|docx|txt)$/i, ''),
-      data: dataDoTexto(r.nome),          // "… — 27 de setembro de 2026" → "2026-09-27"
+      nome: (!dataPdf && dica.nome) || r.nome || arquivo.name.replace(/\.(pdf|docx|txt)$/i, ''),
+      data: dataPdf || dica.data || '',          // "… — 27 de setembro de 2026" → "2026-09-27"
       itens: comHomilia([...itemAbertura(r), ...cantos.itens]), aviso: r.aviso, cantos,
       tituloLiturgico: r.tituloLiturgico,            // ex.: "Assunção da Bem-aventurada Virgem Maria — Solenidade"
       msgEuc: capturarEucaristia(r.eucaristia),   // guarda a oração eucarística e o prefácio do dia no catálogo
@@ -2323,7 +2325,7 @@ async function iniciar() {
   renderBiblia();
   renderCabecalho();
   renderEstadoProj();
-  $('#versaoApp').textContent = NO_APP ? 'Versão 1.6.1 · aplicativo para Windows' : 'Versão 1.6.1 · no navegador';
+  $('#versaoApp').textContent = NO_APP ? 'Versão 1.6.2 · aplicativo para Windows' : 'Versão 1.6.2 · no navegador';
   // pede armazenamento permanente (o navegador não apaga os dados para liberar espaço)
   try { navigator.storage?.persist?.(); } catch (_) {}
   enviarConfigTelao(); renderTemasRapidos();

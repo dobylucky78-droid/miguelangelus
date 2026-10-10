@@ -726,10 +726,16 @@ namespace MiguelAngelus
         }
 
         // Downloads pedidos pela página (o navegador bloqueia ler outros sites; o programa não).
-        // Só sites conhecidos: folhetos da Arquidiocese do Rio.
+        // Sites conhecidos (podem tudo, inclusive o contador de downloads por POST): folhetos da Arquidiocese do Rio
         // e a Liturgia Diária da Paulus
         static readonly string[] SitesPermitidos = { "arqrio.org.br", "www.arqrio.org.br", "arqrio.com.br", "www.arqrio.com.br",
                                                      "paulus.com.br", "www.paulus.com.br" };
+        // Baixar (GET) também pode de qualquer site público por nome: a página de folhetos da diocese é configurada
+        // pela paróquia. Nunca endereço de IP nem nome da rede local (o app não sai vasculhando a rede da igreja).
+        static bool SitePublico(Uri u) =>
+            u.HostNameType == UriHostNameType.Dns && u.Host.Contains(".") && u.IsDefaultPort &&
+            !u.Host.EndsWith(".local", StringComparison.OrdinalIgnoreCase) && !u.Host.EndsWith(".localhost", StringComparison.OrdinalIgnoreCase) &&
+            !u.Host.EndsWith(".lan", StringComparison.OrdinalIgnoreCase) && !u.Host.EndsWith(".home", StringComparison.OrdinalIgnoreCase);
         static readonly System.Net.Http.HttpClient cliente = CriarCliente();
 
         static System.Net.Http.HttpClient CriarCliente()
@@ -748,10 +754,11 @@ namespace MiguelAngelus
             try
             {
                 var url = m["url"] as string;
-                if (!Uri.TryCreate(url, UriKind.Absolute, out var u) || u.Scheme != "https" || !SitesPermitidos.Contains(u.Host.ToLowerInvariant()))
+                var post = (m.TryGetValue("metodo", out var me) ? me as string : "GET") == "POST";
+                if (!Uri.TryCreate(url, UriKind.Absolute, out var u) || u.Scheme != "https" || !(SitesPermitidos.Contains(u.Host.ToLowerInvariant()) || (!post && SitePublico(u))))
                     throw new InvalidOperationException("endereço não permitido: " + url);
                 System.Net.Http.HttpResponseMessage r;
-                if ((m.TryGetValue("metodo", out var me) ? me as string : "GET") == "POST")
+                if (post)
                 {
                     var campos = (m.TryGetValue("corpo", out var c) ? c as System.Collections.Generic.Dictionary<string, object> : null)
                                  ?? new System.Collections.Generic.Dictionary<string, object>();

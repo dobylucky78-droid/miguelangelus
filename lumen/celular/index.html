@@ -82,7 +82,7 @@
   .check { display: flex; gap: 10px; align-items: center; padding: 6px 0; }
   .check input { width: 24px; height: 24px; accent-color: var(--acento); }
   .sutil { color: var(--sutil); font-size: 13px; }
-  .tela-cheia { position: fixed; inset: 0; background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px; text-align: center; gap: 14px; z-index: 10; }
+  .tela-cheia { position: fixed; top: 0; right: 0; bottom: 0; left: 0; background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px; text-align: center; gap: 14px; z-index: 10; }
   .tela-cheia img { width: 84px; height: 84px; }
   .tela-cheia h1 { margin: 0; font-size: 24px; } .tela-cheia h1 b { color: var(--acento); }
   .tela-cheia .codigo { font: 700 34px/1 Consolas, monospace; letter-spacing: 10px; text-align: center; max-width: 220px; }
@@ -90,7 +90,7 @@
   .tela-cheia .campo { width: 100%; max-width: 320px; text-align: left; }
   .tela-cheia label { font-size: 13px; color: var(--sutil); display: block; margin-bottom: 4px; }
   .erro { color: #ff8a80; min-height: 1.3em; font-size: 14px; }
-  .folha { position: fixed; inset: 0; background: rgba(0,0,0,.6); display: flex; align-items: flex-end; z-index: 9; }
+  .folha { position: fixed; top: 0; right: 0; bottom: 0; left: 0; background: rgba(0,0,0,.6); display: flex; align-items: flex-end; z-index: 9; }
   .folha > div { background: var(--painel); width: 100%; border-radius: 18px 18px 0 0; padding: 16px 14px calc(16px + var(--seg-baixo)); max-height: 85%; overflow-y: auto; }
   .folha h3 { margin: 0 0 10px; }
   .folha .rec { display: block; width: 100%; text-align: left; margin-bottom: 6px; font-size: 14px; }
@@ -160,6 +160,13 @@
     .tira .sl { width: 190px; height: 112px; font-size: 13px; }
     .abas { justify-content: center; grid-template-columns: repeat(4, minmax(0, 180px)); }
   }
+
+  /* Safari antigo (iOS < 14.5) não tem "gap" em flexbox: margens no lugar (o script liga html.sem-gap) */
+  .sem-gap .topo > * + *, .sem-gap .rot > * + *, .sem-gap .tira > * + *, .sem-gap .it > * + *, .sem-gap .toc > * + *,
+  .sem-gap .check > * + *, .sem-gap .rot-atual > * + *, .sem-gap .chips > * + *, .sem-gap .chips button > * + *,
+  .sem-gap .rc .ln > * + *, .sem-gap .m-barra > * + *, .sem-gap .mc-cab > * + *, .sem-gap .mc-tom > * + *, .sem-gap .ptz-ctl > * + * { margin-left: 8px; }
+  .sem-gap .lista > * + *, .sem-gap .tela-cheia > * + *, .sem-gap .ptz-zm > * + * { margin-top: 8px; }
+  .sem-gap .linha > *, .sem-gap .temas > *, .sem-gap .ptz-pos > * { margin: 3px; }
 </style>
 </head>
 <body>
@@ -286,9 +293,22 @@
 <video id="acordado" src="acordado.mp4" muted loop playsinline webkit-playsinline preload="auto"></video>
 
 <script>
+// Navegador antigo demais para esta página (iOS 9/10, Android antigo: sem fetch, funções de seta, async…): vai para a
+// versão simples, feita em JavaScript da época. Escrito em JavaScript antigo, para rodar até lá.
+(function () {
+  var antigo = !window.fetch || !window.Promise || !window.EventSource;
+  if (!antigo) try { new Function('async function f(){ var o = { ...{ a: 1 } }; await 0; } var g = (x) => x; return `${1}`;'); } catch (e) { antigo = true; }
+  if (antigo) location.replace('/simples.html' + location.search);
+})();
+// Safari antigo: sem "gap" em flexbox → margens (CSS .sem-gap)
+(function () { try { var d = document.createElement('div'); d.style.display = 'flex'; d.style.flexDirection = 'column'; d.style.rowGap = '1px';
+  d.appendChild(document.createElement('div')); d.appendChild(document.createElement('div')); document.documentElement.appendChild(d);
+  if (d.scrollHeight !== 1) document.documentElement.className += ' sem-gap'; d.parentNode.removeChild(d); } catch (e) {} })();
+</script>
+<script>
 'use strict';
 const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
-const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const CHAVE = 'mgl.celular.token';
 let token = ''; try { token = localStorage.getItem(CHAVE) || ''; } catch (_) {}
 let est = null, fonte = null, vivoEm = 0, aba = 'controle';
@@ -296,7 +316,7 @@ let est = null, fonte = null, vivoEm = 0, aba = 'controle';
 // ---------- utilidades ----------
 let tt = 0;
 function toast(t) { const el = $('#toast'); el.textContent = t; el.style.opacity = 1; clearTimeout(tt); tt = setTimeout(() => el.style.opacity = 0, 2200); }
-const vibrar = () => { try { navigator.vibrate?.(12); } catch (_) {} };
+const vibrar = () => { try { if (navigator.vibrate) navigator.vibrate(12); } catch (_) {} };
 const fmt = s => { s = Math.max(0, Math.floor(s || 0)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
 function nomePadrao() {
   const u = navigator.userAgent;
@@ -311,7 +331,7 @@ function htmlSlide(s, curto) {
   if (s.avisos) return `<div><b>${esc(s.avisos.icone)} ${esc(s.avisos.titulo)}</b>${s.avisos.pag ? ` <small>${esc(s.avisos.pag)}</small>` : ''}` +
     s.avisos.itens.map(t => '<br>• ' + esc(t).replace(/&lt;(\/?)(b|i|u)&gt;/gi, '<$1$2>')).join('') + '</div>';
   if (s.versos) return '<div>' + s.versos.map(v => `<sup>${esc(v.n)}</sup>${esc(v.t)}`).join(' ') + '</div>';
-  const cfg = est?.cfg || {};
+  const cfg = (est && est.cfg) || {};
   let povo = false;
   const trocas = [];
   const linhas = esc(s.texto).split('\n').map((l, i) => {
@@ -335,7 +355,7 @@ function htmlSlide(s, curto) {
 // ---------- desenho ----------
 function render() {
   if (!est) return;
-  document.documentElement.style.setProperty('--cor-quem', est.cfg?.corRotulo || '#ff5a4f');
+  document.documentElement.style.setProperty('--cor-quem', (est.cfg && est.cfg.corRotulo) || '#ff5a4f');
   $('#nomeRoteiro').textContent = est.roteiro || 'MiguelAngelus';
   const selo = $('#selo');
   selo.textContent = est.preto ? 'Tela preta' : est.altar ? 'Altar' : est.camera ? 'Câmera' : est.noAr.slide ? 'Ao vivo' : est.tocando.some(t => t.tipo === 'video' && !t.pausado) ? 'Vídeo' : 'Livre';
@@ -357,8 +377,8 @@ function render() {
 
   // próximo
   const p = est.prox;
-  $('#proxRot').textContent = p?.abre ? 'Próximo item (abre)' : 'Próximo';
-  $('#proxTit').textContent = p?.tit || '';
+  $('#proxRot').textContent = p && p.abre ? 'Próximo item (abre)' : 'Próximo';
+  $('#proxTit').textContent = (p && p.tit) || '';
   $('#prox').innerHTML = p ? (p.slide ? htmlSlide(p.slide, true) : `<span class="vazia">${esc(p.tit || '—')}</span>`) : '<span class="vazia">Fim do roteiro</span>';
 
   // slides do item aberto
@@ -386,8 +406,8 @@ function render() {
 
   // mídia
   const cx = $('#cxAberta');
-  cx.hidden = !a?.midia;
-  if (a?.midia) {
+  cx.hidden = !(a && a.midia);
+  if (a && a.midia) {
     const tocandoEsta = est.tocando.find(t => t.id === a.midia.id);
     cx.innerHTML = `<h3>${a.midia.tipo === 'video' ? '🎬' : '🎵'} ${esc(a.midia.nome)}</h3><div class="linha">
       <button data-midia="${esc(a.midia.id)}" data-macao="midiaTocar" style="background:var(--acento);color:#1b1503;border:0;font-weight:700">${tocandoEsta ? (tocandoEsta.pausado ? '▶ Continuar' : '❚❚ Pausar') : a.midia.tipo === 'video' ? '▶ Tocar no telão' : '▶ Tocar'}</button>
@@ -445,7 +465,8 @@ const transpAcorde = (a, p) => { if (!p) return a; const b = /^[A-G]b/.test(a); 
 function transpLinha(l, p) {
   if (!p) return l;
   let out = '', falta = 0;
-  for (const m of l.matchAll(/(\S+)|(\s+)/g)) {
+  const rx = /(\S+)|(\s+)/g; let m;
+  while ((m = rx.exec(l))) {
     if (m[2]) { out += ' '.repeat(Math.max(1, m[2].length - falta)); falta = Math.max(0, falta - m[2].length + 1); continue; }
     const t = m[1].replace(/[()]/g, ''), novo = RX_AC.test(t) ? m[1].replace(t, transpAcorde(t, p)) : m[1];
     falta += novo.length - m[1].length; out += novo;
@@ -467,7 +488,7 @@ function htmlCifra(m, passos) {
 function renderMusico(refazer) {
   if (papel !== 'musico' && aba !== 'musico') return;    // controle: só quando a aba 🎸 Cifras está aberta
   document.documentElement.style.setProperty('--tam-cifra', tamCifra + 'px');
-  const vivo = est?.vivoIdx ?? -1;
+  const vivo = est && est.vivoIdx != null ? est.vivoIdx : -1;
   const chave = JSON.stringify(musica) + JSON.stringify(transp) + instr;
   if (refazer || chave !== chaveMusica) {
     chaveMusica = chave;
@@ -491,18 +512,18 @@ function renderMusico(refazer) {
   $$('#mCantos .agora').forEach(x => x.classList.remove('agora'));
   const card = $(`#mCantos .mc[data-i="${vivo}"]`);
   if (!card) return;
-  const slide = est?.noAr?.slide;
+  const slide = est && est.noAr ? est.noAr.slide : null;
   // mesmo slide de antes (o estado chega várias vezes): repete o destaque, sem avançar nem rolar a tela
-  const chaveSlide = vivo + '|' + (est?.noAr?.idx ?? '') + '|' + (slide?.texto || '');
+  const chaveSlide = vivo + '|' + (est && est.noAr && est.noAr.idx != null ? est.noAr.idx : '') + '|' + ((slide && slide.texto) || '');
   if (chaveSlide === renderMusico.ultimo) {
     const el = card.querySelector(`.l[data-k="${ultimaLinha[vivo]}"]`);
-    if (el) { el.classList.add('agora'); const a = el.previousElementSibling; if (a?.classList.contains('ac')) a.classList.add('agora'); }
+    if (el) { el.classList.add('agora'); const a = el.previousElementSibling; if (a && a.classList.contains('ac')) a.classList.add('agora'); }
     return;
   }
   const mudou = chaveSlide !== renderMusico.ultimo;
   renderMusico.ultimo = chaveSlide;
   // começo da 1ª linha do slide (no slide a frase pode vir inteira; na cifra, quebrada em linhas curtas)
-  const alvo = palavras((slide?.texto || '').split('\n').find(l => palavras(l).length) || '').slice(0, 6);
+  const alvo = palavras(((slide && slide.texto) || '').split('\n').find(l => palavras(l).length) || '').slice(0, 6);
   let marcada = null;
   if (alvo.length) {
     const linhas = [...card.querySelectorAll('.l:not(.ac):not(.tb):not(.sec)')];
@@ -514,7 +535,7 @@ function renderMusico(refazer) {
       const set = new Set(w), comum = alvo.filter(x => set.has(x)).length;
       return { el, nota: Math.max(seguidas, comum * 0.8) / Math.min(w.length, alvo.length) };
     }).filter(x => x.nota >= 0.6);
-    const ult = ultimaLinha[vivo] ?? -1;
+    const ult = ultimaLinha[vivo] != null ? ultimaLinha[vivo] : -1;
     const esc1 = cand.find(x => +x.el.dataset.k > ult) || cand.sort((a, b) => b.nota - a.nota)[0];
     if (esc1) {
       marcada = esc1.el; marcada.classList.add('agora');
@@ -697,8 +718,8 @@ document.addEventListener('click', e => {
   if (b.id === 'btTrocar') { trocando = !trocando; renderRoteiros(); $('main').scrollTop = 0; return; }
   if (b.dataset.cap !== undefined) { filtroCap = b.dataset.cap; try { localStorage.setItem('mgl.celular.capela', filtroCap); } catch (_) {} return renderRoteiros(); }
   if (b.dataset.rot) {
-    if (b.dataset.rot === est?.roteiroId) { trocando = false; return renderRoteiros(); }
-    const nome = b.querySelector('.nm')?.textContent || 'este roteiro';
+    if (est && b.dataset.rot === est.roteiroId) { trocando = false; return renderRoteiros(); }
+    const nome = (b.querySelector('.nm') || {}).textContent || 'este roteiro';
     if (!confirm(`Abrir "${nome}" no computador?`)) return;
     cmd('roteiro', { id: b.dataset.rot }); trocando = false; renderRoteiros(); return toast('Roteiro aberto');
   }

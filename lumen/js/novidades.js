@@ -5,6 +5,12 @@
  * A versão mais nova fica em cima. Ao gerar uma versão nova, acrescente a entrada dela aqui.
  */
 const NOVIDADES = [
+  { versao: '1.6.2', data: '2026-10-09', itens: [
+    '🌐 Folheto da diocese: em Agenda → Paróquia, informe a (arqui)diocese e a página onde ela publica os folhetos. O botão 🌐 busca lá e monta os roteiros. O Rio continua como antes; em outras dioceses aparecem os PDFs da página com nome e data, para escolher.',
+    'Quando a Arquidiocese ainda não publicou a versão Celular do folheto, o 🌐 oferece a versão da Assembleia (em colunas) — o MiguelAngelus separa as colunas e monta o roteiro. Dê uma conferida.',
+    '📱 Celular: além do QR code, aparece o endereço para digitar no navegador (para aparelhos que não leem QR code).',
+    '📱 Aparelhos antigos (iPad antigo, navegadores velhos) abrem uma versão simples do controle, com Controle, Roteiro e 🎸 Cifras para o músico (tom −/+, instrumento e tamanho da letra).',
+  ] },
   { versao: '1.6.1', data: '2026-10-07', itens: [
     '🖨 Imprimir roteiro (Arquivo → Imprimir roteiro…, ou Ctrl+P): Resumo (a ordem da celebração), Completo (com as letras, orações, leituras, preces e avisos) ou Músicos (os cantos com a cifra e o tom). Imprime no papel ou salva em PDF.',
     '🔎 Localizar em tudo (Editar, ou Ctrl+F): uma busca só em cantos, orações, roteiros, avisos e Bíblia, com o trecho encontrado em destaque; um clique abre.',

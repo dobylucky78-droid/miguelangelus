@@ -207,8 +207,12 @@ function renderCelular() {
       <div class="cel-qr" title="${esc(url)}">${qrSvg(url)}</div>
       <div class="cel-txt">
         <p><b>1.</b> No celular, conecte no <b>mesmo Wi-Fi</b> deste computador.</p>
-        <p><b>2.</b> Aponte a câmera do celular para o QR code (ou digite no navegador):</p>
-        <p class="cel-end">${esc(i.ips[0])}:${i.porta}</p>
+        <p><b>2.</b> Aponte a câmera do celular para o QR code.</p>
+        <div class="cel-digitar">
+          <div class="sutil pequeno">Sem câmera, ou ela não lê o QR (tablet antigo)? Digite no navegador, na barra de endereço:</div>
+          <div class="cel-end" title="Digite exatamente assim, com o http:// e os dois-pontos">http://${esc(i.ips[0])}:${i.porta}</div>
+          <div class="sutil pequeno">e, quando a página pedir, o código:</div>
+        </div>
         <p>Código: <span class="cel-cod">${esc(i.codigo.split('').join(' '))}</span></p>
         <p class="sutil pequeno">🎸 <b>Músicos</b>: o mesmo QR; no celular, escolham <b>Músico</b> — veem só as cifras dos cantos, acompanhando o telão.</p>
         <p class="sutil pequeno">Cada código serve para um celular; depois de usado, aparece outro.
