@@ -21,7 +21,7 @@
     </div>
     <div class="splash-info">
       <div class="splash-gratis"><b>Gratuito · uso livre</b></div>
-      <div>Versão 1.6.4</div>
+      <div>Versão 1.6.5</div>
       <div>© 2026 · PASCOM</div>
       <div><b>Paróquia São José Operário</b></div>
     </div>
@@ -83,7 +83,7 @@
         <hr>
         <button data-menu="proximo">Próximo slide <span class="atalho">→</span></button>
         <button data-menu="anterior">Slide anterior <span class="atalho">←</span></button>
-        <button data-menu="preto">Tela preta <span class="atalho">B</span></button>
+        <button data-menu="mudo">🔇 Mudo (só o fundo) <span class="atalho">M</span></button>
         <button data-menu="limpar">Limpar a tela <span class="atalho">Esc</span></button>
         <button data-menu="altar">Olhar para o altar <span class="atalho">L</span></button>
         <button data-menu="pix">Pix da paróquia (QR code) <span class="atalho">P</span></button>
@@ -253,7 +253,7 @@
       </div>
       <div id="listaOracoes"></div>
 
-      <div class="separador">Partes fixas da Missa</div>
+      <div class="separador" title="Duplo clique numa parte para corrigir o texto">Partes fixas da Missa <span class="sutil pequeno">(duplo clique edita)</span></div>
       <div id="listaOrdinario"></div>
       <p class="sutil pequeno">Confira os textos com o Missal adotado na sua paróquia. Eles ficam no arquivo <code>js/ordinario.js</code>.</p>
     </section>
@@ -314,6 +314,7 @@
     </div>
     <div class="linha controles">
       <button id="btnLimpar" title="Limpar texto (Esc)">Limpar</button>
+      <button id="btnMudo" title="Mudo: o telão fica só com o fundo enquanto você navega pelos slides; clique de novo (ou M) para mostrar o slide que estiver no ar">Mudo</button>
       <button id="btnAltar" title="Slide &quot;Todos dirijam seu olhar para o altar&quot; (L). Clique de novo para voltar ao slide que estava no ar.">⛪ Altar</button>
       <button id="btnAviso" title="Aviso na tela: placa de carro, responsável por criança… (A)">📢 Aviso</button>
       <button id="btnPix" title="QR code do Pix da paróquia no telão — ofertório, fim da Missa (P). Clique de novo para voltar ao que estava no ar.">💠 Pix</button>
@@ -464,6 +465,10 @@
           <label class="check"><input type="checkbox" data-cfg="negrito"> Texto em <b>negrito</b></label>
           <label class="check"><input type="checkbox" data-cfg="rodape"> Mostrar rodapé (título / referência)</label>
           <div class="linha">
+            <label class="check" title="Cada parte do roteiro (Entrada, Ato Penitencial, Coleta, Salmo…) começa com um slide só com o nome dela — ideia do Hermínio"><input type="checkbox" data-cfg="slideSecao"> 1º slide de cada parte com o nome dela</label>
+            <label class="check" title="Ex.: 3. Ato Penitencial — na ordem do roteiro"><input type="checkbox" data-cfg="numerarSecoes"> com número</label>
+          </div>
+          <div class="linha">
             <label class="check" title="P. (presidente), T. (todos), L. (leitor), C. (comentarista), D. (diácono) — vêm do folheto"><input type="checkbox" data-cfg="mostrarRotulos"> Mostrar quem fala (P., T., L.…)</label>
             <label class="campo">Cor <input type="color" data-cfg="corRotulo"></label>
           </div>
@@ -478,6 +483,16 @@
             <label class="campo">Caracteres por linha <input type="number" min="15" max="90" data-cfg="caracteresPorLinha"></label>
           </div>
           <label class="check"><input type="checkbox" data-cfg="quebraCantos"> Aplicar também às letras dos cantos</label>
+          <div class="linha" title="Área útil do slide (ideia do Hermínio): o texto, as linhas e o tamanho da letra ficam dentro destas margens">
+            <label class="campo">Margem dos lados (% da tela) <input type="range" min="0" max="25" step="1" data-cfg="margemLados"></label>
+            <label class="campo">Margem em cima e embaixo (%) <input type="range" min="0" max="25" step="1" data-cfg="margemTopo"></label>
+          </div>
+          <div id="previaMargens" class="previa-margens" title="O telão em miniatura: pontilhado = limite das margens; tracejado = onde o texto ficou (desviando das imagens dos cantos)">
+            <iframe src="projecao.html?preview&amp;mini=margens" title="Miniatura do telão" tabindex="-1"></iframe>
+            <span class="pm-medidas"></span>
+          </div>
+          <p class="sutil pequeno" style="margin-top:-4px">Pontilhado: limite das margens. Tracejado: onde o texto ficou, desviando das imagens dos cantos
+            (as da comunidade do roteiro aberto). O texto de exemplo é o slide que está no ar ou aberto.</p>
           <p class="sutil pequeno">Ligado: textos longos (leituras, orações) viram vários slides, sempre com letra grande e do mesmo tamanho.
             Desligado: cada slide mantém o texto inteiro e a letra diminui até caber na tela.</p>
         </section>
@@ -540,7 +555,7 @@
           </div>
           <p id="ndiInfo" class="status"></p>
           <p class="sutil pequeno">No OBS (com o plugin <b>DistroAV</b>): <b>+ → Fonte NDI™</b> → escolha "MiguelAngelus Letras" e coloque
-            <b>por cima da câmera</b>. Só a faixa aparece; o resto é transparente. Tela preta e Limpar esvaziam a faixa.</p>
+            <b>por cima da câmera</b>. Só a faixa aparece; o resto é transparente. Mudo e Limpar esvaziam a faixa.</p>
         </section>
 
         <section data-ajpainel="celular">
@@ -688,7 +703,8 @@
   <form method="dialog" class="form">
     <h2 id="layTitulo">Apresentação</h2>
     <p id="layDica" class="sutil pequeno"></p>
-    <div id="layPrevia" class="lay-previa">
+    <div id="layPrevia" class="lay-previa com-mini">
+      <iframe src="projecao.html?preview&amp;mini=layout" title="Miniatura do telão com estas imagens" tabindex="-1"></iframe>
       <img class="lay-img" data-canto="se" alt="" hidden>
       <img class="lay-img" data-canto="sd" alt="" hidden>
       <img class="lay-img" data-canto="ie" alt="" hidden>
@@ -904,7 +920,7 @@
     <ul class="atalhos">
       <li><kbd>→</kbd> <kbd>Espaço</kbd> <kbd>PgDn</kbd> próximo slide</li>
       <li><kbd>←</kbd> <kbd>PgUp</kbd> slide anterior</li>
-      <li><kbd>B</kbd> tela preta</li>
+      <li><kbd>M</kbd> (ou <kbd>B</kbd>) mudo: só o fundo do tema</li>
       <li><kbd>L</kbd> "Todos dirijam seu olhar para o altar" (de novo: volta ao slide anterior)</li>
       <li><kbd>Esc</kbd> limpar a tela (e parar o vídeo)</li>
       <li>No fim de um item, <kbd>→</kbd> passa para o próximo do roteiro</li>
@@ -935,7 +951,7 @@
       <figure><img src="img/brasao-paroquia.webp" alt="Brasão da Paróquia São José Operário"><figcaption>Paróquia São José Operário (RJ)</figcaption></figure>
       <figure><img src="img/brasao-pascom.webp" alt="Logotipo da PASCOM"><figcaption>PASCOM</figcaption></figure>
     </div>
-    <p class="sutil pequeno" id="versaoApp">Versão 1.6.4</p>
+    <p class="sutil pequeno" id="versaoApp">Versão 1.6.5</p>
     <div class="linha"><span class="espaco"></span><button value="ok" class="primario">OK</button></div>
   </form>
 </dialog>
@@ -1011,6 +1027,23 @@
 </dialog>
 
 <!-- ============ Editor de oração ============ -->
+<dialog id="dlgOrdinario">
+  <form id="formOrdinario" method="dialog" class="form">
+    <h2>✎ <span id="ordTitulo"></span> <small class="sutil">— parte fixa da Missa</small></h2>
+    <p class="sutil pequeno">O texto salvo aqui vale para <b>todos os roteiros</b> e vai para os outros computadores pela nuvem.
+      Linha em branco separa os slides; comece a linha com <b>—</b> para a resposta do povo.</p>
+    <p id="ordAviso" class="status" hidden>Este texto já foi editado. <b>Restaurar</b> volta ao texto original do programa.</p>
+    <textarea id="ordTexto" rows="14"></textarea>
+    <details><summary class="sutil pequeno">Ver o texto original do programa</summary><pre id="ordOriginal" class="sutil pequeno" style="white-space:pre-wrap"></pre></details>
+    <div class="linha">
+      <button id="ordRestaurar" value="restaurar" formnovalidate>Restaurar original</button>
+      <span class="espaco"></span>
+      <button value="cancelar" formnovalidate>Cancelar</button>
+      <button value="salvar" class="primario">Salvar</button>
+    </div>
+  </form>
+</dialog>
+
 <dialog id="dlgOracao">
   <form id="formOracao" method="dialog" class="form">
     <h2>Oração</h2>

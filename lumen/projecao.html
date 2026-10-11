@@ -122,6 +122,11 @@
   @keyframes avtEntra { from { opacity: 0; transform: translateY(1.2vh); } }
   body.preview .avt-cab, body.preview .avt-item { animation: none; }
   #aviso.pisca { animation: pisca .55s ease-in-out 4; }
+  /* miniatura (Ajustes / Apresentação): limite das margens pontilhado; área do texto tracejada */
+  #limites { position: fixed; z-index: 9; border: 1px dotted rgba(242,193,78,.9); pointer-events: none; box-sizing: border-box; }
+  body.mini #area { outline: 2px dashed #f2c14e; outline-offset: -1px; }
+  body.mini #rodape { opacity: .55; }
+  body.mudo #area, body.mudo #rodape, body.mudo #imgSlide, body.mudo #veu, body.mudo #papel, body.mudo #avisosTela { visibility: hidden !important; }
   @keyframes pisca { 50% { background: rgba(255, 196, 0, .97); color: #1a1000; } }
 </style>
 </head>
@@ -148,10 +153,17 @@
 <script>
 'use strict';
 const PREVIEW = new URLSearchParams(location.search).has('preview');
+// Miniatura do telão nos Ajustes ('margens') e no editor de Apresentação ('layout'): o mesmo cálculo do telão, com o
+// limite das margens (pontilhado) e a área que o texto ocupou de fato (tracejado) por cima
+const MINI = new URLSearchParams(location.search).get('mini') || '';
 const alvo = PREVIEW ? window.parent : window.opener;
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 if (PREVIEW) document.body.classList.add('preview');
+if (MINI) {
+  document.body.classList.add('mini');
+  const lim = document.createElement('div'); lim.id = 'limites'; document.body.appendChild(lim);
+}
 // No aplicativo, o programa já põe esta janela no telão (a dica de arrastar só aparece se houver um monitor só)
 if (window.chrome && window.chrome.webview) $('dica').innerHTML = 'Só há um monitor ligado: esta janela abriu aqui.<br>Ligue o telão e abra a projeção de novo, ou <b>clique duas vezes</b> para tela cheia.';
 
@@ -231,7 +243,9 @@ function tamanhoLetra(larg, alt, soTexto) {
   if (!cfg.quebraAuto) return maxPx;
   const L = +cfg.linhasPorSlide || 4;
   let f = Math.min(maxPx, alt / (L * 1.22));
-  if (soTexto) f = Math.min(f, maxPx * larg / (window.innerWidth * .9));
+  // área estreitada pelas imagens dos cantos: a letra diminui na proporção. A comparação é com a largura das MARGENS
+  // (Ajustes → Tamanho dos slides), não com a tela: margem maior não encolhe a letra à toa (1.6.5)
+  if (soTexto) { const u = areaUtil(); f = Math.min(f, maxPx * larg / (window.innerWidth * (u[2] - u[0]))); }
   return f;
 }
 
@@ -245,6 +259,9 @@ function ajustar() {
   } else {
     texto.style.maxWidth = '100%';
   }
+  // A+ / A− deste slide (ideia do Hermínio): 10% por passo; maior que a área não fica (o laço abaixo diminui até caber)
+  const passo = Math.max(-6, Math.min(6, +(slide?.escala || 0)));
+  if (passo) f *= Math.pow(1.1, passo);
   texto.style.fontSize = f + 'px';
   while ((texto.scrollHeight > area.clientHeight || texto.scrollWidth > area.clientWidth) && f > 4) {
     f *= 0.96;
@@ -266,6 +283,12 @@ function desenharImagem() {
 
 // Imagem + texto (abertura, homilia, apresentações): imagem um pouco menor e, junto com o texto, sem passar por cima
 // das imagens dos cantos (brasão, PASCOM, padroeiro). Para cada canto que invade, corta o lado que perde menos espaço.
+// Área útil do texto (Ajustes → Tamanho dos slides → margens, ideia do Hermínio): margem dos lados e de cima/baixo em % da tela.
+// O padrão (5% e 5%) é a área de sempre; embaixo fica ainda a faixa do rodapé. Letra, linhas e caracteres seguem esta área.
+function areaUtil() {
+  const mx = Math.min(30, Math.max(0, +(cfg.margemLados ?? 5))) / 100, my = Math.min(30, Math.max(0, +(cfg.margemTopo ?? 5))) / 100;
+  return [mx, my, 1 - mx, .93 - my];
+}
 const CAIXAS = {   // em fração da tela: [esquerda, topo, direita, base]
   esquerda: { img: [.04, .05, .48, .88], area: [.51, .05, .96, .88] },
   direita: { img: [.52, .05, .96, .88], area: [.04, .05, .49, .88] },
@@ -280,7 +303,7 @@ function harmonizar(lay) {
   const pixOn = document.body.classList.contains('pix-on');
   const topoTexto = (Math.min(80, Math.max(40, +cfg.pixCartao || 64)) + 5) / 100;     // logo abaixo do cartão do Pix
   const cx = pixOn ? { area: [.04, topoTexto, .96, .975] }
-    : CAIXAS[lay] || { area: [.05, .05, .95, .88] };     // texto comum (e imagem de fundo): também desvia dos cantos
+    : CAIXAS[lay] || { area: areaUtil() };     // texto comum (e imagem de fundo): também desvia dos cantos
   const W = innerWidth, H = innerHeight, folga = H * .02;
   const cantos = [...document.querySelectorAll('.canto.on')].filter(c => c.naturalWidth).map(c => c.getBoundingClientRect());
   const encaixar = (fr, encolher) => {
@@ -312,14 +335,26 @@ function harmonizar(lay) {
     const margem = cs => cs.reduce((m, c) => Math.max(m, c.left < W / 2 ? c.right + folga : W - c.left + folga), base[0]);
     const opcoes = [];
     for (const vCima of [true, false]) for (const vBaixo of [true, false]) {
-      const m = margem([...(vCima ? [] : cima), ...(vBaixo ? [] : baixo)]);
-      opcoes.push([m, vCima ? cima.reduce((t, c) => Math.max(t, c.bottom + folga), base[1]) : base[1],
-        W - m, vBaixo ? baixo.reduce((b, c) => Math.min(b, c.top - folga), base[3]) : base[3]]);
+      const pelosLados = [...(vCima ? [] : cima), ...(vBaixo ? [] : baixo)];
+      const topo = vCima ? cima.reduce((t, c) => Math.max(t, c.bottom + folga), base[1]) : base[1];
+      const fundo = vBaixo ? baixo.reduce((b, c) => Math.min(b, c.top - folga), base[3]) : base[3];
+      const m = margem(pelosLados);
+      opcoes.push([m, topo, W - m, fundo]);                       // margem igual dos dois lados (continua centralizado)
+      // (1.6.5) ou encosta só do lado da imagem: com uma imagem só embaixo à direita (ex.: o padroeiro), o texto desce
+      // até a margem de baixo do lado livre, em vez de parar todo na altura da imagem
+      const esq = pelosLados.filter(c => c.left < W / 2).reduce((l, c) => Math.max(l, c.right + folga), base[0]);
+      const dir = pelosLados.filter(c => c.left >= W / 2).reduce((r, c) => Math.min(r, c.left - folga), base[2]);
+      if (esq !== m || dir !== W - m) opcoes.push([esq, topo, dir, fundo]);
     }
     const nota = q => (q[2] - q[0]) < W * .3 || (q[3] - q[1]) < H * .2 ? 0 : tamanhoLetra(q[2] - q[0], q[3] - q[1], true);
-    [al, at, ar, ab] = opcoes.sort((x, y) => nota(y) - nota(x))[0];
+    // a de letra maior; empate fica com a centralizada (vem antes na lista)
+    [al, at, ar, ab] = opcoes.map((q, i) => [q, nota(q), i]).sort((x, y) => (y[1] - x[1]) || (x[2] - y[2]))[0][0];
   }
   Object.assign(area.style, { left: al + 'px', top: at + 'px', right: (W - ar) + 'px', bottom: (H - ab) + 'px' });
+  if (MINI) {
+    const u = areaUtil(), lim = $('limites');
+    if (lim) Object.assign(lim.style, { left: u[0] * 100 + '%', top: u[1] * 100 + '%', right: (1 - u[2]) * 100 + '%', bottom: (1 - u[3]) * 100 + '%' });
+  }
 }
 // as imagens dos cantos chegam depois: refaz o encaixe quando carregam (e quando a janela muda de tamanho)
 document.querySelectorAll('.canto').forEach(c => c.addEventListener('load', () => { desenharImagem(); ajustar(); }));
@@ -522,6 +557,8 @@ window.addEventListener('message', e => {
   const m = e.data;
   if (!m || m.app !== 'lumen') return;
   if (m.tipo === 'config') aplicarConfig(m.config);
+  // 🔇 Mudo: só o fundo do tema (sem texto, imagem do slide, avisos nem rodapé); os slides continuam chegando, escondidos
+  else if (m.tipo === 'mudo') document.body.classList.toggle('mudo', !!m.on);
   else if (m.tipo === 'layout') {
     // imagens nos cantos (brasão, logo, padroeiro…); tam = % da altura da tela
     for (const c of ['se', 'sd', 'ie', 'id']) {
@@ -551,7 +588,7 @@ window.addEventListener('resize', () => { desenharImagem(); ajustar(); });
 
 // Avisa o painel que esta janela está pronta (e continua avisando, caso o painel seja recarregado)
 function ola(primeiro) {
-  if (alvo && alvo !== window) try { alvo.postMessage({ app: 'lumen', tipo: 'ola', preview: PREVIEW, primeiro }, '*'); } catch (_) {}
+  if (alvo && alvo !== window) try { alvo.postMessage({ app: 'lumen', tipo: 'ola', preview: PREVIEW, mini: MINI, primeiro }, '*'); } catch (_) {}
 }
 ola(true);
 
@@ -566,7 +603,7 @@ if (!PREVIEW) {
 
   // Teclas pressionadas aqui controlam o painel também
   window.addEventListener('keydown', e => {
-    if (['ArrowRight', 'ArrowLeft', 'ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', ' ', 'b', 'B', 'l', 'L', 'Escape'].includes(e.key)) {
+    if (['ArrowRight', 'ArrowLeft', 'ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', ' ', 'b', 'B', 'm', 'M', 'l', 'L', 'Escape'].includes(e.key)) {
       if (e.key !== 'Escape' || !document.fullscreenElement) e.preventDefault();
       ola(false);
       if (alvo) alvo.postMessage({ app: 'lumen', tipo: 'tecla', key: e.key }, '*');

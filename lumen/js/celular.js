@@ -80,7 +80,7 @@ function estadoCelular() {
       idx: live.item && a && a.item === live.item ? live.idx : -1, total: live.item && a && a.item === live.item ? a.slides.length : 0,
     },
     prox,
-    preto: !!live.preto, altar: !!live.altar, pix: !!S.pixNoAr, temPix: !!(typeof Pix !== 'undefined' && Pix.qr),
+    preto: !!live.preto, mudo: !!S.mudo, altar: !!live.altar, pix: !!S.pixNoAr, temPix: !!(typeof Pix !== 'undefined' && Pix.qr),
     projecao: !!(S.projWin && !S.projWin.closed),
     aviso: Avisos.atual ? { texto: semMarcasAviso(Avisos.atual.texto) } : null,
     recentes: Avisos.recentes.map(x => semMarcasAviso(x.texto)),
@@ -132,7 +132,7 @@ function comandoCelular(c) {
       break;
     }
     case 'slide': if (a && +c.i >= 0 && +c.i < a.slides.length && !ehPlayer(a.item)) projetar(+c.i); break;
-    case 'preto': alternarPreto(); break;
+    case 'preto': case 'mudo': alternarMudo(); break;      // celular antigo ainda manda "preto": vira o Mudo
     case 'limpar': limpar(); break;
     case 'projecao': alternarProjecao(); setTimeout(agendarEstadoCelular, 800); break;   // abre/fecha a janela do telão
     case 'altar': alternarAltar(); break;

@@ -10,6 +10,7 @@ const CAMPOS_PERFIL = ['fonte', 'fonteMax', 'corTexto', 'corFundo', 'alinhamento
   'mostrarRotulos', 'corRotulo', 'espacoResposta',
   // Tamanho dos slides (outra seção dos Ajustes, mas também é "o jeito da tela")
   'quebraAuto', 'linhasPorSlide', 'caracteresPorLinha', 'quebraCantos', 'versosPorSlide', 'salmoCorrido',
+  'margemLados', 'margemTopo', 'slideSecao', 'numerarSecoes',
   'textoAltar'];                       // a tela do botão Altar (que já usa a aparência acima)
 
 const perfilAtivo = () => Perfis.lista.find(p => p.id === S.config.perfilAtivo) || null;

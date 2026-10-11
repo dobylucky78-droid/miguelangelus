@@ -58,6 +58,7 @@ function configTelao(id = temaAtual()) {
 
 function enviarConfigTelao(destinos) {
   enviar({ tipo: 'config', config: configTelao() }, destinos);
+  if (!destinos && typeof atualizarMinis === 'function') atualizarMinis();     // miniaturas do telão (Ajustes, Apresentação)
 }
 
 function escolherTema(id) {
@@ -132,6 +133,14 @@ function ligarTemas() {
 }
 
 // Escolha do tema no editor da apresentação (Agenda → Paróquia → 🖼)
+// Tema da apresentação em edição (sem redesenhar os botões): para a miniatura do telão no editor
+function temaDoEditorLayout() {
+  const a = Apresentacao.alvo;
+  const dono = a?.localId ? localDe(a.localId) : Agenda.dados.paroquia;
+  const herdado = a?.localId ? (Agenda.dados.paroquia?.tema || 'ajustes') : null;
+  return temaPorId(dono?.tema || herdado || 'ajustes');
+}
+
 function renderTemasLayout() {
   const a = Apresentacao.alvo;
   const dono = a?.localId ? localDe(a.localId) : Agenda.dados.paroquia;

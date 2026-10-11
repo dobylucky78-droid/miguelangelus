@@ -89,7 +89,7 @@ function acaoMenu(acao) {
     case 'projecao': return alternarProjecao();
     case 'proximo': return proximo();
     case 'anterior': return anterior();
-    case 'preto': return alternarPreto();
+    case 'preto': case 'mudo': return alternarMudo();       // a Tela preta virou o 🔇 Mudo (1.6.5)
     case 'limpar': return limpar();
     case 'altar': return alternarAltar();
     case 'mensagem': abrirDialogo('dlgMensagem'); return $('#msgRapida').select();

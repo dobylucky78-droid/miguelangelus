@@ -39,7 +39,8 @@ const DB = (() => {
   // { daNuvem: true } = gravação vinda da própria sincronização (não carimba nem marca como pendente).
   const carimbar = (store, obj) => ['roteiros', 'cantos', 'oracoes', 'biblias'].includes(store)
     || (store === 'midias' && obj?.tipo === 'apresentacao')
-    || (store === 'config' && (obj?.id === 'agenda' || obj?.id === 'eucaristia'));
+    // (1.6.5) avisos, perfis e Pix também: sem a data da mudança, só a 1ª versão subia e as mudanças não chegavam aos outros computadores
+    || (store === 'config' && ['agenda', 'eucaristia', 'avisos', 'perfis', 'pix', 'ordinario'].includes(obj?.id));
 
   const api = {
     todos: store => tx(store, 'readonly', s => s.getAll()),

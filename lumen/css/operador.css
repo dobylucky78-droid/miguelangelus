@@ -160,6 +160,14 @@ code { background: var(--painel2); padding: 1px 4px; border-radius: 4px; }
 .slide.foco { border-color: var(--acento); }
 .slide.vivo { border-color: var(--vivo); box-shadow: 0 0 0 1px var(--vivo), 0 0 14px rgba(224,70,60,.25); }
 .slide .num { position: absolute; top: 5px; right: 8px; font-size: 11px; color: var(--sutil); }
+/* A+ / A− do slide: aparece ao passar o mouse (ou fica visível quando o slide já tem tamanho próprio) */
+.slide .tam-slide { position: absolute; bottom: 4px; right: 6px; display: none; gap: 3px; align-items: center; z-index: 1; }
+.slide:hover .tam-slide, .slide.com-tam .tam-slide { display: flex; }
+.slide.com-tam:not(:hover) .tam-slide button { display: none; }
+.slide .tam-slide button { padding: 1px 6px; font-size: 11px; border-radius: 5px; line-height: 1.4; }
+.slide .tam-n { font-size: 10.5px; color: var(--destaque, #d4a93a); font-weight: 700; padding: 0 3px; }
+/* slide com o nome da parte do roteiro */
+.slide.secao .corpo { text-align: center; display: flex; flex-direction: column; justify-content: center; flex: 1; }
 .slide .corpo { flex: 1; padding-right: 14px; }
 .slide .rod { font-size: 11px; color: var(--sutil); border-top: 1px solid var(--borda); padding-top: 4px; }
 .slide sup { color: var(--acento-claro); font-size: 10px; margin-right: 2px; }
@@ -244,7 +252,8 @@ code { background: var(--painel2); padding: 1px 4px; border-radius: 4px; }
 .preview iframe { width: 100%; height: 100%; border: 0; display: block; pointer-events: none; }
 .controles button { flex: 1; }
 /* os botões quebram em mais de uma linha quando não cabem (painel estreito: Tela preta, Limpar, Altar, Aviso, Pix…) */
-.linha.controles { display: grid; grid-template-columns: repeat(auto-fit, minmax(86px, 1fr)); }
+.linha.controles { display: grid; grid-template-columns: repeat(auto-fit, minmax(68px, 1fr)); }
+#btnMudo.ligado { background: #6b2b2b; border-color: #e0463c; color: #fff; }
 .linha.controles button { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .roteiro-painel .linha button { flex: 0 0 auto; }
 .roteiro-painel .adicionar button { padding: 3px 7px; font-size: 12px; }
@@ -436,6 +445,14 @@ big.m-g { font-size: 1.3em; } big.m-gg { font-size: 1.7em; } small.m-pq { font-s
 .cel-digitar { margin: 4px 0 8px; padding: 8px 10px; border: 1px dashed var(--borda); border-radius: 8px; background: var(--painel2); display: flex; flex-direction: column; gap: 4px; }
 .cel-digitar .cel-end { font-size: 24px; }
 .cel-rede .linha { display: flex; gap: 6px; align-items: center; }
+/* desenho do telão com a área útil tracejada (Ajustes → Tamanho dos slides → margens) */
+.previa-margens { position: relative; width: 100%; max-width: 420px; aspect-ratio: 16 / 9; margin: 6px 0 10px; border-radius: 6px;
+  border: 1px solid var(--borda); overflow: hidden; container-type: size; background: #000 center / cover no-repeat; }
+.previa-margens iframe, .lay-previa iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; pointer-events: none; }
+/* editor de Apresentação: a miniatura do telão substitui o desenho antigo */
+.lay-previa.com-mini > img, .lay-previa.com-mini > .lay-texto { display: none !important; }
+.previa-margens .pm-medidas { position: absolute; bottom: 3px; left: 5px; font-size: 10px; color: #f2c14e; background: rgba(0,0,0,.6);
+  padding: 0 4px; border-radius: 3px; }
 .cel-rede select { flex: 1; min-width: 0; }
 .cel-cod { font: 700 22px/1 Consolas, monospace; letter-spacing: 2px; color: var(--acento); }
 .cel-lista { display: flex; flex-direction: column; gap: 4px; margin-bottom: 8px; }

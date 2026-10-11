@@ -5,6 +5,18 @@
  * A versão mais nova fica em cima. Ao gerar uma versão nova, acrescente a entrada dela aqui.
  */
 const NOVIDADES = [
+  { versao: '1.6.5', data: '2026-10-11', itens: [
+    '💡 Melhorias sugeridas pelo Hermínio, depois de usar o MiguelAngelus na Missa das 7h — obrigado, Hermínio!',
+    'Nome de cada parte: o 1º slide de cada parte do roteiro mostra o nome dela, em letra grande (Entrada e o canto, Saudação, Ato Penitencial, Coleta, Salmo…). Opção de numerar ("3. Ato Penitencial"). Liga e desliga em Ajustes → Aparência do telão.',
+    'A+ / A− em cada slide: passe o mouse sobre um slide do roteiro e aumente ou diminua só a letra dele. Se estiver no ar, o telão muda na hora; fica guardado no roteiro.',
+    'Margens do slide (área útil): em Ajustes → Tamanho dos slides, escolha a margem dos lados e de cima/embaixo. A letra, as linhas e os caracteres por linha passam a respeitar essa área.',
+    'Passagem contínua: no último slide de uma parte, Próximo já projeta o 1º slide da parte seguinte; no 1º slide, Anterior volta para o último slide da parte anterior. Sem cliques "vazios" entre as partes.',
+    'Miniatura do telão nos Ajustes e no editor de Apresentação: é o próprio telão em ponto pequeno, com as imagens dos cantos, o tema e o slide no ar. O pontilhado mostra o limite das margens e o tracejado, onde o texto ficou. Mexeu nas margens ou no tamanho de uma imagem, a miniatura muda na hora.',
+    'Melhor aproveitamento da tela: a margem dos lados não encolhe mais a letra, e o texto pode desviar só do lado da imagem do canto (ex.: o padroeiro embaixo à direita), descendo até a margem de baixo do lado livre.',
+    '🔇 Mudo (no lugar da Tela preta): o telão fica só com o fundo do tema enquanto você navega pelos slides para se achar; ao tirar o Mudo, aparece o slide que estiver no ar. Botão no painel, no celular, no menu Projeção e teclas M ou B. A faixa do OBS também some.',
+    '✎ Partes fixas da Missa editáveis: em Orações → Partes fixas da Missa, duplo clique (ou ✎ Editar texto no item do roteiro) para corrigir o texto (ex.: a Saudação). Vale para todos os roteiros e vai para os outros computadores pela nuvem; "Restaurar original" volta ao texto do programa.',
+    'Correção: Avisos paroquiais, Perfis e Pix agora sincronizam também as mudanças (antes só a primeira versão ia para os outros computadores).',
+  ] },
   { versao: '1.6.4', data: '2026-10-10', itens: [
     '📱 Rede só para os celulares: com o computador em duas redes (ex.: Wi-Fi da igreja com internet + um roteador só do MiguelAngelus no cabo), escolha em Controle pelo celular qual rede vai no QR code — fica lembrada neste computador. Assim os celulares dos músicos e da PASCOM não usam a internet da igreja (nem pesam na transmissão).',
     'Controle pelo celular avisa quando o Firewall do Windows não libera o MiguelAngelus no tipo da rede escolhida (Privada ou Pública) e diz qual caixinha marcar. Também mostra quais redes têm internet de verdade.',

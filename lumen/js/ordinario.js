@@ -175,5 +175,67 @@ const Ordinario = (() => {
     ],
   };
 
-  return { grupos, parte: id => indice.get(id) || null, modelos };
+  // Texto editado pela paróquia (1.6.5): Orações → Missa → duplo clique (ou ✎ Editar texto no item). Fica em config
+  // 'ordinario' e vai pela nuvem para os outros computadores; o texto original continua aqui para "Restaurar".
+  let editados = {};
+  const parte = id => {
+    const p = indice.get(id);
+    if (!p) return null;
+    return editados[id]?.length ? { ...p, slides: editados[id], editado: true } : p;
+  };
+  return {
+    grupos, modelos, parte,
+    original: id => indice.get(id) || null,
+    usarEditados: t => { editados = t && typeof t === 'object' ? { ...t } : {}; },
+    editar: (id, slides) => { if (slides && slides.length) editados[id] = slides; else delete editados[id]; return { ...editados }; },
+  };
 })();
+
+async function carregarOrdinarioEditado() {
+  const r = await DB.obter('config', 'ordinario');
+  Ordinario.usarEditados(r?.valor?.textos);
+}
+
+// Editor das partes fixas da Missa (mesma janela das orações não serve: aqui não há categoria nem apagar)
+function abrirEditorOrdinario(id) {
+  const p = Ordinario.parte(id), orig = Ordinario.original(id);
+  if (!p) return;
+  const dlg = $('#dlgOrdinario');
+  dlg.dataset.id = id;
+  $('#ordTitulo').textContent = p.titulo;
+  $('#ordTexto').value = p.slides.join('\n\n');
+  $('#ordRestaurar').hidden = !p.editado;
+  $('#ordAviso').hidden = !p.editado;
+  dlg.returnValue = '';
+  dlg.showModal();
+  $('#ordTexto').focus();
+  $('#ordOriginal').textContent = orig.slides.join('\n\n');
+}
+
+async function salvarOrdinario(id, slides) {
+  const textos = Ordinario.editar(id, slides);
+  await DB.salvar('config', { id: 'ordinario', valor: { textos } });
+  renderOrdinario();
+  renderRoteiroLista();
+  if (S.atual) { atualizarSlides(); renderCabecalho(); }
+}
+
+function ligarEditorOrdinario() {
+  $('#listaOrdinario').addEventListener('dblclick', e => {
+    const it = e.target.closest('[data-parte]');
+    if (it) abrirEditorOrdinario(it.dataset.parte);
+  });
+  $('#formOrdinario').addEventListener('submit', e => {
+    const id = $('#dlgOrdinario').dataset.id;
+    if (e.submitter?.value === 'salvar') {
+      const slides = dividir($('#ordTexto').value);
+      if (!slides.length) { e.preventDefault(); return toast('O texto não pode ficar vazio (para voltar ao original, use Restaurar).'); }
+      const igualOriginal = slides.join('\n\n') === Ordinario.original(id).slides.join('\n\n');
+      salvarOrdinario(id, igualOriginal ? null : slides);
+      toast('Texto salvo. Vale para todos os roteiros (e vai para os outros computadores pela nuvem).');
+    } else if (e.submitter?.value === 'restaurar') {
+      salvarOrdinario(id, null);
+      toast('Texto original restaurado.');
+    }
+  });
+}

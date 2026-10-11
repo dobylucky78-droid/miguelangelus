@@ -26,6 +26,8 @@ const CONFIG_PADRAO = {
   mostrarRotulos: true, corRotulo: '#ff5a4f',     // letra de quem fala (P., T., L.) colorida no telão
   espacoResposta: true,                          // espaço entre as falas: a resposta do povo fica separada
   salmoCorrido: true,                            // salmo: versos de cada estrofe em texto corrido (não quebra a cada vírgula)
+  // ideias do Hermínio (1.6.5): 1º slide de cada parte do roteiro com o nome dela; área útil do slide (margens, % da tela)
+  slideSecao: true, numerarSecoes: false, margemLados: 5, margemTopo: 5,
   // transmissão (NDI): faixa de letras para o OBS
   ndiLigado: false, ndiNome: 'MiguelAngelus Letras', faixaTamanho: 4.6, faixaOpacidade: 0.6,
   faixaCantos: true, faixaRespostas: true, faixaLeituras: true, faixaAvisos: true,
@@ -89,10 +91,35 @@ function enviar(msg, destinos) {
   if (!destinos && (msg.tipo === 'slide' || msg.tipo === 'preto' || msg.tipo === 'aviso')) atualizarFaixa();
 }
 
+// Miniaturas do telão (Ajustes → margens; editor de Apresentação): recebem o tema, as imagens dos cantos e um slide de
+// exemplo (o que estiver no ar ou aberto; senão um texto longo) — e o telão calcula tudo como no de verdade
+const Minis = new Map();     // janela → 'margens' | 'layout'
+const AMOSTRA_MINI = { texto: 'P. O Senhor disse: “Quem dentre vós estiver sem pecado, atire a primeira pedra”. Reconheçamo-nos todos pecadores e perdoemo-nos mutuamente do fundo do coração.', rodape: 'Ato Penitencial' };
+function slideAmostra() {
+  const ok = s => s && s.texto && !s.secao && !s.avisos && !s.img;
+  if (ok(S.live.slide)) return S.live.slide;
+  const a = S.atual;
+  if (a && ok(a.slides[a.idx])) return a.slides[a.idx];
+  return a?.slides.find(ok) || AMOSTRA_MINI;
+}
+function atualizarMini(w) {
+  const tipo = Minis.get(w);
+  if (!tipo) return;
+  const ed = tipo === 'layout' ? Apresentacao.alvo : null;
+  const cfg = ed ? configTelao(temaDoEditorLayout().id) : configTelao();
+  const cantos = ed ? layoutEfetivo(ed.localId || '') : layoutEfetivo(localDoRoteiro(S.roteiro));
+  for (const msg of [{ tipo: 'config', config: cfg }, { tipo: 'layout', cantos }, { tipo: 'slide', slide: slideAmostra() }])
+    try { w.postMessage({ app: 'lumen', ...msg }, '*'); } catch (_) {}
+}
+function atualizarMinis() {
+  for (const w of [...Minis.keys()]) { if (w.closed === true) Minis.delete(w); else atualizarMini(w); }
+}
+
 function enviarEstado(w) {
   enviarConfigTelao([w]);
   enviar({ tipo: 'slide', slide: S.live.slide }, [w]);
   enviar({ tipo: 'preto', on: S.live.preto }, [w]);
+  enviar({ tipo: 'mudo', on: !!S.mudo }, [w]);
   enviarLayout([w]);
   enviarEstadoMidia(w);
   enviarEstadoAviso(w);
@@ -104,6 +131,7 @@ window.addEventListener('message', e => {
   const m = e.data;
   if (!m || m.app !== 'lumen') return;
   if (m.tipo === 'ola') {
+    if (m.mini) { Minis.set(e.source, m.mini); return atualizarMini(e.source); }
     if (m.preview) return enviarEstado(e.source);
     const nova = S.projWin !== e.source;
     S.projWin = e.source;
@@ -326,13 +354,51 @@ function limitarSlide(s) {
 }
 
 function gerarSlides(item) {
-  const slides = gerarSlidesBase(item);
+  let slides = gerarSlidesBase(item);
   // a Homilia é sempre um slide só (a letra diminui para caber todas as leituras)
   // (e a "Capa do folheto" também: título, linha e edição juntos)
-  if (!S.config.quebraAuto || item.tipo === 'homilia' || item.tipo === 'avisos' || (item.tipo === 'imagem' && item.layout === 'capa') ||
-    (item.tipo === 'canto' && !S.config.quebraCantos)) return slides;
-  // Ave-Maria do terço (com as contas) fica inteira num slide: cada Próximo é uma conta
-  return slides.flatMap(s => s.contas ? [s] : limitarSlide(s));
+  if (S.config.quebraAuto && !(item.tipo === 'homilia' || item.tipo === 'avisos' || (item.tipo === 'imagem' && item.layout === 'capa') ||
+    (item.tipo === 'canto' && !S.config.quebraCantos)))
+    // Ave-Maria do terço (com as contas) fica inteira num slide: cada Próximo é uma conta
+    slides = slides.flatMap(s => s.contas ? [s] : limitarSlide(s));
+  // 1º slide da parte com o nome dela (ideia do Hermínio)
+  const secao = slides.length ? slideDaSecao(item) : null;
+  if (secao) slides = [secao, ...slides];
+  // A+ / A− de cada slide (ideia do Hermínio): guardado no item do roteiro, pela posição do slide
+  const tam = item.tamSlides || {};
+  return slides.map((s, i) => tam[i] ? { ...s, escala: tam[i] } : s);
+}
+
+// Nome da parte do roteiro para o 1º slide dela: "Entrada" (+ o canto), "Ato Penitencial", "Coleta", "Salmo Responsorial"…
+// Leituras (já abrem com o título), Homilia, Avisos, imagens, vídeos e o Terço (tem os anúncios) não ganham.
+function nomeDaSecao(it) {
+  switch (it.tipo) {
+    case 'canto': {
+      const c = S.cantos.find(x => x.id === it.cantoId);
+      const m = it.momento && it.momento !== 'Outros' ? it.momento : '';
+      return m ? [m, c?.titulo || ''] : c ? [c.titulo, ''] : null;
+    }
+    case 'texto': case 'preces': return (it.titulo || '').trim() ? [it.titulo.trim(), ''] : null;
+    case 'ordinario': { const p = Ordinario.parte(it.parte); return p ? [p.titulo, ''] : null; }
+    case 'oracao': { const o = oracaoDe(it); return o ? [o.titulo, ''] : null; }
+    case 'salmo': return it.rotulo === 'Canto' ? (it.titulo ? [it.titulo, ''] : null) : [it.titulo || 'Salmo Responsorial', it.ref || ''];
+    case 'prefacio': return [nomeEuc(it.prefId), ''];
+    case 'eucaristica': return [nomeEuc(it.oeId), ''];
+    case 'angelus': return [resumoAngelus(it).tit.replace(/\s*\(.*$/, ''), ''];
+  }
+  return null;
+}
+
+function slideDaSecao(item) {
+  if (!S.config.slideSecao || !S.roteiro?.itens.includes(item)) return null;
+  const nome = nomeDaSecao(item);
+  if (!nome || !nome[0]) return null;
+  let titulo = tirarMarcas(nome[0]);
+  if (S.config.numerarSecoes) {
+    const n = S.roteiro.itens.slice(0, S.roteiro.itens.indexOf(item) + 1).filter(i => nomeDaSecao(i)).length;
+    titulo = `${n}. ${titulo}`;
+  }
+  return { texto: `<gg>${titulo}</gg>` + (nome[1] ? `\n${tirarMarcas(nome[1])}` : ''), rodape: '', secao: true };
 }
 
 // Refrão no início e depois de cada estrofe (sem refrão: só as estrofes).
@@ -503,18 +569,24 @@ function projetar(i) {
   a.idx = i;
   S.live = { slide: a.slides[i], preto: false, item: a.item, idx: i };
   enviar({ tipo: 'slide', slide: S.live.slide });
+  if (Minis.size) atualizarMinis();       // a miniatura dos Ajustes mostra o slide no ar
   enviar({ tipo: 'preto', on: false });
   renderSlides();
   renderRoteiroLista();
   renderControles();
 }
 
+// Passagem contínua entre as partes do roteiro (ideia do Hermínio): no último slide, Próximo já projeta o 1º slide da
+// parte seguinte; no 1º slide, Anterior projeta o último slide da parte anterior. Parte sem slides (vídeo, áudio, câmera)
+// só abre, como antes, para dar o play.
 function proximo() {
   const a = S.atual;
   if (!a) return;
   if (a.idx < a.slides.length - 1) return projetar(a.idx + 1);
-  // fim do item: deixa o próximo item do roteiro preparado (sem projetar ainda)
-  if (a.rIdx >= 0 && a.rIdx < S.roteiro.itens.length - 1) abrirItem(S.roteiro.itens[a.rIdx + 1], a.rIdx + 1);
+  if (a.rIdx >= 0 && a.rIdx < S.roteiro.itens.length - 1) {
+    abrirItem(S.roteiro.itens[a.rIdx + 1], a.rIdx + 1);
+    if (S.atual.slides.length) projetar(0);
+  }
 }
 
 function anterior() {
@@ -524,7 +596,21 @@ function anterior() {
   if (a.rIdx > 0) {
     const i = a.rIdx - 1;
     abrirItem(S.roteiro.itens[i], i);
+    if (S.atual.slides.length) projetar(S.atual.slides.length - 1);
   }
+}
+
+// A+ / A− num slide do roteiro (passa o mouse no slide): 10% por clique, de −6 a +6 passos
+function mudarTamanhoSlide(i, passo) {
+  const a = S.atual;
+  if (!a || a.rIdx < 0) return;
+  const it = a.item, tam = { ...(it.tamSlides || {}) };
+  const v = Math.max(-6, Math.min(6, (tam[i] || 0) + passo));
+  if (v) tam[i] = v; else delete tam[i];
+  it.tamSlides = tam;
+  salvarRoteiro();
+  atualizarSlides();
+  if (S.live.item === it && S.live.idx === i) projetar(i);     // no ar: o telão muda na hora
 }
 
 function alternarPreto() {
@@ -655,10 +741,11 @@ function tratarTecla(key) {
   switch (key) {
     case 'ArrowRight': case 'ArrowDown': case 'PageDown': case ' ': proximo(); return true;
     case 'ArrowLeft': case 'ArrowUp': case 'PageUp': anterior(); return true;
-    case 'b': case 'B': alternarPreto(); return true;
+    case 'b': case 'B': alternarMudo(); return true;       // a Tela preta virou o 🔇 Mudo (1.6.5): B continua funcionando
     case 'a': case 'A': abrirAviso(); return true;
     case 'l': case 'L': alternarAltar(); return true;
     case 'p': case 'P': alternarPix(); return true;
+    case 'm': case 'M': alternarMudo(); return true;
     case 'Escape': limpar(); return true;
   }
   return false;
@@ -716,9 +803,13 @@ function renderSlides() {
   const editAp = ehApresentacao(a.item) && Apres.editando;
   if (!a.slides.length) { el.innerHTML = `<p class="vazio">${esc(mensagemVazia(a.item))}</p>`; return; }
   const vivoAqui = S.live.item === a.item;
+  // A+ / A− no canto do slide (aparece ao passar o mouse), só nos itens do roteiro
+  const botoesTam = (s, i) => a.rIdx < 0 || editAp ? '' : `<span class="tam-slide" title="Tamanho da letra deste slide">
+      ${s.escala ? `<span class="tam-n">${s.escala > 0 ? '+' : ''}${s.escala}</span>` : ''}
+      <button type="button" data-tam="-1" title="Diminuir a letra deste slide">A−</button><button type="button" data-tam="1" title="Aumentar a letra deste slide">A+</button></span>`;
   el.innerHTML = a.slides.map((s, i) => `
-    <div class="slide ${vivoAqui && S.live.idx === i ? 'vivo' : ''} ${a.idx === i ? 'foco' : ''} ${editAp && Apres.sel === i ? 'editando' : ''} ${s.img ? 'com-img lay-' + s.layout : ''}" data-i="${i}">
-      <span class="num">${i + 1}</span>
+    <div class="slide ${vivoAqui && S.live.idx === i ? 'vivo' : ''} ${a.idx === i ? 'foco' : ''} ${editAp && Apres.sel === i ? 'editando' : ''} ${s.img ? 'com-img lay-' + s.layout : ''} ${s.secao ? 'secao' : ''} ${s.escala ? 'com-tam' : ''}" data-i="${i}">
+      <span class="num">${i + 1}</span>${botoesTam(s, i)}
       ${s.img ? `<div class="mini"><img src="${s.img}" alt="">${s.texto ? `<div class="corpo">${htmlCartao(s)}</div>` : ''}</div>` : `<div class="corpo">${htmlCartao(s)}</div>`}
       ${s.rodape ? `<div class="rod">${esc(s.rodape)}</div>` : ''}
     </div>`).join('');
@@ -847,9 +938,10 @@ function renderCabecalho() {
     }
     case 'ordinario': {
       const p = Ordinario.parte(it.parte);
+      const btnEd = `<button data-cmd="editarOrdinario" title="Corrigir o texto desta parte (vale para todos os roteiros)">✎ Editar texto</button>`;
       h = noRoteiro
-        ? `<div class="cab-linha"><span class="tag t-ordinario">Missa</span><select data-campo="parte">${opcoesOrdinario(it.parte)}</select></div>`
-        : `<div class="cab-linha"><span class="tag t-ordinario">Missa</span><h2>${esc(p?.titulo)}</h2><span class="espaco"></span>${btnAdd}</div>`;
+        ? `<div class="cab-linha"><span class="tag t-ordinario">Missa</span><select data-campo="parte">${opcoesOrdinario(it.parte)}</select>${btnEd}</div>`
+        : `<div class="cab-linha"><span class="tag t-ordinario">Missa</span><h2>${esc(p?.titulo)}</h2><span class="espaco"></span>${btnEd}${btnAdd}</div>`;
       break;
     }
     case 'oracao': {
@@ -1848,7 +1940,7 @@ function renderLiturgia() {
 
 function renderOrdinario() {
   $('#listaOrdinario').innerHTML = Ordinario.grupos.map(g => `<div class="grupo-ord">${esc(g.grupo)}</div>
-    <div class="lista">${g.partes.map(p => `<div class="it" data-parte="${p.id}"><span class="tag t-ordinario">Missa</span><span class="tit">${esc(p.titulo)}</span></div>`).join('')}</div>`).join('');
+    <div class="lista">${g.partes.map(p => `<div class="it" data-parte="${p.id}" title="Duplo clique para editar o texto"><span class="tag t-ordinario">Missa</span><span class="tit">${esc(p.titulo)}${Ordinario.parte(p.id).editado ? ' <span class="sutil pequeno">✎ editado</span>' : ''}</span></div>`).join('')}</div>`).join('');
 }
 
 // =====================================================================
@@ -1862,7 +1954,24 @@ function aplicarTemaApp() {
   try { localStorage.setItem('lumen.temaApp', t); } catch {}
 }
 
+// Desenho do telão em Ajustes: a área útil (margens) tracejada, com a cor, a fonte e o fundo do telão — mesma conta do
+// projecao.html (areaUtil). A letra do desenho segue o "tamanho máximo do texto", até caber na área.
+// Miniatura do telão em Ajustes (e no editor de Apresentação): ver atualizarMini
+function desenharPreviaMargens() {
+  const el = $('#previaMargens');
+  if (el) el.querySelector('.pm-medidas').textContent = `margens: lados ${+(S.config.margemLados ?? 5)}% · em cima/embaixo ${+(S.config.margemTopo ?? 5)}%`;
+  atualizarMinis();
+}
+
 function ligarAjustes() {
+  // miniaturas do telão: registradas pelo elemento (o "olá" delas pode chegar antes do programa estar pronto)
+  for (const [sel, tipo] of [['#previaMargens iframe', 'margens'], ['#layPrevia iframe', 'layout']]) {
+    const f = $(sel);
+    if (!f) continue;
+    Minis.set(f.contentWindow, tipo);
+    f.addEventListener('load', () => { Minis.set(f.contentWindow, tipo); atualizarMini(f.contentWindow); });
+  }
+  desenharPreviaMargens();
   for (const el of $$('[data-cfg]')) {
     const k = el.dataset.cfg;
     if (el.type === 'checkbox') el.checked = !!S.config[k]; else el.value = S.config[k];
@@ -1871,8 +1980,8 @@ function ligarAjustes() {
       salvarConfig();
       if (k === 'temaApp') return aplicarTemaApp();     // só o aplicativo; o telão não muda
       if (k === 'textoAltar') return atualizarAltarNoAr();
-      enviarConfigTelao(); renderTemasRapidos();
-      if (['versosPorSlide', 'numerarVersos', 'quebraAuto', 'linhasPorSlide', 'caracteresPorLinha', 'quebraCantos', 'salmoCorrido'].includes(k)) atualizarSlides();
+      enviarConfigTelao(); renderTemasRapidos(); desenharPreviaMargens();
+      if (['versosPorSlide', 'numerarVersos', 'quebraAuto', 'linhasPorSlide', 'caracteresPorLinha', 'quebraCantos', 'salmoCorrido', 'slideSecao', 'numerarSecoes'].includes(k)) atualizarSlides();
     });
   }
 }
@@ -1924,8 +2033,9 @@ function ligarEventos() {
   $('#btnProjecao').addEventListener('click', alternarProjecao);
   $('#btnProx').addEventListener('click', proximo);
   $('#btnAnt').addEventListener('click', anterior);
-  // (Tela preta: menu Projeção e tecla B — o botão saiu do painel para os outros caberem numa linha)
+  // (a Tela preta virou o 🔇 Mudo na 1.6.5: botão no painel, menu Projeção e teclas M / B)
   $('#btnLimpar').addEventListener('click', limpar);
+  $('#btnMudo').addEventListener('click', alternarMudo);
   $('#btnAltar').addEventListener('click', alternarAltar);
   $('#btnMsg').addEventListener('click', projetarMensagem);
   setInterval(renderEstadoProj, 1500);
@@ -1956,6 +2066,8 @@ function ligarEventos() {
   $('#slides').addEventListener('click', e => {
     const s = e.target.closest('.slide');
     if (!s) return;
+    const bt = e.target.closest('[data-tam]');
+    if (bt) return mudarTamanhoSlide(+s.dataset.i, +bt.dataset.tam);
     // apresentação em edição: o clique escolhe o slide para editar (não projeta)
     if (ehApresentacao(S.atual?.item) && Apres.editando) { Apres.sel = +s.dataset.i; renderCabecalho(); renderSlides(); return; }
     projetar(+s.dataset.i);
@@ -1979,6 +2091,7 @@ function ligarEventos() {
     if (!cmd || !S.atual) return;
     const it = S.atual.item;
     if (cmd.startsWith('ap')) return comandoApresentacao(cmd);
+    if (cmd === 'editarOrdinario') return abrirEditorOrdinario(it.parte);
     if (cmd === 'editarCanto') {
       const c = S.cantos.find(c => c.id === it.cantoId);
       if (c) abrirEditorCanto(c);
@@ -2283,10 +2396,21 @@ function ligarEventos() {
 // Início
 // =====================================================================
 
+// 🔇 Mudo (ideia do Hermínio): o telão fica só com o fundo do tema enquanto se navega pelos slides (procurar a parte certa,
+// o padre mudou a ordem…); os slides continuam indo, escondidos. Ao tirar o mudo, aparece o slide que estiver no ar.
+function alternarMudo() {
+  S.mudo = !S.mudo;
+  enviar({ tipo: 'mudo', on: S.mudo });
+  atualizarFaixa();
+  renderControles();
+  if (typeof agendarEstadoCelular === 'function') agendarEstadoCelular();     // o botão do celular acende/apaga
+}
+
 function renderControles() {
   // sem o botão, o aviso de tela preta fica no rótulo em cima da prévia
-  $('#rotuloVivo').textContent = S.live.preto ? 'TELA PRETA (B para voltar)' : 'AO VIVO';
-  $('.rotulo-vivo').classList.toggle('preto', !!S.live.preto);
+  $('#rotuloVivo').textContent = S.live.preto ? 'TELA PRETA (B para voltar)' : S.mudo ? 'MUDO — só o fundo (M para voltar)' : 'AO VIVO';
+  $('.rotulo-vivo').classList.toggle('preto', !!S.live.preto || !!S.mudo);
+  $('#btnMudo').classList.toggle('ligado', !!S.mudo);
   $('#btnAltar').classList.toggle('ligado', !!S.live.altar);
   $('#btnPix').classList.toggle('ligado', !!S.pixNoAr);
 }
@@ -2315,6 +2439,7 @@ async function iniciar() {
   await semearOracoesTerco();           // terco.js: Pai-Nosso, Ângelus, Regina Caeli, Jaculatória de Fátima, Ladainha
   await carregarAgenda();
   await carregarEucaristia();
+  await carregarOrdinarioEditado();     // ordinario.js: textos das partes fixas corrigidos pela paróquia
   await bibliaQueVemJunto();
   S.biblias = (await DB.todos('biblias')).map(Biblia.indexar);
   S.biblia = S.biblias.find(b => b.id === S.config.bibliaAtiva) || S.biblias[0] || null;
@@ -2335,6 +2460,7 @@ async function iniciar() {
   ligarApresentacoes();
   renderMidias();
   ligarOracoes();
+  ligarEditorOrdinario();
   renderOracoes();
   ligarMenus();
   ligarAvisos();
@@ -2375,7 +2501,7 @@ async function iniciar() {
   renderBiblia();
   renderCabecalho();
   renderEstadoProj();
-  $('#versaoApp').textContent = NO_APP ? 'Versão 1.6.4 · aplicativo para Windows' : 'Versão 1.6.4 · no navegador';
+  $('#versaoApp').textContent = NO_APP ? 'Versão 1.6.5 · aplicativo para Windows' : 'Versão 1.6.5 · no navegador';
   // pede armazenamento permanente (o navegador não apaga os dados para liberar espaço)
   try { navigator.storage?.persist?.(); } catch (_) {}
   enviarConfigTelao(); renderTemasRapidos();

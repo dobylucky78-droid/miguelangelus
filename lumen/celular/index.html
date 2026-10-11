@@ -217,7 +217,7 @@
     <div class="rot"><span>Slides do item aberto</span><b id="abertoTit"></b></div>
     <div id="tira" class="tira"></div>
     <div class="grade">
-      <button data-cmd="preto" id="btPreto">Tela preta</button>
+      <button data-cmd="mudo" id="btMudo" title="O telão fica só com o fundo enquanto você navega">Mudo</button>
       <button data-cmd="limpar">Limpar</button>
       <button data-cmd="altar" id="btAltar">Altar</button>
       <button id="btAviso">Aviso</button>
@@ -372,7 +372,7 @@ function render() {
   document.documentElement.style.setProperty('--cor-quem', (est.cfg && est.cfg.corRotulo) || '#ff5a4f');
   $('#nomeRoteiro').textContent = est.roteiro || 'MiguelAngelus';
   const selo = $('#selo');
-  selo.textContent = est.preto ? 'Tela preta' : est.altar ? 'Altar' : est.camera ? 'Câmera' : est.noAr.slide ? 'Ao vivo' : est.tocando.some(t => t.tipo === 'video' && !t.pausado) ? 'Vídeo' : 'Livre';
+  selo.textContent = est.preto ? 'Tela preta' : est.mudo ? 'Mudo' : est.altar ? 'Altar' : est.camera ? 'Câmera' : est.noAr.slide ? 'Ao vivo' : est.tocando.some(t => t.tipo === 'video' && !t.pausado) ? 'Vídeo' : 'Livre';
   selo.classList.toggle('vivo', !!(est.preto || est.altar || est.noAr.slide || est.camera));
   if (!est.projecao) selo.textContent += ' · telão fechado';
   if (papel === 'musico') return renderMusico();      // músico: só as cifras
@@ -406,7 +406,7 @@ function render() {
 
   $('#btProjecao').textContent = est.projecao ? '✕ Fechar o telão' : '▣ Abrir o telão';
   $('#btProjecao').classList.toggle('ligado', !!est.projecao);
-  $('#btPreto').classList.toggle('ligado', !!est.preto);
+  if ($('#btMudo')) $('#btMudo').classList.toggle('ligado', !!est.mudo);
   $('#btAltar').classList.toggle('ligado', !!est.altar);
   $('#btPix').hidden = !est.temPix;                    // só aparece com o QR code do Pix cadastrado no computador
   $('#btPix').classList.toggle('ligado', !!est.pix);

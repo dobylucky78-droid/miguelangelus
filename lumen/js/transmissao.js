@@ -50,7 +50,8 @@ function linhasDoSlide(s) {
 }
 
 function conteudoFaixa() {
-  if (S.live.preto) return { linhas: [], negrito: [] };
+  if (S.live.preto || S.mudo) return { linhas: [], negrito: [] };          // tela preta ou 🔇 Mudo: a faixa some também
+  if (S.live.slide?.secao) return { linhas: [], negrito: [] };             // slide com o nome da parte: só no telão
   // aviso na tela (placa, criança…) tem prioridade, se estiver ligado para a transmissão
   if (Avisos.atual && S.config.faixaAvisos) return { linhas: [Avisos.atual.texto.replace(RX_MARCAS, '')], negrito: [true] };
   const cat = categoriaAoVivo();

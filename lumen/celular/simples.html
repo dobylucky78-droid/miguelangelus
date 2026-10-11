@@ -9,7 +9,7 @@
   Versão simples do controle pelo celular, para navegadores antigos (iPad/iPhone com iOS 9 e 10, Android antigo):
   JavaScript da época (sem funções de seta, let/const, fetch, async), sem grid e sem "gap".
   A página completa (index.html) manda para cá sozinha quando o navegador não a entende.
-  Controle: no telão, próximo, Anterior/Próximo, Tela preta, Limpar, Altar, slides do item e o roteiro.
+  Controle: no telão, próximo, Anterior/Próximo, Mudo, Limpar, Altar, slides do item e o roteiro.
   Músico: as cifras dos cantos do roteiro, com o canto do telão marcado, tom (−/+), meu instrumento e tamanho da letra.
 -->
 <style>
@@ -91,7 +91,7 @@
     <div class="tela" id="prox" style="min-height:50px;font-size:14px"><span class="vazia">—</span></div>
     <div class="rot" style="margin-top:14px"></div>
     <div class="botoes">
-      <button data-cmd="preto" id="btPreto">Tela preta</button><button data-cmd="limpar">Limpar</button><button data-cmd="altar" id="btAltar">Altar</button>
+      <button data-cmd="mudo" id="btMudo">Mudo</button><button data-cmd="limpar">Limpar</button><button data-cmd="altar" id="btAltar">Altar</button>
     </div>
     <button data-cmd="projecao" id="btProjecao" class="largo">Abrir o telão</button>
     <div class="rot">Slides do item aberto <span id="abertoTit"></span></div>
@@ -253,7 +253,7 @@ function render() {
   $('nomeRoteiro').textContent = est.roteiro || 'MiguelAngelus';
   var n = est.noAr || {};
   var selo = $('selo');
-  selo.textContent = (est.preto ? 'Tela preta' : est.altar ? 'Altar' : est.camera ? 'Câmera' : n.slide ? 'Ao vivo' : 'Livre') + (est.projecao ? '' : ' · telão fechado');
+  selo.textContent = (est.preto ? 'Tela preta' : est.mudo ? 'Mudo' : est.altar ? 'Altar' : est.camera ? 'Câmera' : n.slide ? 'Ao vivo' : 'Livre') + (est.projecao ? '' : ' · telão fechado');
   alternar(selo, 'vivo', !!(est.preto || est.altar || n.slide || est.camera));
   if (papel === 'musico' || aba === 'cifras') return renderCifras(true);
   $('noArTit').textContent = n.tit ? '· ' + n.tit + (n.idx >= 0 ? ' ' + (n.idx + 1) + '/' + n.total : '') : '';
@@ -270,7 +270,7 @@ function render() {
     !a.slides.length ? '<span class="vazia">Item sem slides.</span>' :
     a.slides.map(function (s, i) { return '<button class="sl' + (vivoAqui && n.idx === i ? ' vivo' : '') + '" data-slide="' + i + '"><span class="n">' + (i + 1) + '</span>' + htmlSlide(s) + '</button>'; }).join('');
   $('btProjecao').textContent = est.projecao ? '✕ Fechar o telão' : '▣ Abrir o telão';
-  alternar($('btPreto'), 'ligado', !!est.preto);
+  alternar($('btMudo'), 'ligado', !!est.mudo);
   alternar($('btAltar'), 'ligado', !!est.altar);
   $('lista').innerHTML = (est.itens || []).length ? est.itens.map(function (it, i) {
     return '<button class="it' + (a && a.rIdx === i ? ' sel' : '') + '" data-item="' + i + '">' + (est.vivoIdx === i ? '<span class="noar"></span>' : '') +

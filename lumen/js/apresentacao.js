@@ -72,6 +72,7 @@ function abrirEditorLayout(alvo) {
   const dlg = $('#dlgLayout');
   dlg.returnValue = '';
   dlg.showModal();
+  atualizarMinis();        // a miniatura passa a mostrar esta apresentação
 }
 
 function renderEditorLayout() {
@@ -100,12 +101,14 @@ function renderEditorLayout() {
     tam.value = proprio?.tam || TAM_PADRAO[c];
     ctl.querySelector('.lay-tam-valor').textContent = proprio ? `${tam.value}%` : herdado ? 'padrão' : '—';
   }
+  if (typeof atualizarMinis === 'function') atualizarMinis();     // a miniatura do telão acompanha (tema, imagens, tamanhos)
 }
 
 function aposMudarLayout() {
   salvarAgenda();
   renderEditorLayout();
   enviarLayout();
+  atualizarMinis();        // miniatura do telão no editor (e em Ajustes)
 }
 
 function ligarApresentacao() {
