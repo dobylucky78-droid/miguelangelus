@@ -10,9 +10,8 @@ const Ordinario = (() => {
   const grupos = [
     {
       grupo: 'Ritos Iniciais', partes: [
-        { id: 'saudacao', titulo: 'Saudação', slides: [
+        { id: 'saudacao', titulo: 'Saudação', slides: [      // como a paróquia usa (1.6.7): só o sinal da cruz
           'Em nome do Pai e do Filho e do Espírito Santo.\n— Amém.',
-          'O Senhor esteja convosco.\n— Ele está no meio de nós.',
         ] },
         { id: 'ato-penitencial', titulo: 'Ato Penitencial (Confesso)', slides: [
           'Confesso a Deus todo-poderoso\ne a vós, irmãos e irmãs,\nque pequei muitas vezes\npor pensamentos e palavras,\natos e omissões,',
@@ -193,7 +192,11 @@ const Ordinario = (() => {
 
 async function carregarOrdinarioEditado() {
   const r = await DB.obter('config', 'ordinario');
-  Ordinario.usarEditados(r?.valor?.textos);
+  // texto editado que ficou igual ao original (ex.: o original passou a ser o da paróquia) deixa de contar como editado
+  const textos = { ...(r?.valor?.textos || {}) };
+  for (const [id, sl] of Object.entries(textos))
+    if (Ordinario.original(id) && sl.join('\n\n') === Ordinario.original(id).slides.join('\n\n')) delete textos[id];
+  Ordinario.usarEditados(textos);
 }
 
 // Editor das partes fixas da Missa (mesma janela das orações não serve: aqui não há categoria nem apagar)

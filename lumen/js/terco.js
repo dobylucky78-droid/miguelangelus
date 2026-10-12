@@ -71,7 +71,7 @@ const ORACOES_TERCO = [
     'Exultai e alegrai-vos, ó Virgem Maria, aleluia!\n— Porque o Senhor ressuscitou verdadeiramente, aleluia!\n\n' +
     'Oremos: Ó Deus, que vos dignastes alegrar o mundo\ncom a ressurreição do vosso Filho, nosso Senhor Jesus Cristo,\n' +
     'concedei-nos, vos suplicamos, que, por sua Mãe, a Virgem Maria,\nalcancemos as alegrias da vida eterna.\nPelo mesmo Cristo, Senhor nosso.\n— Amém.' },
-  { titulo: 'Ladainha de Nossa Senhora', categoria: 'Marianas', texto: (() => {
+  { titulo: 'Ladainha de Nossa Senhora', categoria: 'Ladainhas', texto: (() => {
     const pares = ['Senhor, tende piedade de nós.', 'Jesus Cristo, tende piedade de nós.', 'Senhor, tende piedade de nós.',
       'Jesus Cristo, ouvi-nos.', 'Jesus Cristo, atendei-nos.'];
     const blocos = [pares.slice(0, 3).map(p => `${p}\n— ${p}`).join('\n'), pares.slice(3).map(p => `${p}\n— ${p}`).join('\n')];
@@ -257,6 +257,15 @@ async function semearSequencias() {
     Oracoes.lista.push(nova);
   }
   S.config.sequenciasSemeadas = todas.map(o => o.titulo);
+  salvarConfig();
+}
+
+// 1.6.7: a Ladainha de Nossa Senhora (cadastrada em Marianas na 1.6.3) vai para Ladainhas, junto das outras — uma vez só
+async function ladainhaNSParaLadainhas() {
+  if (S.config.ladainhaNSMovida) return;
+  const o = Oracoes.lista.find(x => x.titulo === 'Ladainha de Nossa Senhora' && x.categoria === 'Marianas');
+  if (o) { o.categoria = 'Ladainhas'; await DB.salvar('oracoes', o); }
+  S.config.ladainhaNSMovida = true;
   salvarConfig();
 }
 

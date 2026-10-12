@@ -142,15 +142,42 @@ namespace MiguelAngelus
             finally { h.Free(); }
         }
 
+        // Último conteúdo recebido: a faixa de letras e o 💠 Pix (redesenha os dois juntos quando um muda)
+        Faixa ultimaFaixa = new Faixa();
+        Bitmap pixQr, pixFaixa;
+        double pixQrTam = 36, pixFaixaTam = 11;      // % da altura do vídeo (os mesmos do telão com a câmera)
+
+        public void DefinirPix(bool on, string qr, string faixa, double qrTam, double faixaTam)
+        {
+            lock (trava) { pixQr?.Dispose(); pixFaixa?.Dispose(); pixQr = on ? ImagemDeDataUrl(qr) : null; pixFaixa = on ? ImagemDeDataUrl(faixa) : null; }
+            pixQrTam = Math.Max(20, Math.Min(55, qrTam)); pixFaixaTam = Math.Max(6, Math.Min(20, faixaTam));
+            Desenhar(ultimaFaixa);
+        }
+
+        // "data:image/png;base64,…" → Bitmap (só imagens guardadas no programa)
+        static Bitmap ImagemDeDataUrl(string url)
+        {
+            if (string.IsNullOrEmpty(url) || !url.StartsWith("data:image/")) return null;
+            int v = url.IndexOf(','); if (v < 0) return null;
+            try { using (var ms = new MemoryStream(Convert.FromBase64String(url.Substring(v + 1)))) using (var b = new Bitmap(ms)) return new Bitmap(b); }
+            catch { return null; }
+        }
+
         public void Desenhar(Faixa f)
         {
+            ultimaFaixa = f ?? new Faixa();
+            f = ultimaFaixa;
             using (var bmp = new Bitmap(L, A, PixelFormat.Format32bppArgb))
             {
                 using (var g = Graphics.FromImage(bmp))
                 {
                     g.Clear(Color.Transparent);
                     if (f.Linhas.Length > 0) DesenharFaixa(g, f);
+                    lock (trava) DesenharPix(g);
                 }
+                // depuração: MIGUELANGELUS_NDI_PNG=c:\pasta\quadro.png grava o quadro enviado (para conferir sem o OBS)
+                var png = Environment.GetEnvironmentVariable("MIGUELANGELUS_NDI_PNG");
+                if (!string.IsNullOrEmpty(png)) try { bmp.Save(png, ImageFormat.Png); } catch { }
                 var d = bmp.LockBits(new Rectangle(0, 0, L, A), ImageLockMode.ReadOnly, PixelFormat.Format32bppArgb);
                 lock (trava) Marshal.Copy(d.Scan0, quadro, 0, quadro.Length);   // memória BGRA, alfa direto
                 bmp.UnlockBits(d);
@@ -198,6 +225,57 @@ namespace MiguelAngelus
             }
         }
 
+        // Como no telão com a câmera: faixa do CNPJ no alto à esquerda, QR code no alto à direita, em cartões brancos
+        void DesenharPix(Graphics g)
+        {
+            if (pixQr == null && pixFaixa == null) return;
+            g.SmoothingMode = SmoothingMode.AntiAlias;
+            float topo = A * 0.025f, ladoX = L * 0.02f;
+            if (pixQr != null)
+            {
+                float lado = (float)(A * pixQrTam / 100.0), pad = A * 0.012f;
+                var r = new RectangleF(L - ladoX - lado, topo, lado, lado);
+                Cartao(g, r, A * 0.012f);
+                var ant = g.InterpolationMode; g.InterpolationMode = InterpolationMode.NearestNeighbor;   // QR nítido
+                g.PixelOffsetMode = PixelOffsetMode.Half;
+                g.DrawImage(pixQr, Caber(pixQr, RectangleF.Inflate(r, -pad, -pad)));
+                g.InterpolationMode = ant; g.PixelOffsetMode = PixelOffsetMode.Default;
+            }
+            if (pixFaixa != null)
+            {
+                float alt = (float)(A * pixFaixaTam / 100.0), pad = A * 0.008f, maxL = L * 0.62f;
+                float larg = Math.Min(maxL, (alt - 2 * pad) * pixFaixa.Width / Math.Max(1f, pixFaixa.Height) + 2 * pad);
+                var r = new RectangleF(ladoX, topo, larg, alt);
+                Cartao(g, r, A * 0.012f);
+                g.InterpolationMode = InterpolationMode.HighQualityBicubic;
+                g.DrawImage(pixFaixa, Caber(pixFaixa, RectangleF.Inflate(r, -pad, -pad)));
+            }
+        }
+
+        // cartão branco com cantos arredondados e uma sombra leve
+        static void Cartao(Graphics g, RectangleF r, float raio)
+        {
+            using (var sombra = Arredondado(new RectangleF(r.X + raio * 0.3f, r.Y + raio * 0.5f, r.Width, r.Height), raio))
+            using (var ps = new SolidBrush(Color.FromArgb(90, 0, 0, 0))) g.FillPath(ps, sombra);
+            using (var c = Arredondado(r, raio)) g.FillPath(Brushes.White, c);
+        }
+
+        static GraphicsPath Arredondado(RectangleF r, float raio)
+        {
+            var p = new GraphicsPath(); float d = raio * 2;
+            p.AddArc(r.X, r.Y, d, d, 180, 90); p.AddArc(r.Right - d, r.Y, d, d, 270, 90);
+            p.AddArc(r.Right - d, r.Bottom - d, d, d, 0, 90); p.AddArc(r.X, r.Bottom - d, d, d, 90, 90);
+            p.CloseFigure(); return p;
+        }
+
+        // a imagem inteira dentro do retângulo, sem deformar (centralizada)
+        static RectangleF Caber(Image img, RectangleF r)
+        {
+            float esc = Math.Min(r.Width / img.Width, r.Height / img.Height);
+            float w = img.Width * esc, h = img.Height * esc;
+            return new RectangleF(r.X + (r.Width - w) / 2, r.Y + (r.Height - h) / 2, w, h);
+        }
+
         static bool Negrito(Faixa f, int i) => i < f.Negrito.Length && f.Negrito[i];
 
         static FontFamily FamiliaOuPadrao(string nome)
@@ -210,6 +288,7 @@ namespace MiguelAngelus
             rodando = false;
             laco?.Join(1000);
             if (envio != IntPtr.Zero) NdiNativo.NDIlib_send_destroy(envio);
+            lock (trava) { pixQr?.Dispose(); pixFaixa?.Dispose(); }
         }
     }
 }

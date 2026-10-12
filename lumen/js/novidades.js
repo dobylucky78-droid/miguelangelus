@@ -5,6 +5,11 @@
  * A versão mais nova fica em cima. Ao gerar uma versão nova, acrescente a entrada dela aqui.
  */
 const NOVIDADES = [
+  { versao: '1.6.7', data: '2026-10-12', itens: [
+    'Saudação (Orações → Missa): o texto padrão passa a ser só "Em nome do Pai e do Filho e do Espírito Santo. — Amém.", como a paróquia usa.',
+    '📿 A Ladainha de Nossa Senhora agora fica em Orações → Ladainhas, junto das outras.',
+    '💠 Pix também no OBS: com a transmissão NDI ligada, ao pôr o Pix no ar a faixa do CNPJ (alto à esquerda) e o QR code (alto à direita) entram na transmissão, como no telão com a câmera; ao tirar o Pix, saem. Liga e desliga em Ajustes → Transmissão → "💠 Pix". Os tamanhos são os mesmos do Pix com a câmera (Ajustes → 💠 Pix).',
+  ] },
   { versao: '1.6.6', data: '2026-10-12', itens: [
     '💾 Salvar e enviar para a nuvem, no editor da Apresentação de cada capela (imagens dos cantos e tema): grava na hora e já sincroniza, sem esperar fechar o programa.',
     'Correção: a apresentação de cada capela não é mais desfeita quando outro computador mexe na Agenda (ex.: cria um roteiro pela Agenda). Na sincronização, vale a versão mais nova de cada capela.',

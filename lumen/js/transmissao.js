@@ -7,7 +7,7 @@
  * Usa S, NO_APP, Avisos, salvarConfig, $… (em tempo de execução).
  */
 
-const Transmissao = { ultimo: '', status: { ativo: false, conexoes: 0, erro: null }, timer: 0 };
+const Transmissao = { ultimo: '', ultimoPix: '', status: { ativo: false, conexoes: 0, erro: null }, timer: 0 };
 
 function paraApp(msg) {
   try { if (NO_APP) window.chrome.webview.postMessage(msg); } catch (_) {}
@@ -75,6 +75,19 @@ function atualizarFaixa(forcar = false) {
   }, 30);
 }
 
+// 💠 Pix no OBS (1.6.7): com o Pix no ar, a faixa do CNPJ e o QR code vão por cima, no alto (como no telão com a câmera).
+// As imagens vão numa mensagem à parte, só quando o Pix liga/desliga ou muda — a faixa de letras continua leve.
+function atualizarPixNdi(forcar = false) {
+  if (!NO_APP || !S.config.ndiLigado) return;
+  const on = !!(S.pixNoAr && S.config.faixaPix !== false && Pix.qr);
+  const msg = { tipo: 'ndiPix', on, qr: on ? Pix.qr : '', faixa: on ? Pix.faixa : '',
+    qrTam: +S.config.pixQrCamera || 36, faixaTam: +S.config.pixFaixaCamera || 11 };
+  const chave = `${on}|${msg.qr.length}|${msg.faixa.length}|${msg.qr.slice(-40)}|${msg.faixa.slice(-40)}|${msg.qrTam}|${msg.faixaTam}`;
+  if (!forcar && chave === Transmissao.ultimoPix) return;
+  Transmissao.ultimoPix = chave;
+  paraApp(msg);
+}
+
 const primeiraFonte = f => (f || 'Segoe UI').split(',')[0].replace(/["']/g, '').trim();
 
 function aplicarNdi() {
@@ -82,6 +95,7 @@ function aplicarNdi() {
   paraApp({ tipo: 'ndi', ligar: !!S.config.ndiLigado, nome: S.config.ndiNome || 'MiguelAngelus Letras' });
   Transmissao.ultimo = '';
   atualizarFaixa(true);
+  atualizarPixNdi(true);
 }
 
 function renderNdi() {
@@ -111,6 +125,7 @@ function ligarTransmissao() {
   $('#dlgAjustes').addEventListener('input', e => {
     const k = e.target.dataset?.cfg || '';
     if (k === 'ndiLigado' || k === 'ndiNome') aplicarNdi();
+    else if (k === 'faixaPix' || /^pix(Qr|Faixa)Camera$/.test(k)) atualizarPixNdi();
     else if (/^faixa|^fonte$|^corTexto$|^maiusculas$/.test(k)) atualizarFaixa(true);
   });
   $('#estadoNdi').addEventListener('click', () => abrirAjustes('ndi'));

@@ -109,13 +109,14 @@ function renderPixAjustes() {
 // O Pix fica POR CIMA do que está passando (como a câmera): os slides continuam, menores, na parte de baixo;
 // com a câmera no ar, a faixa e o QR code vão para o alto, menores. Ligar/desligar não mexe no roteiro.
 const msgPix = () => ({ tipo: 'pix', on: !!S.pixNoAr, qr: S.pixNoAr ? Pix.qr : '', faixa: S.pixNoAr ? Pix.faixa : '' });
-function mostrarPixNoTelao() { enviar(msgPix()); }
+function mostrarPixNoTelao() { enviar(msgPix()); atualizarPixNdi(); }
 function enviarEstadoPix(w) { if (S.pixNoAr) enviar(msgPix(), [w]); }
 
 function alternarPix() {
   if (!S.pixNoAr && !Pix.qr) { toast('Coloque o QR code do Pix em Ajustes → 💠 Pix da paróquia.'); abrirAjustes('pix'); return; }
   S.pixNoAr = !S.pixNoAr;
   enviar(msgPix());
+  atualizarPixNdi();                       // 💠 também no OBS (NDI), se ligado em Ajustes → Transmissão
   renderControles();
   if (typeof agendarEstadoCelular === 'function') agendarEstadoCelular();
 }

@@ -37,7 +37,7 @@ const CONFIG_PADRAO = {
   contornarCantos: true,                         // (1.6.6) o texto contorna o quadrado de cada imagem dos cantos
   // transmissão (NDI): faixa de letras para o OBS
   ndiLigado: false, ndiNome: 'MiguelAngelus Letras', faixaTamanho: 4.6, faixaOpacidade: 0.6,
-  faixaCantos: true, faixaRespostas: true, faixaLeituras: true, faixaAvisos: true,
+  faixaCantos: true, faixaRespostas: true, faixaLeituras: true, faixaAvisos: true, faixaPix: true,
   bibliaAtiva: '', roteiroAtivo: '',
 };
 
@@ -2497,7 +2497,8 @@ async function iniciar() {
   statusAbertura('Carregando orações, Agenda e Bíblia…');
   await carregarOracoes();
   await semearOracoesTerco();           // terco.js: Pai-Nosso, Ângelus, Regina Caeli, Jaculatória de Fátima, Ladainha
-  await semearSequencias();             // terco.js: Sequência Pascal e de Pentecostes (1.6.6)
+  await semearSequencias();             // terco.js: Sequências e Ladainhas (1.6.6)
+  await ladainhaNSParaLadainhas();      // terco.js: Ladainha de Nossa Senhora em Ladainhas (1.6.7)
   await carregarAgenda();
   await carregarEucaristia();
   await carregarOrdinarioEditado();     // ordinario.js: textos das partes fixas corrigidos pela paróquia
@@ -2562,7 +2563,7 @@ async function iniciar() {
   renderBiblia();
   renderCabecalho();
   renderEstadoProj();
-  $('#versaoApp').textContent = NO_APP ? 'Versão 1.6.6 · aplicativo para Windows' : 'Versão 1.6.6 · no navegador';
+  $('#versaoApp').textContent = NO_APP ? 'Versão 1.6.7 · aplicativo para Windows' : 'Versão 1.6.7 · no navegador';
   // pede armazenamento permanente (o navegador não apaga os dados para liberar espaço)
   try { navigator.storage?.persist?.(); } catch (_) {}
   enviarConfigTelao(); renderTemasRapidos();

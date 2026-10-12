@@ -286,6 +286,10 @@ namespace MiguelAngelus
                 var tipo = m.TryGetValue("tipo", out var t) ? t as string : null;
                 if (tipo == "ndi") LigarNdi(m.TryGetValue("ligar", out var l) && l is bool b && b, m.TryGetValue("nome", out var n) ? n as string : null);
                 else if (tipo == "faixa") ndi?.Desenhar(LerFaixa(m));
+                else if (tipo == "ndiPix") ndi?.DefinirPix(m.TryGetValue("on", out var po) && po is bool pb && pb,
+                    m.TryGetValue("qr", out var pq) ? pq as string : null, m.TryGetValue("faixa", out var pf) ? pf as string : null,
+                    m.TryGetValue("qrTam", out var qt) ? Convert.ToDouble(qt, System.Globalization.CultureInfo.InvariantCulture) : 36,
+                    m.TryGetValue("faixaTam", out var ft) ? Convert.ToDouble(ft, System.Globalization.CultureInfo.InvariantCulture) : 11);
                 else if (tipo == "http") _ = Http(m);
                 else if (tipo == "arquivo") Arquivo(m);
                 else if (tipo == "abrirManual")
