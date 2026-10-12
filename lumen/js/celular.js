@@ -92,6 +92,7 @@ function estadoCelular() {
     camera: Camera.ativa, letra: !!Camera.letra,
     tocando, volume: volumeMidia(),
     cfg: { corRotulo: cfg.corRotulo || '#ff5a4f', mostrarRotulos: cfg.mostrarRotulos !== false, espacoResposta: cfg.espacoResposta !== false },
+    links: typeof linksCelular === 'function' ? linksCelular() : [],      // links.js: mesa de som e outros
   };
 }
 

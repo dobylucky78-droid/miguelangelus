@@ -5,6 +5,12 @@
  * A versão mais nova fica em cima. Ao gerar uma versão nova, acrescente a entrada dela aqui.
  */
 const NOVIDADES = [
+  { versao: '1.6.8', data: '2026-10-12', itens: [
+    '🔗 Links no celular (Ajustes → 📱 Controle pelo celular → Links): botões que abrem outra página direto do MiguelAngelus no celular — na aba 🎸 Cifras dos músicos e na aba 🎬 Mídia do controle. Já vem com a 🎚️ Mesa de som (http://192.168.0.20, a mesa no roteador do MiguelAngelus). Cada link tem nome, endereço, ícone (emoji ou uma imagem sua) e para quem aparece (todos, só músicos ou só o controle). Vão para os outros computadores pela nuvem.',
+    '🎨 Manual da aparência dos slides (Ajuda): guia com fotos para os operadores — as 4 camadas (comunidade, tema, perfil, roteiro), o seu perfil, os ajustes em slides específicos na preparação e os combinados da equipe.',
+    'Fundo próprio de um item: a letra fica branca com sombra em qualquer tema (no Creme e no Azul claro ficava escura por cima da imagem).',
+    'Correção: o título da Abertura não mostra mais a marca de cor (“<azul>…”) na lista do roteiro e na impressão.',
+  ] },
   { versao: '1.6.7', data: '2026-10-12', itens: [
     'Saudação (Orações → Missa): o texto padrão passa a ser só "Em nome do Pai e do Filho e do Espírito Santo. — Amém.", como a paróquia usa.',
     '📿 A Ladainha de Nossa Senhora agora fica em Orações → Ladainhas, junto das outras.',

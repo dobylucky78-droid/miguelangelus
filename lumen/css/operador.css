@@ -904,3 +904,19 @@ html[data-tema-app="claro"] .nuvem-ok { color: #1f6a99; }
 html[data-tema-app="claro"] .sync-abertura { background: rgba(240, 242, 245, .9); }
 html[data-tema-app="claro"] dialog::backdrop { background: rgba(0,0,0,.35); }
 html[data-tema-app="claro"] .tema-amostra { border-color: #aab1ba; }
+
+/* 🔗 Links no celular (Ajustes → Controle pelo celular) */
+.link-cel { display: grid; grid-template-columns: 64px minmax(0, 1fr) minmax(0, 1.6fr) auto; gap: 6px; align-items: center; margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid rgba(128,128,128,.2); }
+.link-cel [data-lk="icone"], .link-cel .link-img { grid-column: 1; grid-row: 1; }
+.link-cel [data-lk="nome"] { grid-column: 2; grid-row: 1; }
+.link-cel [data-lk="url"] { grid-column: 3; grid-row: 1; }
+.link-cel [data-lk-tirar] { grid-column: 4; grid-row: 1; }
+.link-cel [data-lk="para"] { grid-column: 2 / 4; grid-row: 2; }
+.link-cel [data-lk-testar] { grid-column: 4; grid-row: 2; }
+.link-cel select, .link-cel input { min-width: 0; }
+.link-cel select[data-lk="icone"] { font-size: 18px; padding: 4px; }
+.link-cel input.invalido { border-color: #e0463c; }
+#btnLinkNovo { margin-top: 4px; }
+.link-cel .link-img { position: relative; width: 64px; height: 34px; padding: 2px; display: grid; place-items: center; }
+.link-cel .link-img img { max-width: 30px; max-height: 30px; border-radius: 6px; }
+.link-cel .link-img span { position: absolute; top: -6px; right: -6px; font-size: 10px; background: #b3261e; color: #fff; border-radius: 50%; width: 16px; height: 16px; display: grid; place-items: center; }

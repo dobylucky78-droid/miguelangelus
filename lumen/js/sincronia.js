@@ -13,7 +13,7 @@
 const Sync = { estado: { vistos: {}, enviados: {}, removidos: [] }, pedidos: {}, seq: 0, sujo: false, ocupado: false, ultimo: 0, erro: null, timer: 0 };
 
 const GRUPOS_SYNC = [
-  { sub: 'config', store: 'config', filtro: r => ['agenda', 'eucaristia', 'pix', 'avisos', 'perfis', 'ordinario'].includes(r.id) },
+  { sub: 'config', store: 'config', filtro: r => ['agenda', 'eucaristia', 'pix', 'avisos', 'perfis', 'ordinario', 'links'].includes(r.id) },
   { sub: 'roteiros', store: 'roteiros' },
   { sub: 'cantos', store: 'cantos' },
   { sub: 'oracoes', store: 'oracoes' },
@@ -242,6 +242,7 @@ async function recarregarDadosDaNuvem() {
   if (typeof carregarAvisosPar === 'function') await carregarAvisosPar();
   if (typeof carregarPerfis === 'function') await carregarPerfis();
   if (typeof carregarOrdinarioEditado === 'function') { await carregarOrdinarioEditado(); try { renderOrdinario(); } catch (_) {} }
+  if (typeof carregarLinks === 'function') await carregarLinks();
   try { renderCantos(); renderOracoes(); renderMidias(); renderRoteiroCab(); renderRoteiroLista(); } catch (_) {}
   if (typeof oferecerJuntarRoteiros === 'function') setTimeout(() => oferecerJuntarRoteiros(), 500);   // cópias de outro computador
 }

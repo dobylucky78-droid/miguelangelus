@@ -21,7 +21,7 @@
     </div>
     <div class="splash-info">
       <div class="splash-gratis"><b>Gratuito · uso livre</b></div>
-      <div>Versão 1.6.7</div>
+      <div>Versão 1.6.8</div>
       <div>© 2026 · PASCOM</div>
       <div><b>Paróquia São José Operário</b></div>
     </div>
@@ -118,6 +118,7 @@
     <div class="menu"><button class="menu-titulo">Ajuda</button>
       <div class="menu-itens">
         <button data-menu="manual">📘 Manual do MiguelAngelus <span class="atalho">F1</span></button>
+        <button data-menu="manualAparencia">🎨 Manual da aparência dos slides</button>
         <button data-menu="atalhos">Atalhos do teclado…</button>
         <button data-menu="atualizar">Procurar atualizações…</button>
         <button data-menu="novidades">📋 Novidades (histórico de versões)…</button>
@@ -569,6 +570,12 @@
             <b>mesmo Wi-Fi</b> deste computador. Não precisa instalar nada: abre no navegador e pode virar um ícone na tela inicial.</p>
           <label class="check"><input type="checkbox" id="celLigado"> Ligar o controle pelo celular</label>
           <div id="celPainel"></div>
+          <h3 class="aj-sub">🔗 Links no celular</h3>
+          <p class="sutil pequeno">Botões que aparecem no celular (aba 🎸 Cifras dos músicos e aba 🎬 Mídia do controle) e abrem outra página
+            — ex.: a <b>mesa de som</b>. O endereço só abre se o celular estiver na mesma rede do aparelho (a mesa no roteador do
+            MiguelAngelus: o celular no Wi-Fi MiguelAngelus). Vão para os outros computadores pela nuvem.</p>
+          <div id="linksCel"></div>
+          <button type="button" id="btnLinkNovo">＋ Adicionar link</button>
         </section>
 
         <section data-ajpainel="sync">
@@ -958,7 +965,7 @@
       <figure><img src="img/brasao-paroquia.webp" alt="Brasão da Paróquia São José Operário"><figcaption>Paróquia São José Operário (RJ)</figcaption></figure>
       <figure><img src="img/brasao-pascom.webp" alt="Logotipo da PASCOM"><figcaption>PASCOM</figcaption></figure>
     </div>
-    <p class="sutil pequeno" id="versaoApp">Versão 1.6.7</p>
+    <p class="sutil pequeno" id="versaoApp">Versão 1.6.8</p>
     <div class="linha"><span class="espaco"></span><button value="ok" class="primario">OK</button></div>
   </form>
 </dialog>
@@ -1228,6 +1235,7 @@
 <script src="js/cifras.js"></script>
 <script src="lib/qrcode/qrcode.min.js"></script>
 <script src="js/celular.js"></script>
+<script src="js/links.js"></script>
 <script src="js/menus.js"></script>
 <script src="js/app.js"></script>
 </body>

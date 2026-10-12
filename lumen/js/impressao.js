@@ -45,7 +45,7 @@ function htmlImpressao(r, modelo) {
     const res = resumoItem(it), c = it.tipo === 'canto' ? S.cantos.find(x => x.id === it.cantoId) : null;
     const ficha = c ? [fichaCanto(c), c.tom ? 'Tom: ' + c.tom : ''].filter(Boolean).join(' · ') : '';
     const cab = `<div class="cab"><span class="n">${i + 1}</span><span class="rot">${esc(res.rot)}</span>
-      <span class="tit">${esc(res.tit)}</span>${ficha ? `<span class="ficha">${esc(ficha)}</span>` : ''}</div>`;
+      <span class="tit">${esc(tirarMarcas(res.tit || ''))}</span>${ficha ? `<span class="ficha">${esc(ficha)}</span>` : ''}</div>`;
     let corpo = '';
     if (modelo === 'completo') {
       const t = textoParaImprimir(it);

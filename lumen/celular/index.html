@@ -126,6 +126,14 @@
   .m-barra select { min-width: 0; flex: 1 1 140px; max-width: 260px; padding: 7px 6px; font-size: 14px; }
   .m-barra { flex-wrap: wrap; }
   .m-seguir { margin-left: auto; font-size: 14px; }
+  /* 🔗 links (mesa de som…): Ajustes → Controle pelo celular → Links */
+  .links { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 10px; }
+  .links:empty { display: none; }
+  .links a { display: inline-flex; align-items: center; gap: 8px; padding: 9px 14px; border-radius: 12px; background: var(--painel);
+    border: 1px solid var(--borda); color: var(--texto, #eee); text-decoration: none; font-weight: 600; font-size: 15px; }
+  .links a i { font-style: normal; font-size: 20px; line-height: 1; }
+  .links a img { width: 26px; height: 26px; border-radius: 6px; object-fit: contain; }
+  .links a:active { background: var(--acento-esc); border-color: var(--acento); }
   .mc { background: var(--painel); border: 1px solid var(--borda); border-radius: 12px; margin-bottom: 12px; overflow: hidden; }
   .mc.vivo { border: 2px solid var(--vivo); }
   .mc-cab { display: flex; align-items: center; gap: 8px; padding: 10px 12px; background: var(--painel2); }
@@ -244,6 +252,7 @@
 
   <!-- MÚSICOS: cantos do roteiro com as cifras, acompanhando o telão -->
   <section data-aba="musico" hidden>
+    <div id="linksMusico" class="links"></div>
     <div class="m-barra">
       <button id="mMenor" title="Letra menor">A−</button><button id="mMaior" title="Letra maior">A+</button>
       <select id="mInstr" title="Meu instrumento: as cifras aparecem no tom dele (só neste aparelho)">
@@ -259,6 +268,7 @@
 
   <!-- MÍDIA -->
   <section data-aba="midia" hidden>
+    <div class="cartao" id="cxLinks" hidden><h3>🔗 Links</h3><div id="linksControle" class="links"></div></div>
     <div class="cartao" id="cxAberta" hidden></div>
     <div class="cartao"><h3>Tocando agora</h3><div id="tocando"><p class="sutil">Nada tocando.</p></div>
       <div class="linha"><span class="sutil">Volume</span><input type="range" id="vol" min="0" max="1" step="0.05" style="flex:1"></div></div>
@@ -366,6 +376,20 @@ function htmlSlide(s, curto) {
   return `<div>${html}</div>`;      // um bloco só (a caixa do telão centraliza com flex)
 }
 
+// ---------- 🔗 links (mesa de som…): abrem numa aba nova; só http/https ----------
+let ultimosLinks = '';
+function renderLinksCel() {
+  const lista = (est.links || []).filter(l => /^https?:\/\//i.test(l.url));
+  const chave = JSON.stringify(lista) + papel;
+  if (chave === ultimosLinks) return;
+  ultimosLinks = chave;
+  const html = para => lista.filter(l => l.para === 'todos' || l.para === para)
+    .map(l => `<a href="${esc(l.url)}" target="_blank" rel="noopener">${/^data:image\//.test(l.img || '') ? `<img src="${l.img}" alt="">` : `<i>${esc(l.icone || '🔗')}</i>`}${esc(l.nome)}</a>`).join('');
+  $('#linksMusico').innerHTML = html('musico');
+  $('#linksControle').innerHTML = html('controle');
+  $('#cxLinks').hidden = !$('#linksControle').innerHTML;
+}
+
 // ---------- desenho ----------
 function render() {
   if (!est) return;
@@ -375,6 +399,7 @@ function render() {
   selo.textContent = est.preto ? 'Tela preta' : est.mudo ? 'Mudo' : est.altar ? 'Altar' : est.camera ? 'Câmera' : est.noAr.slide ? 'Ao vivo' : est.tocando.some(t => t.tipo === 'video' && !t.pausado) ? 'Vídeo' : 'Livre';
   selo.classList.toggle('vivo', !!(est.preto || est.altar || est.noAr.slide || est.camera));
   if (!est.projecao) selo.textContent += ' · telão fechado';
+  renderLinksCel();
   if (papel === 'musico') return renderMusico();      // músico: só as cifras
 
   // aviso

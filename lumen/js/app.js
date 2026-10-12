@@ -1130,7 +1130,7 @@ function renderRoteiroLista() {
     const sel = S.atual && S.atual.rIdx === i;
     return `<div class="it ${sel ? 'sel' : ''} ${r.vazio ? 'pendente' : ''}" data-i="${i}">
       <span class="tag t-${it.tipo}">${esc(r.rot)}</span>
-      <span class="tit">${esc(r.tit)}</span>
+      <span class="tit">${esc(tirarMarcas(r.tit || ''))}</span>
       ${S.live.item === it ? '<span class="pt-vivo" title="No ar"></span>' : ''}
       <span class="acoes">
         <button data-acao="subir" title="Subir">↑</button>
@@ -2550,6 +2550,7 @@ async function iniciar() {
   ligarCowabunga();
   ligarCifras();
   ligarCelular();
+  ligarLinks();                          // links.js: botões de links no celular (mesa de som…)
   ligarPix();
   ligarDivisoria();
   ligarZoomApp();
@@ -2563,7 +2564,7 @@ async function iniciar() {
   renderBiblia();
   renderCabecalho();
   renderEstadoProj();
-  $('#versaoApp').textContent = NO_APP ? 'Versão 1.6.7 · aplicativo para Windows' : 'Versão 1.6.7 · no navegador';
+  $('#versaoApp').textContent = NO_APP ? 'Versão 1.6.8 · aplicativo para Windows' : 'Versão 1.6.8 · no navegador';
   // pede armazenamento permanente (o navegador não apaga os dados para liberar espaço)
   try { navigator.storage?.persist?.(); } catch (_) {}
   enviarConfigTelao(); renderTemasRapidos();

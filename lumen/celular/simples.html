@@ -102,6 +102,7 @@
     <div id="lista"></div>
   </div>
   <div id="pgCifras" hidden>
+    <div id="links" style="margin:0 0 8px"></div>
     <div class="m-barra">
       <select id="mInstr" title="Meu instrumento: as cifras aparecem no tom dele (só neste aparelho)">
         <option value="c">🎹 Dó (violão, teclado…)</option>
@@ -255,6 +256,12 @@ function render() {
   var selo = $('selo');
   selo.textContent = (est.preto ? 'Tela preta' : est.mudo ? 'Mudo' : est.altar ? 'Altar' : est.camera ? 'Câmera' : n.slide ? 'Ao vivo' : 'Livre') + (est.projecao ? '' : ' · telão fechado');
   alternar(selo, 'vivo', !!(est.preto || est.altar || n.slide || est.camera));
+  // 🔗 links (mesa de som…), em cima das cifras
+  var lk = '', ls = est.links || [];
+  for (var k = 0; k < ls.length; k++) if (/^https?:\/\//i.test(ls[k].url) && (ls[k].para === 'todos' || ls[k].para === papel))
+    lk += '<a href="' + esc(ls[k].url) + '" target="_blank" style="display:inline-block;margin:0 8px 8px 0;padding:9px 14px;border:1px solid #444;border-radius:10px;color:#eee;text-decoration:none;font-weight:bold">' +
+      (/^data:image\//.test(ls[k].img || '') ? '<img src="' + ls[k].img + '" alt="" style="width:22px;height:22px;vertical-align:middle;border-radius:5px"> ' : esc(ls[k].icone || '🔗') + ' ') + esc(ls[k].nome) + '</a>';
+  if ($('links').innerHTML !== lk) $('links').innerHTML = lk;
   if (papel === 'musico' || aba === 'cifras') return renderCifras(true);
   $('noArTit').textContent = n.tit ? '· ' + n.tit + (n.idx >= 0 ? ' ' + (n.idx + 1) + '/' + n.total : '') : '';
   $('noAr').innerHTML = est.preto ? '<span class="vazia">■ Tela preta</span>' : est.camera ? '<span class="vazia">📷 Câmera no telão</span>' :

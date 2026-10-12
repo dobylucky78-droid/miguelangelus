@@ -62,9 +62,11 @@ document.addEventListener('click', e => {
 });
 
 // Manual (HTML ao lado do programa): no aplicativo abre no navegador padrão do Windows
-function abrirManual() {
-  if (NO_APP) window.chrome.webview.postMessage({ tipo: 'abrirManual' });
-  else window.open('Manual do MiguelAngelus.html', '_blank', 'noopener');
+// qual: '' = o manual principal; 'aparencia' = Manual da Aparência dos Slides (guia dos operadores, 1.6.8)
+const MANUAIS = { '': 'Manual do MiguelAngelus.html', aparencia: 'Manual da Aparência dos Slides.html' };
+function abrirManual(qual = '') {
+  if (NO_APP) window.chrome.webview.postMessage({ tipo: 'abrirManual', qual });
+  else window.open(MANUAIS[qual] || MANUAIS[''], '_blank', 'noopener');
 }
 
 function alternarTelaCheiaPainel() {
@@ -104,6 +106,7 @@ function acaoMenu(acao) {
     case 'agenda-celebracoes': return abrirAgenda('celebracoes');
     case 'agenda-paroquia': return abrirAgenda('paroquia');
     case 'manual': return abrirManual();
+    case 'manualAparencia': return abrirManual('aparencia');
     case 'atalhos': return abrirDialogo('dlgAtalhos');
     case 'atualizar': return verificarAtualizacao({ silencioso: false });
     case 'sobre': return abrirDialogo('dlgSobre');

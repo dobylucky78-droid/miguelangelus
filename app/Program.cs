@@ -294,7 +294,9 @@ namespace MiguelAngelus
                 else if (tipo == "arquivo") Arquivo(m);
                 else if (tipo == "abrirManual")
                 {
-                    var manual = Path.Combine(Program.PastaWeb, "Manual do MiguelAngelus.html");
+                    // só os manuais conhecidos (nada de caminho vindo da página)
+                    var qual = m.TryGetValue("qual", out var q) ? q as string : "";
+                    var manual = Path.Combine(Program.PastaWeb, qual == "aparencia" ? "Manual da Aparência dos Slides.html" : "Manual do MiguelAngelus.html");
                     if (File.Exists(manual)) Program.AbrirNoNavegador(manual);
                     else MessageBox.Show(this, "O manual não foi encontrado na pasta do programa.", "MiguelAngelus");
                 }
