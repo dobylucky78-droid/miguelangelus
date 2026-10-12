@@ -6,7 +6,7 @@
  * Usa $, esc, uid, dividir, semAcento, toast, abrirItem... de app.js (em tempo de execução).
  */
 
-const CATEGORIAS_ORACAO = ['Marianas', 'Anjos e Santos', 'Espírito Santo', 'Eucaristia', 'Penitência', 'Paróquia', 'Outras'];
+const CATEGORIAS_ORACAO = ['Marianas', 'Anjos e Santos', 'Espírito Santo', 'Eucaristia', 'Penitência', 'Sequências', 'Ladainhas', 'Paróquia', 'Outras'];
 
 const ORACOES_PADRAO = [
   { titulo: 'Ave-Maria', categoria: 'Marianas', texto:
@@ -116,7 +116,8 @@ function renderOracoes() {
     return `<button class="pasta" data-pasta="${esc(cat)}"><span class="seta">${f ? '▸' : '▾'}</span>📁 ${esc(cat)}<span class="n">${l.length}</span></button>
       ${f ? '' : `<div class="lista pasta-itens">${l.map(o => `
       <div class="it ${o.id === selId ? 'sel' : ''}" data-id="${o.id}" title="Duplo clique para editar">
-        <span class="tit">${esc(o.titulo)}</span></div>`).join('')}</div>`}`;
+        <span class="tit">${esc(o.titulo)}</span>
+        <button class="or-acao" data-editar-oracao title="Editar">✎</button><button class="or-acao" data-excluir-oracao title="Excluir esta oração">✕</button></div>`).join('')}</div>`}`;
   }).join('');
 }
 
@@ -136,8 +137,7 @@ function abrirEditorOracao(o, aoSalvar) {
   const x = o || { id: '', titulo: '', categoria: 'Paróquia', texto: '' };
   f.dataset.id = x.id;
   f.titulo.value = x.titulo;
-  $('#categoriasOracao').innerHTML = categoriasUsadas().map(c => `<option value="${esc(c)}">`).join('');
-  f.categoria.value = x.categoria || 'Outras';
+  preencherCategoriasOracao(x.categoria || 'Outras');
   f.texto.value = x.texto || '';
   $('#btnExcluirOracao').hidden = !x.id;
   aoSalvarOracao = aoSalvar || null;
@@ -145,6 +145,16 @@ function abrirEditorOracao(o, aoSalvar) {
   dlg.returnValue = '';
   dlg.showModal();
   (x.id ? f.texto : f.titulo).focus();
+}
+
+// Categoria: todas as que existem (padrão + as criadas) e "Nova categoria…" no fim
+function preencherCategoriasOracao(sel) {
+  const cats = categoriasUsadas();
+  if (sel && !cats.includes(sel)) cats.push(sel);
+  const el = $('#categoriasOracao');
+  el.innerHTML = cats.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('') + '<option value="__nova">➕ Nova categoria…</option>';
+  el.value = sel;
+  el.dataset.anterior = sel;
 }
 
 // Uma oração que já existe com o mesmo título, ou com o texto quase igual (60% ou mais das sequências de 3 palavras)
@@ -195,12 +205,20 @@ function ligarOracoes() {
     const primeira = $('#listaOracoes .it');
     if (primeira) { primeira.click(); e.target.blur(); }
   });
+  $('#categoriasOracao').addEventListener('change', e => {
+    const el = e.target;
+    if (el.value !== '__nova') return void (el.dataset.anterior = el.value);
+    const nome = (prompt('Nome da nova categoria:') || '').trim();
+    preencherCategoriasOracao(nome || el.dataset.anterior);
+  });
   $('#btnNovaOracao').addEventListener('click', () => abrirEditorOracao(null, o => abrirItem({ tipo: 'oracao', oracaoId: o.id })));
   $('#listaOracoes').addEventListener('click', e => {
     const pasta = e.target.closest('[data-pasta]');
     if (pasta) { Recolher.alternar('oracao:' + pasta.dataset.pasta, true); return renderOracoes(); }
     const row = e.target.closest('.it');
     if (!row) return;
+    if (e.target.closest('[data-editar-oracao]')) return abrirEditorOracao(Oracoes.lista.find(o => o.id === row.dataset.id));
+    if (e.target.closest('[data-excluir-oracao]')) return excluirOracao(row.dataset.id);
     abrirItem({ tipo: 'oracao', oracaoId: row.dataset.id });
     renderOracoes();
   });
@@ -226,14 +244,21 @@ function ligarOracoes() {
     salvarOracaoDoEditor();
   });
   $('#btnExcluirOracao').addEventListener('click', async () => {
-    const id = $('#formOracao').dataset.id;
-    if (!id || !confirm('Excluir esta oração? Os roteiros que a usam ficarão com o espaço vazio.')) return;
-    await DB.remover('oracoes', id);
-    Oracoes.lista = Oracoes.lista.filter(o => o.id !== id);
-    $('#dlgOracao').close('');
-    if (S.atual?.rIdx < 0 && S.atual.item.oracaoId === id) S.atual = null;
-    aposMudarOracoes();
-    if (!S.atual) { renderCabecalho(); renderSlides(); }
-    toast('Oração excluída.');
+    if (await excluirOracao($('#formOracao').dataset.id)) $('#dlgOracao').close('');
   });
+}
+
+// Excluir (pelo ✕ na lista ou pelo botão do editor). Avisa se algum roteiro usa a oração.
+async function excluirOracao(id) {
+  const o = Oracoes.lista.find(x => x.id === id);
+  if (!o) return false;
+  const usam = S.roteiros.filter(r => (r.itens || []).some(i => i.oracaoId === id)).length;
+  if (!confirm(`Excluir a oração "${o.titulo}"?` + (usam ? `\n\n${usam} roteiro(s) usam esta oração e ficarão com o espaço vazio.` : ''))) return false;
+  await DB.remover('oracoes', id);
+  Oracoes.lista = Oracoes.lista.filter(x => x.id !== id);
+  if (S.atual?.rIdx < 0 && S.atual.item.oracaoId === id) S.atual = null;
+  aposMudarOracoes();
+  if (!S.atual) { renderCabecalho(); renderSlides(); }
+  toast('Oração excluída.');
+  return true;
 }

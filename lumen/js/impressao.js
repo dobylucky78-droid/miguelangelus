@@ -74,7 +74,7 @@ function htmlImpressao(r, modelo) {
     .ficha { color: #666; font-size: 9pt; margin-left: auto; text-align: right; }
     .txt { margin: 4px 0 0 26px; }
     .txt .quem { color: #b01c1c; }
-    font.m-vermelho { color: #c62828; } font.m-dourado { color: #9a6b00; } font.m-azul { color: #1d5fb0; } font.m-verde { color: #2e7d32; }
+    font.m-vermelho { color: #c8102e; } font.m-dourado { color: #9a6b00; } font.m-azul { color: #1d5fb0; } font.m-verde { color: #2e7d32; }
     font.m-roxo { color: #6a2c91; } font.m-branco, font.m-preto { color: inherit; }
     big.m-g { font-size: 1.2em; } big.m-gg { font-size: 1.45em; font-weight: 700; } small.m-pq { font-size: .8em; }
     pre.cifra { margin: 6px 0 0 26px; font: 10pt/1.25 Consolas, "Courier New", monospace; white-space: pre-wrap; }

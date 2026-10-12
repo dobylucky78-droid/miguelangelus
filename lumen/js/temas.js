@@ -104,6 +104,7 @@ function alternarTemaLiturgico() {
       'roxo no Advento e na Quaresma, branco no Natal e na Páscoa, vermelho em Pentecostes e nos mártires, rosa no Gaudete e no Laetare.\n\n' +
       'Capelas com tema próprio (Agenda → Paróquia → 🖼) continuam com o delas; o quadradinho ✝ na tela de controle também liga só por um roteiro.')) return;
   if (ligado) delete p.tema; else p.tema = 'liturgico';
+  p.layoutEm = Date.now();
   salvarAgenda();
   Temas.manual = null;
   enviarConfigTelao();
@@ -123,6 +124,7 @@ function ligarTemas() {
     const dono = a?.localId ? localDe(a.localId) : Agenda.dados.paroquia;
     if (!dono) return;
     if (id === 'herdar') delete dono.tema; else dono.tema = id;
+    dono.layoutEm = Date.now();          // data da apresentação desta capela (a sincronização junta capela por capela)
     salvarAgenda();
     renderEditorLayout();
     Temas.manual = null;

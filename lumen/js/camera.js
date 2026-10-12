@@ -130,6 +130,7 @@ function pararCamera() {
   enviarConfigTelao(); renderTemasRapidos();      // volta o tema que estava
   renderCameraAtiva();
   if (ehCamera(S.atual?.item)) renderSlides();
+  renderControles();                               // o botão "Tirar câmera" do painel apaga
 }
 
 function definirLetraCamera(on) {
@@ -166,12 +167,19 @@ function renderCameraAtiva() {
     ${fechado ? '' : `<div class="cam-lista">${cams.map(c => `
       <button class="cam-bt ${c.id === Camera.ativa ? 'ativa' : ''}" data-camquadro="${c.id}" title="${c.id === Camera.ativa ? 'No telão' : 'Mostrar no telão'}">
         ${c.id === Camera.ativa ? '●' : '📷'} ${esc(c.nome)}${c.id === joy ? '<span class="cam-joy" title="O joystick está controlando esta câmera (Select troca)">🎮</span>' : ''}</button>`).join('')}</div>
-    ${cams.filter(c => c.ptz?.ip && c.ptzPosicoes?.length).map(c => `<div class="cam-ptz" title="Posições prontas da câmera PTZ (um clique leva a câmera até lá)">
-      <span class="sutil pequeno">🎮 ${esc(c.nome)}:</span>${c.ptzPosicoes.slice().sort((a, b) => a.n - b.n).map(p => `<button data-ptzquadro="${c.id}:${p.n}">${esc(p.nome)}</button>`).join('')}</div>`).join('')}
+    ${(() => {
+      // posições de cada câmera recolhem (notebook de 14"): com uma câmera só, começam abertas; com mais, fechadas
+      const comPos = cams.filter(c => c.ptz?.ip && c.ptzPosicoes?.length);
+      return comPos.map(c => {
+        const fech = Recolher.fechado('quadro:pos:' + c.id, comPos.length > 1);
+        return `<div class="cam-ptz ${fech ? 'fechado' : ''}" title="Posições prontas da câmera PTZ (um clique leva a câmera até lá)">
+          <button class="cam-pos-cab" data-campos="${c.id}" title="Mostrar / esconder as posições"><span class="seta">${fech ? '▸' : '▾'}</span> 🎮 ${esc(c.nome)} <span class="sutil pequeno">(${c.ptzPosicoes.length})</span></button>
+          ${fech ? '' : c.ptzPosicoes.slice().sort((a, b) => a.n - b.n).map(p => `<button data-ptzquadro="${c.id}:${p.n}">${esc(p.nome)}</button>`).join('')}</div>`;
+      }).join('');
+    })()}
     <div class="toc">
       <label class="check" title="Letra dos slides numa faixa embaixo, por cima da câmera"><input type="checkbox" data-camativa="letra" ${Camera.letra ? 'checked' : ''}> Letra por cima</label>
-      <span class="toc-nome"></span>
-      <button data-camativa="parar" ${ativa ? '' : 'disabled'} title="Tirar a câmera do telão">✕ Tirar do telão</button></div>`}`;
+      <span class="toc-nome sutil pequeno">(📷 Tirar fica no painel, junto do Mudo)</span></div>`}`;
 }
 
 function ligarCamera() {
@@ -191,6 +199,12 @@ function ligarCamera() {
   $('#cameraAtiva').addEventListener('click', e => {
     if (e.target.closest('[data-camativa="parar"]')) return pararCamera();
     if (e.target.closest('[data-camativa="recolher"]')) { Recolher.alternar('quadro:cameras'); return renderCameraAtiva(); }
+    const cp = e.target.closest('[data-campos]');
+    if (cp) {
+      const nCams = Midia.lista.filter(m => m.tipo === 'camera' && m.ptz?.ip && m.ptzPosicoes?.length).length;
+      Recolher.alternar('quadro:pos:' + cp.dataset.campos, nCams > 1);
+      return renderCameraAtiva();
+    }
     const b = e.target.closest('[data-camquadro]');
     const c = b && Midia.lista.find(m => m.id === b.dataset.camquadro);
     if (c && c.id !== Camera.ativa) mostrarCamera(c, null);

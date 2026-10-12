@@ -12,8 +12,14 @@ const NO_APP = !!(window.chrome && window.chrome.webview);
 const semAcento = s => (s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 const debounce = (fn, ms) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; };
 
-const MOMENTOS = ['Entrada', 'Ato Penitencial', 'Aspersão', 'Glória', 'Salmo', 'Aclamação ao Evangelho', 'Ofertório', 'Santo',
-  'Cordeiro', 'Comunhão', 'Ação de Graças', 'Final', 'Mariano', 'Adoração', 'Outros'];
+const MOMENTOS = ['Entrada', 'Ato Penitencial', 'Aspersão', 'Glória', 'Salmo', 'Sequência', 'Aclamação ao Evangelho', 'Ofertório', 'Santo',
+  'Cordeiro', 'Comunhão', 'Ação de Graças', 'Final', 'Mariano', 'Ladainha', 'Adoração', 'Outros'];
+// Momentos cujo "rezado" é uma oração cadastrada (Orações → Sequências / Ladainhas): o item guarda oracaoId e dá para trocar por um canto
+const MOMENTOS_COM_ORACAO = { 'Sequência': 'Sequências', 'Ladainha': 'Ladainhas' };
+const oracoesDoMomento = m => Oracoes.lista.filter(o => o.categoria === MOMENTOS_COM_ORACAO[m] || (m === 'Ladainha' && /^Ladainha/i.test(o.titulo)))
+  .sort((a, b) => a.titulo.localeCompare(b.titulo, 'pt-BR'));
+// item de canto rezado a partir de uma oração (ex.: Ladainha de Nossa Senhora rezada; troque por um canto do momento para cantar)
+const itemCantoDeOracao = (momento, o) => ({ id: uid(), tipo: 'canto', momento, cantoId: '', oracaoId: o?.id || '' });
 
 const CONFIG_PADRAO = {
   pixCartao: 64, pixQrCamera: 36, pixFaixaCamera: 11,      // tamanhos do 💠 Pix no telão (% da altura da tela)
@@ -28,6 +34,7 @@ const CONFIG_PADRAO = {
   salmoCorrido: true,                            // salmo: versos de cada estrofe em texto corrido (não quebra a cada vírgula)
   // ideias do Hermínio (1.6.5): 1º slide de cada parte do roteiro com o nome dela; área útil do slide (margens, % da tela)
   slideSecao: true, numerarSecoes: false, margemLados: 5, margemTopo: 5,
+  contornarCantos: true,                         // (1.6.6) o texto contorna o quadrado de cada imagem dos cantos
   // transmissão (NDI): faixa de letras para o OBS
   ndiLigado: false, ndiNome: 'MiguelAngelus Letras', faixaTamanho: 4.6, faixaOpacidade: 0.6,
   faixaCantos: true, faixaRespostas: true, faixaLeituras: true, faixaAvisos: true,
@@ -113,6 +120,8 @@ function atualizarMini(w) {
 }
 function atualizarMinis() {
   for (const w of [...Minis.keys()]) { if (w.closed === true) Minis.delete(w); else atualizarMini(w); }
+  const med = document.querySelector('#previaMargens .pm-medidas');
+  if (med) med.textContent = `margens: lados ${+(S.config.margemLados ?? 5)}% · em cima/embaixo ${+(S.config.margemTopo ?? 5)}%`;
 }
 
 function enviarEstado(w) {
@@ -366,7 +375,38 @@ function gerarSlides(item) {
   if (secao) slides = [secao, ...slides];
   // A+ / A− de cada slide (ideia do Hermínio): guardado no item do roteiro, pela posição do slide
   const tam = item.tamSlides || {};
-  return slides.map((s, i) => tam[i] ? { ...s, escala: tam[i] } : s);
+  // fundo próprio do item (1.6.6): no lugar do fundo do tema, com a opção de usar ou não
+  const fundo = item.usarFundo && item.fundoImg ? { fundo: item.fundoImg, fundoEscurecer: +(item.fundoEscurecer ?? 35) } : null;
+  return slides.map((s, i) => (tam[i] || fundo) ? { ...s, ...(tam[i] ? { escala: tam[i] } : {}), ...(fundo || {}) } : s);
+}
+
+// Linha "🖼 Fundo próprio" no cabeçalho dos itens do roteiro
+function htmlFundoItem(it) {
+  return `<div class="cab-linha fundo-item">
+    <span class="sutil pequeno">🖼 Fundo próprio:</span>
+    ${it.fundoImg ? `<img class="fundo-mini" src="${it.fundoImg}" alt="">
+      <label class="check" title="Usar esta imagem de fundo nos slides deste item (desmarcado: o fundo do tema)"><input type="checkbox" data-campo="usarFundo" ${it.usarFundo ? 'checked' : ''}> Usar</label>
+      <label class="check" title="Escurece a imagem para a letra aparecer bem">Escurecer <input type="range" min="0" max="85" step="5" data-campo="fundoEscurecer" value="${+(it.fundoEscurecer ?? 35)}" style="width:90px"></label>
+      <button data-cmd="fundoEscolher" title="Trocar a imagem">Trocar…</button>
+      <button data-cmd="fundoTirar" class="perigo" title="Remover a imagem de fundo deste item">✕</button>`
+    : `<button data-cmd="fundoEscolher" title="Uma imagem de fundo só para os slides deste item (no lugar do fundo do tema)">Escolher imagem…</button>`}
+  </div>`;
+}
+
+async function definirFundoDoItem(arquivo) {
+  const a = S.atual;
+  if (!a || a.rIdx < 0 || !arquivo) return;
+  try { a.item.fundoImg = await reduzirImagem(arquivo, 1920, 0.85); } catch (e) { return toast(e.message); }
+  a.item.usarFundo = true;
+  aposMudarFundoItem();
+}
+
+function aposMudarFundoItem() {
+  const it = S.atual?.item;
+  salvarRoteiro();
+  atualizarSlides();
+  renderCabecalho();
+  if (it && S.live.item === it && S.live.idx >= 0) projetar(S.live.idx);    // no ar: o telão muda na hora
 }
 
 // Nome da parte do roteiro para o 1º slide dela: "Entrada" (+ o canto), "Ato Penitencial", "Coleta", "Salmo Responsorial"…
@@ -456,6 +496,8 @@ function gerarSlidesBase(item) {
       // sem canto escolhido: o texto rezado do folheto (ex.: Santo tirado da Oração Eucarística);
       // a aclamação do folheto tem refrão ("Aleluia…") antes e depois do versículo
       if (item.refraoRezado) return comRefrao(item.refraoRezado, item.textoRezado, item.momento || '');
+      const o = item.oracaoId && oracaoDe(item);          // Sequência/Ladainha rezada: o texto atual da oração
+      if (o) return dividir(o.texto || '').map(x => ({ texto: x, rodape: o.titulo }));
       return fala(item.textoRezado);
     }
     case 'texto':
@@ -870,7 +912,9 @@ function renderCabecalho() {
       h = noRoteiro
         ? `<div class="cab-linha"><span class="tag t-canto">Canto</span>
              <select data-campo="momento" class="estreito">${MOMENTOS.map(m => `<option ${m === it.momento ? 'selected' : ''}>${m}</option>`).join('')}</select>
-             <select data-campo="cantoId" title="${it.textoRezado ? 'Deixe “rezado” para usar o texto do folheto, ou escolha um canto' : ''}">${opcoesCantos(it.momento, it.cantoId, soFavoritosNoRoteiro(), !!it.textoRezado)}</select>
+             <select data-campo="cantoId" title="${it.textoRezado || MOMENTOS_COM_ORACAO[it.momento] ? 'Deixe “rezado” para usar o texto, ou escolha um canto' : ''}">${opcoesCantos(it.momento, it.cantoId, soFavoritosNoRoteiro(), !!(it.textoRezado || MOMENTOS_COM_ORACAO[it.momento]))}</select>
+             ${MOMENTOS_COM_ORACAO[it.momento] && !c ? `<select data-campo="oracaoId" title="Texto rezado (Orações → ${MOMENTOS_COM_ORACAO[it.momento]})">
+               <option value="">— qual ${it.momento === 'Ladainha' ? 'ladainha' : 'sequência'}? —</option>${oracoesDoMomento(it.momento).map(o => `<option value="${o.id}" ${o.id === it.oracaoId ? 'selected' : ''}>${esc(o.titulo)}</option>`).join('')}</select>` : ''}
              ${temFavoritos() ? `<label class="check" title="A lista mostra só os cantos favoritos, separados por momento"><input type="checkbox" data-sofav ${soFavoritosNoRoteiro() ? 'checked' : ''}> ⭐ só favoritos</label>` : ''}
              ${c ? `<button data-cmd="favoritarCanto" class="estrela-bt ${c.favorito ? 'on' : ''}" title="${c.favorito ? 'Tirar dos favoritos' : 'Marcar este canto como favorito'}">${c.favorito ? '★' : '☆'}</button>` : ''}
              <button data-cmd="editarCanto" ${c ? '' : 'disabled'}>Editar</button>
@@ -1010,6 +1054,7 @@ function renderCabecalho() {
       break;
     }
   }
+  if (noRoteiro && !['imagem', 'midia', 'avisos'].includes(it.tipo)) h += htmlFundoItem(it);
   el.innerHTML = h;
   atualizarStatusRef();
 }
@@ -1033,7 +1078,8 @@ function resumoItem(it) {
   switch (it.tipo) {
     case 'canto': {
       const c = S.cantos.find(c => c.id === it.cantoId);
-      return { rot: it.momento || 'Canto', tit: c ? c.titulo : it.textoRezado ? `${it.momento || 'Canto'} (rezado)` : 'escolher canto…', vazio: !c && !it.textoRezado };
+      const o = !c && it.oracaoId && oracaoDe(it);
+      return { rot: it.momento || 'Canto', tit: c ? c.titulo : o ? `${o.titulo} (rezada)` : it.textoRezado ? `${it.sequencia || it.momento || 'Canto'} (rezado)` : 'escolher canto…', vazio: !c && !o && !it.textoRezado };
     }
     case 'leitura': return { rot: it.titulo || 'Leitura', tit: it.ref || 'informar referência…', vazio: !it.ref };
     case 'salmo': {
@@ -1151,6 +1197,7 @@ function novoItem(tipo) {
     case 'midia': return { ...base, midiaId: '', loop: false };
     case 'oracao': return { ...base, oracaoId: '' };
     case 'angelus': return base;
+    case 'ladainha': return itemCantoDeOracao('Ladainha', oracoesDoMomento('Ladainha').find(o => /Nossa Senhora/.test(o.titulo)) || oracoesDoMomento('Ladainha')[0]);
     case 'preces': return { ...base, titulo: 'Oração dos Fiéis', resposta: 'Senhor, escutai a nossa prece.', convite: '', texto: '', conclusao: '' };
     case 'avisos': return { ...base, titulo: '', extras: '', programados: true };
   }
@@ -1163,6 +1210,11 @@ function itemParaRoteiro(it) {
     case 'canto': {
       const c = S.cantos.find(c => c.id === it.cantoId);
       return { id: uid(), tipo: 'canto', momento: c?.momento || 'Outros', cantoId: it.cantoId };
+    }
+    case 'oracao': {        // Ladainha/Sequência vai como item rezado-ou-cantado (como o Glória)
+      const o = oracaoDe(it), m = o && Object.keys(MOMENTOS_COM_ORACAO).find(k => oracoesDoMomento(k).includes(o));
+      if (m) return itemCantoDeOracao(m, o);
+      return { ...structuredClone(it), id: uid() };
     }
     default: return { ...structuredClone(it), id: uid() };
   }
@@ -2036,6 +2088,8 @@ function ligarEventos() {
   // (a Tela preta virou o 🔇 Mudo na 1.6.5: botão no painel, menu Projeção e teclas M / B)
   $('#btnLimpar').addEventListener('click', limpar);
   $('#btnMudo').addEventListener('click', alternarMudo);
+  $('#btnTirarCamera').addEventListener('click', () => { pararCamera(); renderControles(); });
+  $('#arqFundoItem').addEventListener('change', e => { const f = e.target.files[0]; e.target.value = ''; if (f) definirFundoDoItem(f); });
   $('#btnAltar').addEventListener('click', alternarAltar);
   $('#btnMsg').addEventListener('click', projetarMensagem);
   setInterval(renderEstadoProj, 1500);
@@ -2080,6 +2134,7 @@ function ligarEventos() {
     const it = S.atual.item;
     it[campo] = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
     if (it.tipo === 'terco') aoMudarTerco(it, campo);
+    if (campo === 'usarFundo' || campo === 'fundoEscurecer') { if (campo === 'fundoEscurecer') it[campo] = +it[campo]; return aposMudarFundoItem(); }
     if (S.atual.rIdx >= 0) { salvarRoteiro(); renderRoteiroLista(); }
     if (it.tipo === 'terco' && e.target.type === 'checkbox') { atualizarSlides(); return renderCabecalho(); }
     atualizarSlides();
@@ -2092,6 +2147,8 @@ function ligarEventos() {
     const it = S.atual.item;
     if (cmd.startsWith('ap')) return comandoApresentacao(cmd);
     if (cmd === 'editarOrdinario') return abrirEditorOrdinario(it.parte);
+    if (cmd === 'fundoEscolher') return $('#arqFundoItem').click();
+    if (cmd === 'fundoTirar') { delete it.fundoImg; it.usarFundo = false; return aposMudarFundoItem(); }
     if (cmd === 'editarCanto') {
       const c = S.cantos.find(c => c.id === it.cantoId);
       if (c) abrirEditorCanto(c);
@@ -2411,6 +2468,9 @@ function renderControles() {
   $('#rotuloVivo').textContent = S.live.preto ? 'TELA PRETA (B para voltar)' : S.mudo ? 'MUDO — só o fundo (M para voltar)' : 'AO VIVO';
   $('.rotulo-vivo').classList.toggle('preto', !!S.live.preto || !!S.mudo);
   $('#btnMudo').classList.toggle('ligado', !!S.mudo);
+  const camNoAr = typeof Camera !== 'undefined' && !!Camera.ativa;
+  $('#btnTirarCamera').disabled = !camNoAr;
+  $('#btnTirarCamera').classList.toggle('ligado', camNoAr);
   $('#btnAltar').classList.toggle('ligado', !!S.live.altar);
   $('#btnPix').classList.toggle('ligado', !!S.pixNoAr);
 }
@@ -2437,6 +2497,7 @@ async function iniciar() {
   statusAbertura('Carregando orações, Agenda e Bíblia…');
   await carregarOracoes();
   await semearOracoesTerco();           // terco.js: Pai-Nosso, Ângelus, Regina Caeli, Jaculatória de Fátima, Ladainha
+  await semearSequencias();             // terco.js: Sequência Pascal e de Pentecostes (1.6.6)
   await carregarAgenda();
   await carregarEucaristia();
   await carregarOrdinarioEditado();     // ordinario.js: textos das partes fixas corrigidos pela paróquia
@@ -2501,7 +2562,7 @@ async function iniciar() {
   renderBiblia();
   renderCabecalho();
   renderEstadoProj();
-  $('#versaoApp').textContent = NO_APP ? 'Versão 1.6.5 · aplicativo para Windows' : 'Versão 1.6.5 · no navegador';
+  $('#versaoApp').textContent = NO_APP ? 'Versão 1.6.6 · aplicativo para Windows' : 'Versão 1.6.6 · no navegador';
   // pede armazenamento permanente (o navegador não apaga os dados para liberar espaço)
   try { navigator.storage?.persist?.(); } catch (_) {}
   enviarConfigTelao(); renderTemasRapidos();

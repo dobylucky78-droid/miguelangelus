@@ -74,7 +74,7 @@
   #texto .resp { font-weight: 700; }
   #texto .entre { display: block; height: .45em; }
   #texto .quem { font-weight: 700; color: var(--cor-quem, #ff5a4f); }
-  font.m-vermelho { color: #ff5a4f; } font.m-dourado { color: #f2c14e; } font.m-azul { color: #5aa9ff; } font.m-verde { color: #5cc46a; }
+  font.m-vermelho { color: #c8102e; } font.m-dourado { color: #f2c14e; } font.m-azul { color: #5aa9ff; } font.m-verde { color: #5cc46a; }
   font.m-roxo { color: #b57cf0; } font.m-branco { color: #fff; } font.m-preto { color: #111; }
   big.m-g { font-size: 1.3em; } small.m-pq { font-size: .75em; }
   /* título: um bloco centralizado (o justificado do telão não espalha as palavras dele) */
@@ -125,6 +125,7 @@
   /* miniatura (Ajustes / Apresentação): limite das margens pontilhado; área do texto tracejada */
   #limites { position: fixed; z-index: 9; border: 1px dotted rgba(242,193,78,.9); pointer-events: none; box-sizing: border-box; }
   body.mini #area { outline: 2px dashed #f2c14e; outline-offset: -1px; }
+  .ct-caixa { position: fixed; z-index: 9; border: 2px dashed rgba(90,169,255,.95); pointer-events: none; box-sizing: border-box; }
   body.mini #rodape { opacity: .55; }
   body.mudo #area, body.mudo #rodape, body.mudo #imgSlide, body.mudo #veu, body.mudo #papel, body.mudo #avisosTela { visibility: hidden !important; }
   @keyframes pisca { 50% { background: rgba(255, 196, 0, .97); color: #1a1000; } }
@@ -249,8 +250,70 @@ function tamanhoLetra(larg, alt, soTexto) {
   return f;
 }
 
+// ---------- Texto que contorna as imagens dos cantos (1.6.6) ----------
+// Cada imagem dos cantos que encosta na área das margens vira um quadrado (com folga); o texto ocupa a área inteira e
+// as linhas contornam os quadrados (shape-outside): as de cima ficam entre o brasão e a PASCOM, as do meio usam a largura
+// toda, as de baixo desviam só do padroeiro. Liga/desliga em Ajustes → Tamanho dos slides.
+let contorno = null, htmlAtual = '';
+const usaContorno = () => !!contorno && !slide?.img && !slide?.avisos && !document.body.classList.contains('camera') &&
+  !document.body.classList.contains('pix-on');
+
+function htmlFlutuantes(Ww, Hh) {
+  const esq = contorno.caixas.filter(c => c.lado === 'e'), dir = contorno.caixas.filter(c => c.lado === 'd');
+  const px = v => Math.max(0, Math.round(v)) + 'px';
+  let h = '';
+  if (esq.length) {
+    const tl = esq.find(c => c.alto), bl = esq.find(c => !c.alto);
+    const w = Math.max(...esq.map(c => c.r));
+    const p = ['0 0'];
+    if (tl) p.push(`${px(tl.r)} 0`, `${px(tl.r)} ${px(tl.b)}`, `0 ${px(tl.b)}`);
+    if (bl) p.push(`0 ${px(bl.t)}`, `${px(bl.r)} ${px(bl.t)}`, `${px(bl.r)} ${px(Hh)}`);
+    p.push(`0 ${px(Hh)}`);
+    h += `<span class="ct-f" style="float:left;width:${px(w)};height:${px(Hh)};shape-outside:polygon(${p.join(',')})"></span>`;
+  }
+  if (dir.length) {
+    const tr = dir.find(c => c.alto), br = dir.find(c => !c.alto);
+    const w = Math.max(...dir.map(c => Ww - c.l)), x0 = Ww - w;
+    const p = [`${px(w)} 0`];
+    if (tr) p.push(`${px(tr.l - x0)} 0`, `${px(tr.l - x0)} ${px(tr.b)}`, `${px(w)} ${px(tr.b)}`);
+    if (br) p.push(`${px(w)} ${px(br.t)}`, `${px(br.l - x0)} ${px(br.t)}`, `${px(br.l - x0)} ${px(Hh)}`);
+    p.push(`${px(w)} ${px(Hh)}`);
+    h += `<span class="ct-f" style="float:right;width:${px(w)};height:${px(Hh)};shape-outside:polygon(${p.join(',')})"></span>`;
+  }
+  return h;
+}
+
+function ajustarContorno() {
+  const texto = $('texto'), area = $('area');
+  const Ww = area.clientWidth, Hh = area.clientHeight;
+  area.style.alignItems = 'flex-start';
+  Object.assign(texto.style, { maxWidth: '100%', width: '100%' });
+  texto.innerHTML = htmlFlutuantes(Ww, Hh) + '<span class="ct-esp" style="display:block;height:0"></span>' + htmlAtual + '<span class="ct-fim"></span>';
+  const esp = texto.querySelector('.ct-esp'), fim = texto.querySelector('.ct-fim');
+  const topoArea = () => area.getBoundingClientRect().top;
+  const fundoTexto = () => fim.getBoundingClientRect().bottom - topoArea();
+  let f = tamanhoLetra(Ww, Hh, false);
+  const passo = Math.max(-6, Math.min(6, +(slide?.escala || 0)));
+  if (passo) f *= Math.pow(1.1, passo);
+  texto.style.fontSize = f + 'px';
+  while ((fundoTexto() > Hh || texto.scrollWidth > Ww + 1) && f > 4) { f *= 0.96; texto.style.fontSize = f + 'px'; }
+  // centraliza na altura: espaço em cima = metade do que sobra (o contorno pode mudar ao descer: confere de novo)
+  let e = Math.max(0, (Hh - fundoTexto()) / 2);
+  for (let k = 0; k < 8; k++) {
+    esp.style.height = e + 'px';
+    const sobra = fundoTexto() - Hh;
+    if (sobra <= 0 || e <= 0) break;
+    e = Math.max(0, e - sobra - 1);
+  }
+  if (fundoTexto() > Hh) esp.style.height = '0px';
+}
+
 function ajustar() {
   const texto = $('texto'), area = $('area');
+  if (usaContorno()) { ajustarContorno(); ajustarAvisos(); return; }
+  // sem contorno: desfaz o que o modo contorno mudou
+  if (texto.querySelector('.ct-f, .ct-esp')) texto.innerHTML = htmlAtual;
+  area.style.alignItems = ''; texto.style.width = '';
   let f = (+cfg.fonteMax || 9) * window.innerHeight / 100;
   if (cfg.quebraAuto) {
     const C = +cfg.caracteresPorLinha || 40;
@@ -295,8 +358,21 @@ const CAIXAS = {   // em fração da tela: [esquerda, topo, direita, base]
   acima: { img: [.05, .04, .95, .56], area: [.05, .58, .95, .88] },
   capa: { img: [.50, .04, .97, .96], area: [.04, .08, .48, .92] },
 };
+// Miniatura: os quadrados de cada imagem (o que o texto contorna), tracejados
+function desenharCaixasMini(base) {
+  if (!MINI) return;
+  document.querySelectorAll('.ct-caixa').forEach(e => e.remove());
+  if (!contorno || !base) return;
+  for (const c of contorno.caixas) {
+    const d = document.createElement('div'); d.className = 'ct-caixa';
+    Object.assign(d.style, { left: base[0] + c.l + 'px', top: base[1] + c.t + 'px', width: (c.r - c.l) + 'px', height: (c.b - c.t) + 'px' });
+    document.body.appendChild(d);
+  }
+}
+
 function harmonizar(lay) {
   const img = $('imgSlide'), area = $('area');
+  contorno = null; desenharCaixasMini(null);
   const limpar = () => { for (const p of ['left', 'top', 'right', 'bottom', 'width', 'height']) { img.style[p] = ''; area.style[p] = ''; } };
   if (document.body.classList.contains('camera') || lay === 'so') return limpar();
   // Pix por cima (sem câmera): o cartão do Pix fica no alto e o texto desce para a faixa de baixo, menor
@@ -331,6 +407,17 @@ function harmonizar(lay) {
     for (const p of ['left', 'top', 'right', 'bottom', 'width', 'height']) img.style[p] = '';
     const base = cx.area.map((v, i) => v * (i % 2 ? H : W));
     const bate = cantos.filter(c => !(c.right <= base[0] || c.left >= base[2] || c.bottom <= base[1] || c.top >= base[3]));
+    // (1.6.6) modo contorno: a área é a das margens inteira e cada imagem vira um quadrado que o texto contorna
+    if (cfg.contornarCantos !== false && !pixOn && !lay && bate.length) {
+      contorno = { caixas: bate.map(c => ({
+        lado: c.left + c.width / 2 < W / 2 ? 'e' : 'd', alto: c.top + c.height / 2 < H / 2,
+        l: Math.max(0, c.left - folga - base[0]), t: Math.max(0, c.top - folga - base[1]),
+        r: Math.min(base[2] - base[0], c.right + folga - base[0]), b: Math.min(base[3] - base[1], c.bottom + folga - base[1]) })) };
+      Object.assign(area.style, { left: base[0] + 'px', top: base[1] + 'px', right: (W - base[2]) + 'px', bottom: (H - base[3]) + 'px' });
+      desenharCaixasMini(base);
+      if (MINI) { const u = areaUtil(), lim = $('limites'); if (lim) Object.assign(lim.style, { left: u[0] * 100 + '%', top: u[1] * 100 + '%', right: (1 - u[2]) * 100 + '%', bottom: (1 - u[3]) * 100 + '%' }); }
+      return;
+    }
     const cima = bate.filter(c => c.top < H / 2), baixo = bate.filter(c => c.top >= H / 2);
     const margem = cs => cs.reduce((m, c) => Math.max(m, c.left < W / 2 ? c.right + folga : W - c.left + folga), base[0]);
     const opcoes = [];
@@ -359,10 +446,21 @@ function harmonizar(lay) {
 // as imagens dos cantos chegam depois: refaz o encaixe quando carregam (e quando a janela muda de tamanho)
 document.querySelectorAll('.canto').forEach(c => c.addEventListener('load', () => { desenharImagem(); ajustar(); }));
 
+// Fundo próprio do item do roteiro (slide.fundo, 1.6.6): no lugar do fundo do tema, escurecido para a letra aparecer
+function aplicarFundo() {
+  const f = $('fundo');
+  if (slide?.fundo && /^data:image\//.test(slide.fundo)) {
+    const a = Math.min(.85, Math.max(0, (+slide.fundoEscurecer || 0) / 100));
+    f.style.backgroundImage = `linear-gradient(rgba(0,0,0,${a}), rgba(0,0,0,${a})), url("${slide.fundo}")`;
+  } else f.style.backgroundImage = cfg.fundoImagem ? `url("${cfg.fundoImagem}")` : 'none';
+}
+
 function desenhar() {
+  aplicarFundo();
   desenharImagem();
   desenharAvisos();
-  $('texto').innerHTML = slide && !slide.avisos ? htmlSlide(slide) : '';
+  htmlAtual = slide && !slide.avisos ? htmlSlide(slide) : '';
+  $('texto').innerHTML = htmlAtual;
   $('rodape').textContent = slide && !slide.avisos && cfg.rodape !== false ? (slide.rodape || '') : '';
   ajustar();
 }
@@ -585,6 +683,8 @@ window.addEventListener('message', e => {
 });
 
 window.addEventListener('resize', () => { desenharImagem(); ajustar(); });
+// miniatura: a página dos Ajustes pode estar fechada (tamanho zero) quando chegam os dados; ao aparecer, refaz tudo
+if (MINI) new ResizeObserver(() => { if (innerWidth > 0) { desenharImagem(); ajustar(); } }).observe(document.documentElement);
 
 // Avisa o painel que esta janela está pronta (e continua avisando, caso o painel seja recarregado)
 function ola(primeiro) {

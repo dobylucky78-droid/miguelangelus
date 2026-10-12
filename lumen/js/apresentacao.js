@@ -104,7 +104,15 @@ function renderEditorLayout() {
   if (typeof atualizarMinis === 'function') atualizarMinis();     // a miniatura do telão acompanha (tema, imagens, tamanhos)
 }
 
+// Dono da apresentação em edição (a paróquia ou a comunidade)
+function donoDoLayout() {
+  const a = Apresentacao.alvo;
+  return a?.localId ? localDe(a.localId) : Agenda.dados.paroquia;
+}
+
 function aposMudarLayout() {
+  const dono = donoDoLayout();
+  if (dono) dono.layoutEm = Date.now();     // data da apresentação desta capela (a sincronização junta capela por capela)
   salvarAgenda();
   renderEditorLayout();
   enviarLayout();
@@ -148,6 +156,21 @@ function ligarApresentacao() {
       obj[c] = { img, tam: obj[c]?.tam || TAM_PADRAO[c] };
       aposMudarLayout();
     } catch (err) { alert(err.message); }
+  });
+
+  // 💾 Salvar e enviar: grava já (sem esperar) e, com a nuvem ligada, sincroniza na hora
+  $('#btnLaySalvar').addEventListener('click', async () => {
+    const b = $('#btnLaySalvar');
+    const dono = donoDoLayout();
+    if (dono) dono.layoutEm = Date.now();
+    clearTimeout(timerAgenda);
+    await DB.salvar('config', { id: 'agenda', valor: Agenda.dados });
+    if (typeof ligadaSync !== 'function' || !ligadaSync()) return toast('Apresentação salva neste computador (a sincronização com a nuvem está desligada).');
+    b.disabled = true; b.textContent = '☁ Enviando…';
+    try {
+      await sincronizarAgora({ silencioso: true });
+      toast(Sync.erro ? '⚠ Salvo aqui, mas não foi para a nuvem: ' + Sync.erro : '☁ Apresentação salva e enviada para a nuvem.');
+    } finally { b.disabled = false; b.textContent = '💾 Salvar e enviar para a nuvem'; }
   });
 
   // Local do roteiro → apresentação no telão

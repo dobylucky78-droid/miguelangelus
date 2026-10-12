@@ -117,6 +117,166 @@ const ORACOES_TERCO = [
     'Bendito seja o nome de Maria, Virgem e Mãe.\nBendito seja São José, seu castíssimo esposo.\nBendito seja Deus nos seus anjos e nos seus santos.' },
 ];
 
+// Sequências (1.6.6): cantadas/rezadas antes da Aclamação ao Evangelho. Texto do Lecionário — confira com o da paróquia
+// (são orações comuns: dá para corrigir em Orações → Sequências).
+const ORACOES_SEQUENCIAS = [
+  { titulo: 'Sequência Pascal (Cantai, cristãos)', categoria: 'Sequências', texto: [
+    'Cantai, cristãos, afinal:\n“Salve, ó vítima pascal!”\nCordeiro inocente, o Cristo\nabriu-nos do Pai o aprisco.',
+    'Por toda ovelha imolado,\ndo mundo lava o pecado.\nDuelam forte e mais forte:\né a vida que enfrenta a morte.',
+    'O rei da vida, cativo,\né morto, mas reina vivo!\nResponde, pois, ó Maria:\nno teu caminho o que havia?',
+    '“Vi Cristo ressuscitado,\no túmulo abandonado,\nos anjos da cor do sol,\ndobrado ao chão o lençol…',
+    'O Cristo, que leva aos céus,\ncaminha à frente dos seus!”\nRessuscitou de verdade.\nÓ Rei, ó Cristo, piedade!',
+  ].map((e, i) => `<b><vermelho>${i + 1}.</vermelho></b> ${e}`).join('\n\n') },       // nº da estrofe em vermelho e negrito
+  { titulo: 'Sequência de Pentecostes (Espírito de Deus)', categoria: 'Sequências', texto: [
+    'Espírito de Deus,\nenviai dos céus\num raio de luz!', 'Vinde, Pai dos pobres,\ndai aos corações\nvossos sete dons.',
+    'Consolo que acalma,\nhóspede da alma,\ndoce alívio, vinde!', 'No labor descanso,\nna aflição remanso,\nno calor aragem.',
+    'Enchei, luz bendita,\nchama que crepita,\no íntimo de nós!', 'Sem a luz que acode,\nnada o homem pode,\nnenhum bem há nele.',
+    'Ao sujo lavai,\nao seco regai,\ncurai o doente.', 'Dobrai o que é duro,\nguiai no escuro,\no frio aquecei.',
+    'Dai à vossa Igreja,\nque espera e deseja,\nvossos sete dons.', 'Dai em prêmio ao forte\numa santa morte,\nalegria eterna. Amém.',
+  ].map((e, i) => `<b><vermelho>${i + 1}.</vermelho></b> ${e}`).join('\n\n') },       // nº da estrofe em vermelho e negrito
+  // Corpus Christi (Lauda Sion): versão completa oficial para o Brasil (texto enviado pela paróquia, 12/10/2026).
+  // A forma breve começa na estrofe "Eis o pão que os anjos comem" (21ª): para usá-la, apague as anteriores numa cópia.
+  { titulo: 'Sequência de Corpus Christi (Terra, exulta de alegria)', categoria: 'Sequências', texto: [
+    'Terra, exulta de alegria,\nlouva teu pastor e guia\ncom teus hinos, tua voz!',
+    'Tanto possas, tanto ouses,\nem louvá-lo não repouses:\nsempre excede o teu louvor!',
+    'Hoje a Igreja te convida:\nao pão vivo que dá vida\nvem com ela celebrar!',
+    'Este pão que o mundo creia!\npor Jesus, na santa ceia,\nfoi entregue aos que escolheu.',
+    'Nosso júbilo cantemos,\nnosso amor manifestemos,\npois transborda o coração!',
+    'Quão solene a festa, o dia,\nque da Santa Eucaristia\nnos recorda a instituição!',
+    'Novo Rei e nova mesa,\nnova Páscoa e realeza,\nfoi-se a Páscoa dos judeus.',
+    'Era sombra o antigo povo,\no que é velho cede ao novo:\nfoge a noite, chega a luz.',
+    'O que o Cristo fez na ceia,\nmanda à Igreja que o rodeia\nrepeti-lo até voltar.',
+    'Seu preceito conhecemos:\npão e vinho consagremos\npara nossa salvação.',
+    'Faz-se carne o pão de trigo,\nfaz-se sangue o vinho amigo:\ndeve-o crer todo cristão.',
+    'Se não vês nem compreendes,\ngosto e vista tu transcendes,\nelevado pela fé.',
+    'Pão e vinho, eis o que vemos;\nmas ao Cristo é que nós temos\nem tão ínfimos sinais...',
+    'Alimento verdadeiro,\npermanece o Cristo inteiro\nquer no vinho, quer no pão.',
+    'É por todos recebido,\nnão em parte ou dividido,\npois inteiro é que se dá!',
+    'Um ou mil comungam dele,\ntanto este quanto aquele:\nmultiplica-se o Senhor.',
+    'Dá-se ao bom como ao perverso,\nmas o efeito é bem diverso:\nvida e morte traz em si...',
+    'Pensa bem: igual comida,\nse ao que é bom enche de vida,\ntraz a morte para o mau.',
+    'Eis a hóstia dividida...\nQuem hesita, quem duvida?\nComo é toda o autor da vida,\na partícula também.',
+    'Jesus não é atingido:\no sinal que é partido;\nmas não é diminuído,\nnem se muda o que contém.',
+    'Eis o pão que os anjos comem\ntransformado em pão do homem;\nsó os filhos o consomem:\nnão será lançado aos cães!',
+    'Em sinais prefigurado,\npor Abraão foi imolado,\nno cordeiro aos pais foi dado,\nno deserto foi maná...',
+    'Bom Pastor, pão de verdade,\npiedade, ó Jesus, piedade,\nconservai-nos na unidade,\nextingui nossa orfandade,\ntransportai-nos para o Pai!',
+    'Aos mortais dando comida,\ndais também o pão da vida;\nque a família assim nutrida\nseja um dia reunida\naos convivas lá do céu!',
+  ].map((e, i) => `<b><vermelho>${i + 1}.</vermelho></b> ${e}`).join('\n\n') },       // nº da estrofe em vermelho e negrito
+];
+
+// Ladainhas (1.6.6), categoria "Ladainhas". Início e fim comuns; as invocações vão de 5 em 5 por tela, com a resposta.
+// Confira com o livro da paróquia (dá para corrigir em Orações → Ladainhas; na de Todos os Santos, acrescente os padroeiros).
+const INICIO_LADAINHA = ['Senhor, tende piedade de nós.\n— Senhor, tende piedade de nós.\nJesus Cristo, tende piedade de nós.\n— Jesus Cristo, tende piedade de nós.\n' +
+  'Senhor, tende piedade de nós.\n— Senhor, tende piedade de nós.',
+  'Jesus Cristo, ouvi-nos.\n— Jesus Cristo, ouvi-nos.\nJesus Cristo, atendei-nos.\n— Jesus Cristo, atendei-nos.',
+  'Deus Pai do céu,\nDeus Filho, Redentor do mundo,\nDeus Espírito Santo,\nSantíssima Trindade, que sois um só Deus,\n— tende piedade de nós.'];
+const CORDEIRO_LADAINHA = ['Cordeiro de Deus, que tirais os pecados do mundo,\n— perdoai-nos, Senhor.',
+  'Cordeiro de Deus, que tirais os pecados do mundo,\n— ouvi-nos, Senhor.',
+  'Cordeiro de Deus, que tirais os pecados do mundo,\n— tende piedade de nós.'];
+const deCinco = (lista, resp) => { const b = []; for (let i = 0; i < lista.length; i += 5) b.push(lista.slice(i, i + 5).map(x => x + ',').join('\n') + `\n— ${resp}`); return b; };
+
+const ORACOES_LADAINHAS = [
+  // forma do Missal (Vigília Pascal, Batismo, Ordenações), sem os pedidos próprios de cada rito
+  { titulo: 'Ladainha de Todos os Santos', categoria: 'Ladainhas', texto: [
+    'Senhor, tende piedade de nós.\n— Senhor, tende piedade de nós.\nCristo, tende piedade de nós.\n— Cristo, tende piedade de nós.\n' +
+    'Senhor, tende piedade de nós.\n— Senhor, tende piedade de nós.',
+    ...deCinco(['Santa Maria, Mãe de Deus', 'São Miguel', 'Santos Anjos de Deus', 'São João Batista', 'São José',
+      'São Pedro e São Paulo', 'Santo André', 'São João', 'Santa Maria Madalena', 'Santo Estêvão',
+      'Santo Inácio de Antioquia', 'São Lourenço', 'Santa Perpétua e Santa Felicidade', 'Santa Inês', 'São Gregório',
+      'Santo Agostinho', 'Santo Atanásio', 'São Basílio', 'São Martinho', 'São Bento',
+      'São Francisco e São Domingos', 'São Francisco Xavier', 'São João Maria Vianney', 'Santa Catarina de Sena', 'Santa Teresa de Jesus',
+      'Todos os Santos e Santas de Deus'], 'rogai por nós.'),
+    'Sede-nos propício,\n— ouvi-nos, Senhor.',
+    ...deCinco(['De todo mal', 'De todo pecado', 'Da morte eterna', 'Pela vossa encarnação', 'Pela vossa morte e ressurreição',
+      'Pela efusão do Espírito Santo'], 'livrai-nos, Senhor.'),
+    'Apesar de nossos pecados,\nJesus, Filho do Deus vivo,\n— ouvi-nos, Senhor.',
+    'Cristo, ouvi-nos.\n— Cristo, ouvi-nos.\nCristo, atendei-nos.\n— Cristo, atendei-nos.',
+  ].join('\n\n') },
+  { titulo: 'Ladainha do Sagrado Coração de Jesus', categoria: 'Ladainhas', texto: [
+    ...INICIO_LADAINHA,
+    ...deCinco(['Coração de Jesus, Filho do Pai Eterno', 'Coração de Jesus, formado pelo Espírito Santo no seio da Virgem Mãe',
+      'Coração de Jesus, substancialmente unido ao Verbo de Deus', 'Coração de Jesus, de majestade infinita', 'Coração de Jesus, templo santo de Deus',
+      'Coração de Jesus, tabernáculo do Altíssimo', 'Coração de Jesus, casa de Deus e porta do céu', 'Coração de Jesus, fornalha ardente de caridade',
+      'Coração de Jesus, receptáculo de justiça e de amor', 'Coração de Jesus, cheio de bondade e de amor',
+      'Coração de Jesus, abismo de todas as virtudes', 'Coração de Jesus, digníssimo de todo louvor', 'Coração de Jesus, rei e centro de todos os corações',
+      'Coração de Jesus, no qual estão todos os tesouros da sabedoria e da ciência', 'Coração de Jesus, no qual habita toda a plenitude da divindade',
+      'Coração de Jesus, no qual o Pai pôs as suas complacências', 'Coração de Jesus, de cuja plenitude todos nós participamos',
+      'Coração de Jesus, desejado das colinas eternas', 'Coração de Jesus, paciente e de muita misericórdia', 'Coração de Jesus, rico para todos que vos invocam',
+      'Coração de Jesus, fonte de vida e de santidade', 'Coração de Jesus, propiciação por nossos pecados', 'Coração de Jesus, saturado de opróbrios',
+      'Coração de Jesus, triturado por causa de nossos crimes', 'Coração de Jesus, feito obediente até a morte',
+      'Coração de Jesus, transpassado pela lança', 'Coração de Jesus, fonte de toda consolação', 'Coração de Jesus, nossa vida e ressurreição',
+      'Coração de Jesus, nossa paz e reconciliação', 'Coração de Jesus, vítima dos pecadores',
+      'Coração de Jesus, salvação dos que em vós esperam', 'Coração de Jesus, esperança dos que morrem em vós', 'Coração de Jesus, delícia de todos os santos'],
+      'tende piedade de nós.'),
+    ...CORDEIRO_LADAINHA,
+    'Jesus, manso e humilde de coração,\n— fazei o nosso coração semelhante ao vosso.',
+    'Oremos: Deus onipotente e eterno,\nolhai para o Coração do vosso amantíssimo Filho\ne para os louvores e satisfações que ele, em nome dos pecadores, vos tributa;\n' +
+    'e aos que imploram a vossa misericórdia, concedei benigno o perdão,\nem nome do mesmo Jesus Cristo, vosso Filho,\nque convosco vive e reina por todos os séculos dos séculos.\n— Amém.',
+  ].join('\n\n') },
+  { titulo: 'Ladainha de São Miguel Arcanjo', categoria: 'Ladainhas', texto: [
+    ...INICIO_LADAINHA,
+    ...deCinco(['Santa Maria, Rainha dos Anjos', 'São Miguel', 'São Miguel, cheio da graça de Deus', 'São Miguel, perfeito adorador do Verbo Divino',
+      'São Miguel, coroado de honra e de glória', 'São Miguel, poderosíssimo príncipe dos exércitos do Senhor',
+      'São Miguel, porta-estandarte da Santíssima Trindade', 'São Miguel, guardião do Paraíso', 'São Miguel, guia e consolador do povo israelita',
+      'São Miguel, esplendor e fortaleza da Igreja militante', 'São Miguel, honra e alegria da Igreja triunfante', 'São Miguel, luz dos anjos',
+      'São Miguel, baluarte dos cristãos', 'São Miguel, força daqueles que combatem pelo estandarte da cruz',
+      'São Miguel, luz e confiança das almas no último momento da vida', 'São Miguel, socorro muito certo',
+      'São Miguel, nosso auxílio em todas as adversidades', 'São Miguel, arauto da sentença eterna',
+      'São Miguel, consolador das almas que estão no Purgatório', 'São Miguel, a quem o Senhor incumbiu de receber as almas que estão no Purgatório',
+      'São Miguel, nosso príncipe', 'São Miguel, nosso advogado'], 'rogai por nós.'),
+    ...CORDEIRO_LADAINHA,
+    'Rogai por nós, ó glorioso São Miguel, príncipe da Igreja de Cristo,\n— para que sejamos dignos de suas promessas.',
+  ].join('\n\n') },
+  // com as invocações acrescentadas pelo Papa Francisco em 2021
+  { titulo: 'Ladainha de São José', categoria: 'Ladainhas', texto: [
+    ...INICIO_LADAINHA,
+    ...deCinco(['Santa Maria', 'São José', 'Ilustre filho de Davi', 'Luz dos Patriarcas', 'Esposo da Mãe de Deus',
+      'Guarda do Redentor', 'Casto guarda da Virgem', 'Sustentador do Filho de Deus', 'Zeloso defensor de Cristo', 'Servidor de Cristo',
+      'Ministro da salvação', 'Chefe da Sagrada Família', 'José justíssimo', 'José castíssimo', 'José prudentíssimo',
+      'José fortíssimo', 'José obedientíssimo', 'José fidelíssimo', 'Espelho de paciência', 'Amante da pobreza',
+      'Modelo dos operários', 'Glória da vida doméstica', 'Guarda das virgens', 'Sustentáculo das famílias', 'Apoio nas dificuldades',
+      'Consolação dos infelizes', 'Esperança dos enfermos', 'Padroeiro dos exilados', 'Padroeiro dos aflitos', 'Padroeiro dos pobres',
+      'Padroeiro dos moribundos', 'Terror dos demônios', 'Protetor da Santa Igreja'], 'rogai por nós.'),
+    ...CORDEIRO_LADAINHA,
+    'Ele o constituiu senhor de sua casa.\n— E administrador de todos os seus bens.',
+    'Oremos: Ó Deus, que por inefável providência\nvos dignastes escolher São José para esposo de vossa Mãe Santíssima,\n' +
+    'concedei-nos que, venerando-o como protetor na terra,\nmereçamos tê-lo como intercessor no céu.\nVós que viveis e reinais pelos séculos dos séculos.\n— Amém.',
+  ].join('\n\n') },
+];
+
+// cada sequência/ladainha é cadastrada uma vez só (se a paróquia apagar, não volta); a lista guarda as já cadastradas
+async function semearSequencias() {
+  const todas = [...ORACOES_SEQUENCIAS, ...ORACOES_LADAINHAS];
+  const feitas = S.config.sequenciasSemeadas;
+  const ja = Array.isArray(feitas) ? feitas : feitas ? ORACOES_SEQUENCIAS.slice(0, 2).map(o => o.titulo) : [];
+  if (todas.every(o => ja.includes(o.titulo))) return;
+  for (const o of todas) {
+    if (ja.includes(o.titulo) || Oracoes.lista.some(x => x.titulo === o.titulo)) continue;
+    const nova = { id: uid(), ...o, padrao: true };
+    await DB.salvar('oracoes', nova);
+    Oracoes.lista.push(nova);
+  }
+  S.config.sequenciasSemeadas = todas.map(o => o.titulo);
+  salvarConfig();
+}
+
+// No roteiro da Missa do Domingo da Páscoa e de Pentecostes, a Sequência entra antes da Aclamação ao Evangelho
+function comSequencia(d, itens) {
+  let titulo = '';
+  try { titulo = Liturgia.info(d).titulo || ''; } catch (_) {}
+  const nome = /^Domingo da Páscoa/.test(titulo) ? 'Sequência Pascal (Cantai, cristãos)'
+    : /^Pentecostes/.test(titulo) ? 'Sequência de Pentecostes (Espírito de Deus)'
+    : /Corpo e Sangue de Cristo/.test(titulo) ? 'Sequência de Corpus Christi (Terra, exulta de alegria)' : '';
+  const o = nome && Oracoes.lista.find(x => x.titulo === nome);
+  if (!o || itens.some(i => i.tipo === 'canto' && i.momento === 'Sequência')) return itens;
+  let k = itens.findIndex(i => i.tipo === 'canto' && i.momento === 'Aclamação ao Evangelho');
+  if (k < 0) k = itens.findIndex(i => i.tipo === 'leitura' && i.evangelho);
+  const novo = itens.slice();
+  // como o Glória: um item de canto do momento "Sequência" — rezado (o texto da oração) ou um canto escolhido na lista
+  novo.splice(k < 0 ? novo.length : k, 0, itemCantoDeOracao('Sequência', o));
+  return novo;
+}
+
 // Roteiro de Adoração ao Santíssimo (Agenda → tipo "Adoração"): exposição, orações, Palavra, silêncio, Tão Sublime e bênção.
 // Os cantos ficam para escolher (o "Tão Sublime Sacramento" já vem, se estiver nos Cantos).
 function itensDaAdoracao() {

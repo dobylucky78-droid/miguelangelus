@@ -55,6 +55,21 @@ function progresso(txt) {
   try { renderSync(txt); } catch (_) {}
 }
 
+// Junta em `base` a apresentação (layout, tema) de cada capela de `outra` que for mais nova (layoutEm).
+// A paróquia (apresentação padrão) e cada comunidade, pelo id. Devolve true se mudou algo em `base`.
+function juntarApresentacoes(base, outra) {
+  let mudou = false;
+  const levar = (de, para) => {
+    if (!de || !para || (de.layoutEm || 0) <= (para.layoutEm || 0)) return;
+    for (const k of ['layout', 'tema']) { if (de[k] === undefined) delete para[k]; else para[k] = structuredClone(de[k]); }
+    para.layoutEm = de.layoutEm;
+    mudou = true;
+  };
+  levar(outra.paroquia, base.paroquia ||= {});
+  for (const l of base.locais || []) levar((outra.locais || []).find(x => x.id === l.id), l);
+  return mudou;
+}
+
 // ---------- baixar (ao abrir) ----------
 async function puxarSync() {
   let novos = 0;
@@ -71,6 +86,23 @@ async function puxarSync() {
         let obj; try { obj = JSON.parse(it.texto); } catch (_) { continue; }
         if (!obj?.id || (g.filtro && !g.filtro(obj))) continue;
         const local = await DB.obter(g.store, obj.id);
+        // Agenda: a apresentação de cada capela (imagens, tamanhos, tema) não é atropelada pelo resto da Agenda que
+        // veio do outro computador — vale, capela por capela, a mais nova (layoutEm). (1.6.6)
+        if (g.store === 'config' && obj.id === 'agenda' && local?.valor && obj.valor) {
+          const nuvemMaisNova = (obj.atualizado || 0) > (local.atualizado || 0);
+          const base = nuvemMaisNova ? obj.valor : local.valor, outra = nuvemMaisNova ? local.valor : obj.valor;
+          const mudou = juntarApresentacoes(base, outra);
+          if (nuvemMaisNova || mudou) {
+            // juntou algo do outro lado: grava como mudança deste computador (vai para a nuvem na próxima sincronização)
+            if (mudou) { await DB.salvar('config', { id: 'agenda', valor: base }); Sync.sujo = true; }
+            else await DB.salvar('config', obj, { daNuvem: true });
+            novos++;
+          }
+          Sync.estado.vistos[it.caminho] = a.mtime;
+          const k = `config:agenda`;
+          Sync.estado.enviados[k] = Math.max(Sync.estado.enviados[k] || 0, mudou ? 0 : obj.atualizado || 0);
+          continue;
+        }
         if (!local || (obj.atualizado || 0) > (local.atualizado || 0)) {
           if (g.store === 'midias' && local?.blob) obj.blob = local.blob;
           await DB.salvar(g.store, obj, { daNuvem: true });

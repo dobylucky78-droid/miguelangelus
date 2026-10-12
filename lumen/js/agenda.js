@@ -429,7 +429,7 @@ async function criarRoteiroDaCelebracao(o, itens) {
     // Missa: modelo dominical aos domingos, semanal nos outros dias; Terço, Ângelus e Adoração já vêm montados (terco.js);
     // outras celebrações começam vazias
     const modelo = ehMissa(o.tipo) ? (d.getDay() === 0 ? 'dominical' : 'semanal') : null;
-    r.itens = modelo ? comRitoProprio(o.tipo, Ordinario.modelos[modelo].map(x => ({ id: uid(), ...structuredClone(x) })))
+    r.itens = modelo ? comSequencia(d, comRitoProprio(o.tipo, Ordinario.modelos[modelo].map(x => ({ id: uid(), ...structuredClone(x) }))))
       : o.tipo === 'Terço' ? itensDoTerco(d)
       : o.tipo === 'Ângelus' ? [novoItem('angelus')]
       : o.tipo === 'Adoração' ? itensDaAdoracao()

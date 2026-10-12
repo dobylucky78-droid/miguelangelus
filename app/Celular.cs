@@ -140,7 +140,7 @@ namespace MiguelAngelus
                 .Select(kv => (object)new { id = kv.Key.Substring(0, 8), nome = kv.Value.Nome, desde = kv.Value.Desde, papel = kv.Value.Papel, online = online.Contains(kv.Key) }).ToList();
             var redes = Redes();
             return new { tipo = "celularInfo", ligado = Ligado, erro = Erro, porta = Porta, codigo = Codigo, ips = redes.Select(x => x.ip).ToList(),
-                redes = redes.Select(x => (object)new { ip = x.ip, nome = x.nome, internet = x.gw, publica = x.publica, bloqueada = x.bloqueada }).ToList(), aparelhos = lista };
+                redes = redes.Select(x => (object)new { ip = x.ip, nome = x.nome, internet = x.gw, publica = x.publica, bloqueada = x.bloqueada, rede = x.rede, wifi = x.wifi }).ToList(), aparelhos = lista };
         }
 
         internal void Tirar(string id)
@@ -165,9 +165,9 @@ namespace MiguelAngelus
         // Cada rede do computador: endereço, nome da placa ("Wi-Fi 3", "Ethernet 3"), se tem internet, se o Windows a marcou como
         // Pública e se o Firewall barra o MiguelAngelus nesse tipo de rede (a permissão é por tipo: Privada / Pública / Domínio;
         // na 1ª vez o Windows pergunta e a pessoa marca uma delas — aí a rede do outro tipo fica barrada para os celulares).
-        internal static List<(string ip, string nome, bool gw, bool publica, bool bloqueada)> Redes()
+        internal static List<(string ip, string nome, bool gw, bool publica, bool bloqueada, string rede, bool wifi)> Redes()
         {
-            var r = new List<(string ip, string nome, bool gw, bool publica, bool bloqueada)>();
+            var r = new List<(string ip, string nome, bool gw, bool publica, bool bloqueada, string rede, bool wifi)>();
             var perfis = PerfisDeRede();
             var liberados = PerfisLiberadosNoFirewall();
             try
@@ -187,7 +187,7 @@ namespace MiguelAngelus
                     var bloqueada = liberados >= 0 && (liberados & bit) == 0;
                     foreach (var u in p.UnicastAddresses)
                         if (u.Address.AddressFamily == AddressFamily.InterNetwork && !IPAddress.IsLoopback(u.Address) && !u.Address.ToString().StartsWith("169.254."))
-                            r.Add((u.Address.ToString(), ni.Name, gw, publica, bloqueada));
+                            r.Add((u.Address.ToString(), ni.Name, gw, publica, bloqueada, pf.nome ?? "", ni.NetworkInterfaceType == NetworkInterfaceType.Wireless80211));
                 }
             }
             catch { }
@@ -196,16 +196,17 @@ namespace MiguelAngelus
 
         // O que o Windows sabe de cada rede (MSFT_NetConnectionProfile, o mesmo do Get-NetConnectionProfile; só leitura):
         // Pública (NetworkCategory 0) e se chega à internet (IPv4Connectivity 4)
-        static Dictionary<string, (int categoria, bool internet)> perfisGuardados; static DateTime perfisQuando;
-        static Dictionary<string, (int categoria, bool internet)> PerfisDeRede()
+        // + o nome da rede (no Wi-Fi é o SSID, ex.: "AureliAna"; no cabo o Windows dá um nome genérico, ex.: "Rede")
+        static Dictionary<string, (int categoria, bool internet, string nome)> perfisGuardados; static DateTime perfisQuando;
+        static Dictionary<string, (int categoria, bool internet, string nome)> PerfisDeRede()
         {
             if (perfisGuardados != null && (DateTime.UtcNow - perfisQuando).TotalSeconds < 5) return perfisGuardados;
-            var r = new Dictionary<string, (int categoria, bool internet)>(StringComparer.OrdinalIgnoreCase);
+            var r = new Dictionary<string, (int categoria, bool internet, string nome)>(StringComparer.OrdinalIgnoreCase);
             try
             {
-                using (var s = new System.Management.ManagementObjectSearcher(@"root\StandardCimv2", "SELECT InterfaceAlias, NetworkCategory, IPv4Connectivity FROM MSFT_NetConnectionProfile"))
+                using (var s = new System.Management.ManagementObjectSearcher(@"root\StandardCimv2", "SELECT InterfaceAlias, Name, NetworkCategory, IPv4Connectivity FROM MSFT_NetConnectionProfile"))
                     foreach (System.Management.ManagementObject o in s.Get())
-                        r[Convert.ToString(o["InterfaceAlias"])] = (Convert.ToInt32(o["NetworkCategory"]), Convert.ToInt32(o["IPv4Connectivity"]) == 4);
+                        r[Convert.ToString(o["InterfaceAlias"])] = (Convert.ToInt32(o["NetworkCategory"]), Convert.ToInt32(o["IPv4Connectivity"]) == 4, Convert.ToString(o["Name"]) ?? "");
             }
             catch { }
             perfisQuando = DateTime.UtcNow;

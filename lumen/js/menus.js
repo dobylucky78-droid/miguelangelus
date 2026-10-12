@@ -45,6 +45,7 @@ const Recolher = {
 // Ajustes: menu à esquerda, só a seção escolhida aparece à direita (lembra a última)
 function mostrarAjuste(sec) {
   if (!$(`#dlgAjustes [data-ajpainel="${sec}"]`)) sec = 'aparencia';
+  if (typeof atualizarMinis === 'function') setTimeout(atualizarMinis, 80);     // a miniatura do telão aparece já atualizada
   $$('#dlgAjustes [data-ajsec]').forEach(b => b.classList.toggle('ativa', b.dataset.ajsec === sec));
   $$('#dlgAjustes [data-ajpainel]').forEach(p => p.classList.toggle('ativa', p.dataset.ajpainel === sec));
   try { localStorage.setItem('lumen.ajuste', sec); } catch {}

@@ -201,35 +201,41 @@ function renderCelular() {
   if (!i) { el.innerHTML = '<p class="sutil pequeno">Ligando…</p>'; return; }
   if (i.erro) { el.innerHTML = `<p class="status erro">Não consegui ligar o controle: ${esc(i.erro)}</p>`; return; }
   if (!i.ips.length) { el.innerHTML = '<p class="status erro">Este computador não está conectado a nenhuma rede (Wi-Fi ou cabo).</p>'; return; }
-  // Rede dos celulares: com mais de uma (ex.: Wi-Fi da igreja + roteador só do MiguelAngelus no cabo), escolhe-se qual vai
-  // no QR code; fica lembrada neste computador pelo nome da placa ("Ethernet 3"), que não muda quando o IP muda
-  const redes = i.redes?.length ? i.redes : i.ips.map(ip => ({ ip, nome: '', internet: true, publica: false }));
-  const rede = redes.find(r => r.nome && r.nome === S.config.celularRede) || redes.find(r => r.ip === S.config.celularRede) || redes[0];
-  const url = `http://${rede.ip}:${i.porta}/?c=${i.codigo}`;
-  const nomeRede = r => `${r.nome ? r.nome + ' — ' : ''}${r.ip} (${r.internet ? 'com internet' : 'só local, sem internet'})`;
-  el.innerHTML = `
-    ${redes.length > 1 ? `<label class="campo cel-rede">Rede dos celulares <span class="linha">
-      <select data-cel-rede>${redes.map(r => `<option value="${esc(r.nome || r.ip)}" ${r === rede ? 'selected' : ''}>${esc(nomeRede(r))}</option>`).join('')}</select>
-      <button type="button" data-cel-atualizar title="Ler as redes do computador de novo">↻</button></span></label>` : ''}
-    ${rede.bloqueada ? `<p class="status erro">O <b>Firewall do Windows</b> não deixa os celulares chegarem ao MiguelAngelus pela rede
-      <b>${esc(rede.nome)}</b> (ela está como <b>${rede.publica ? 'Pública' : 'Privada'}</b>). Para liberar: no Windows, abra
-      <b>Permitir um aplicativo pelo Firewall do Windows</b> → <b>Alterar configurações</b> → no <b>MiguelAngelus</b>, marque
-      <b>${rede.publica ? 'Pública' : 'Privada'}</b> → <b>OK</b>. Depois clique em ↻.</p>` : ''}
-    <div class="cel-par">
+  // Um QR code para cada rede do computador (ex.: o roteador só do MiguelAngelus no cabo e o Wi-Fi da igreja, com a mesa
+  // de som): cada celular lê o da rede em que está. A rede sem internet (a dedicada) vem primeiro.
+  const redes = (i.redes?.length ? i.redes : i.ips.map(ip => ({ ip, nome: '', internet: true, publica: false })))
+    .slice().sort((a, b) => (a.internet ? 1 : 0) - (b.internet ? 1 : 0));
+  // nome que o celular vê: o dado pela paróquia (✎); senão, no Wi-Fi, o nome da rede (SSID); no cabo sem internet, o
+  // roteador do MiguelAngelus (pelo cabo o Windows não sabe o nome do Wi-Fi dele)
+  const generico = n => !n || /^(rede|network|rede não identificada|unidentified network)(\s*\d+)?$/i.test(n.trim());
+  const rotulo = r => (S.config.nomesRedes || {})[r.nome] || (r.wifi && !generico(r.rede) ? r.rede : !r.internet ? 'MiguelAngelus' : !generico(r.rede) ? r.rede : r.nome || 'Rede');
+  const cartao = r => {
+    const url = `http://${r.ip}:${i.porta}/?c=${i.codigo}`;
+    return `<div class="cel-rede-cartao ${r.bloqueada ? 'bloqueada' : ''}">
+      <div class="cel-rede-nome">${r.internet ? '🌐' : '📶'} ${esc(rotulo(r))}
+        <button type="button" class="cel-renomear" data-cel-renomear="${esc(r.nome || r.ip)}" title="Trocar o nome que aparece aqui (ex.: o nome do Wi-Fi do roteador)">✎</button>
+        <div class="sutil pequeno">${esc(r.nome || '')} · ${r.internet ? 'com internet' : 'só para os celulares (sem internet)'}</div></div>
       <div class="cel-qr" title="${esc(url)}">${qrSvg(url)}</div>
-      <div class="cel-txt">
-        <p><b>1.</b> No celular, conecte ${rede.internet ? 'no <b>mesmo Wi-Fi</b> deste computador' :
-          'no Wi-Fi do <b>roteador do MiguelAngelus</b>. Ele não tem internet: se o celular perguntar, toque em <b>Manter conexão</b> (o resto do celular segue pelo 4G)'}.</p>
-        <p><b>2.</b> Aponte a câmera do celular para o QR code.</p>
-        <div class="cel-digitar">
-          <div class="sutil pequeno">Sem câmera, ou ela não lê o QR (tablet antigo)? Digite no navegador, na barra de endereço:</div>
-          <div class="cel-end" title="Digite exatamente assim, com o http:// e os dois-pontos">http://${esc(rede.ip)}:${i.porta}</div>
-          <div class="sutil pequeno">e, quando a página pedir, o código:</div>
-        </div>
-        <p>Código: <span class="cel-cod">${esc(i.codigo.split('').join(' '))}</span></p>
-        <p class="sutil pequeno">🎸 <b>Músicos</b>: o mesmo QR; no celular, escolham <b>Músico</b> — veem só as cifras dos cantos, acompanhando o telão.</p>
-        <p class="sutil pequeno">Cada código serve para um celular; depois de usado, aparece outro.</p>
-      </div>
+      <div class="cel-end" title="Sem câmera, ou ela não lê o QR (tablet antigo)? Digite exatamente assim no navegador">http://${esc(r.ip)}:${i.porta}</div>
+      ${r.bloqueada ? `<p class="status erro pequeno">O <b>Firewall</b> barra os celulares nesta rede (ela está como <b>${r.publica ? 'Pública' : 'Privada'}</b>).
+        No Windows: <b>Permitir um aplicativo pelo Firewall do Windows</b> → <b>Alterar configurações</b> → no MiguelAngelus, marque
+        <b>${r.publica ? 'Pública' : 'Privada'}</b> → OK. Depois ↻.</p>` : ''}
+    </div>`;
+  };
+  // um QR por vez (dois na tela, a câmera do celular pode ler o errado): botões escolhem a rede; a escolha fica lembrada
+  const rede = redes.find(r => r.nome && r.nome === S.config.celularRede) || redes.find(r => r.ip === S.config.celularRede) || redes[0];
+  el.innerHTML = `
+    ${redes.length > 1 ? `<div class="cel-abas">${redes.map(r => `<button type="button" data-cel-rede="${esc(r.nome || r.ip)}"
+      class="${r === rede ? 'sel' : ''} ${r.bloqueada ? 'bloqueada' : ''}" title="${esc((r.nome || '') + ' · ' + r.ip)}">${r.internet ? '🌐' : '📶'} ${esc(rotulo(r))}
+      <span class="sutil pequeno">${r.internet ? 'com internet' : 'só celulares'}</span>${r.bloqueada ? ' ⚠' : ''}</button>`).join('')}</div>` : ''}
+    <div class="cel-redes">${cartao(rede)}</div>
+    <div class="cel-txt">
+      <p><b>1.</b> No celular, conecte num destes Wi-Fi${redes.some(r => !r.internet) ? ' — de preferência no do <b>roteador do MiguelAngelus</b> (📶): ele não tem internet; se o celular perguntar, toque em <b>Manter conexão</b> (o resto do celular segue pelo 4G)' : ''}.</p>
+      <p><b>2.</b> ${redes.length > 1 ? 'Escolha acima <b>a rede em que o celular está</b> e aponte' : 'Aponte'} a câmera do celular para o QR code (ou digite o endereço no navegador).</p>
+      <p>Código: <span class="cel-cod">${esc(i.codigo.split('').join(' '))}</span>
+        <button type="button" data-cel-atualizar title="Ler as redes do computador de novo">↻ Redes</button></p>
+      <p class="sutil pequeno">🎸 <b>Músicos</b>: o mesmo QR; no celular, escolham <b>Músico</b> — veem só as cifras dos cantos, acompanhando o telão.
+        Cada código serve para um celular; depois de usado, aparece outro.</p>
     </div>
     <div class="campo">Celulares pareados</div>
     ${i.aparelhos.length ? `<div class="cel-lista">${i.aparelhos.map(p => `
@@ -250,14 +256,19 @@ function ligarCelular() {
     postarApp({ tipo: 'celular', acao: e.target.checked ? 'ligar' : 'desligar' });
     renderCelular();
   });
-  $('#celPainel').addEventListener('change', e => {
-    if (!e.target.matches('[data-cel-rede]')) return;
-    S.config.celularRede = e.target.value;       // fica só neste computador (os outros têm outras placas)
-    salvarConfig();
-    renderCelular();
-  });
   $('#celPainel').addEventListener('click', e => {
     if (e.target.closest('[data-cel-atualizar]')) return postarApp({ tipo: 'celular', acao: 'info' });
+    const ren = e.target.closest('[data-cel-renomear]');
+    if (ren) {
+      const placa = ren.dataset.celRenomear, nomes = { ...(S.config.nomesRedes || {}) };
+      const novo = prompt(`Nome desta rede (o que aparece no celular, ex.: o nome do Wi-Fi). Deixe vazio para o nome automático.`, nomes[placa] || '');
+      if (novo === null) return;
+      if (novo.trim()) nomes[placa] = novo.trim(); else delete nomes[placa];
+      S.config.nomesRedes = nomes; salvarConfig();        // só neste computador (as placas são deste computador)
+      return renderCelular();
+    }
+    const aba = e.target.closest('[data-cel-rede]');
+    if (aba) { S.config.celularRede = aba.dataset.celRede; salvarConfig(); return renderCelular(); }   // só neste computador
     const b = e.target.closest('[data-cel-tirar]');
     if (b && confirm('Tirar este celular? Ele não vai mais controlar o telão (para voltar, precisa parear de novo).'))
       postarApp({ tipo: 'celular', acao: 'tirar', id: b.dataset.celTirar });

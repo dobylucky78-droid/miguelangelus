@@ -126,12 +126,27 @@ async function apagarPosicao(c, n) {
 }
 
 // ---------- Painel na tela da câmera (centro) ----------
+// Blocos que recolhem na tela da câmera (notebook de 14"): o aberto/fechado fica guardado neste computador, por câmera
+// (a tela do centro é redesenhada a toda hora)
+function blocoAberto(chave, padrao) {
+  try { const v = localStorage.getItem('lumen.cam.' + chave); return v === null ? padrao : v === '1'; } catch { return padrao; }
+}
+document.addEventListener('toggle', e => {
+  const k = e.target?.dataset?.recolherCam;
+  if (k) try { localStorage.setItem('lumen.cam.' + k, e.target.open ? '1' : '0'); } catch {}
+}, true);
+
 function htmlPtz(c) {
   const p = c.ptz || {};
   const proto = p.protocolo || 'visca-ip';
   const posicoes = (c.ptzPosicoes || []).slice().sort((a, b) => a.n - b.n);
-  return `<details class="ptz-cx" ${temPtz(c) ? 'open' : ''}>
+  const abertoPtz = blocoAberto(c.id + '.ptz', temPtz(c));
+  const abertoCon = blocoAberto(c.id + '.conexao', !temPtz(c));
+  const abertoPos = blocoAberto(c.id + '.posicoes', true);
+  return `<details class="ptz-cx" data-recolher-cam="${esc(c.id)}.ptz" ${abertoPtz ? 'open' : ''}>
     <summary>🎮 Controle PTZ (mover, zoom, posições) <span class="sutil pequeno">— para câmeras PTZ na rede, como no OBS</span></summary>
+    <details class="ptz-sub" data-recolher-cam="${esc(c.id)}.conexao" ${abertoCon ? 'open' : ''}>
+    <summary>⚙ Conexão${p.ip ? ` <span class="sutil pequeno">${esc(p.ip)}:${esc(p.porta || PORTAS_PTZ[proto])}</span>` : ''}</summary>
     <div class="linha ptz-cfg">
       <label class="campo">IP da câmera <input data-ptzcfg="ip" value="${esc(p.ip || '')}" placeholder="192.168.0.50" style="width:140px"></label>
       <label class="campo">Porta <input data-ptzcfg="porta" value="${esc(p.porta || PORTAS_PTZ[proto])}" style="width:70px"></label>
@@ -141,6 +156,7 @@ function htmlPtz(c) {
         <option value="tcp" ${proto === 'tcp' ? 'selected' : ''}>VISCA TCP</option></select></label>
       <span class="sutil pequeno">Use o mesmo IP e porta do "PTZ Controls" do OBS.</span>
     </div>
+    </details>
     ${temPtz(c) ? `<div class="ptz-corpo">
       <div class="ptz-pad" title="Segure para mover; solte para parar">
         <span></span><button data-ptzmov="0,-1">▲</button><span></span>
@@ -149,12 +165,12 @@ function htmlPtz(c) {
       </div>
       <div class="ptz-zoom"><button data-ptzzoom="1" title="Aproximar">＋ Zoom</button><button data-ptzzoom="-1" title="Afastar">− Zoom</button>
         <label class="campo">Velocidade <input type="range" min="0.1" max="1" step="0.1" value="${PTZ.vel || 0.5}" data-ptzvel></label></div>
-      <div class="ptz-pos">
-        <div class="sutil pequeno">Posições prontas (um clique leva a câmera até lá):</div>
-        <div class="linha" style="flex-wrap:wrap">${posicoes.map(x => `<span class="ptz-p"><button data-ptzir="${x.n}" title="Posição nº ${x.n} da câmera">📍 ${esc(x.nome)}</button><button class="ptz-x" data-ptzren="${x.n}" title="Trocar o nome">✎</button><button class="ptz-x" data-ptzdel="${x.n}" title="Tirar da lista (a câmera continua com ela)">✕</button></span>`).join('')}
-          <button data-ptz="trazer" title="As posições que já estão gravadas na câmera (ex.: pelo OBS) entram na lista, só para chamar">📥 Trazer posições da câmera</button>
-          <button data-ptz="guardar" class="primario" title="Grava na câmera a posição em que ela está agora (a partir do nº ${PTZ_PRIMEIRA_NOVA}, sem tocar nas do OBS)">＋ Guardar posição atual</button></div>
-      </div>
+      <details class="ptz-pos ptz-sub" data-recolher-cam="${esc(c.id)}.posicoes" ${abertoPos ? 'open' : ''}>
+        <summary>📍 Posições prontas <span class="sutil pequeno">(${posicoes.length}) — um clique leva a câmera até lá</span></summary>
+        <div class="linha ptz-lista-pos">${posicoes.map(x => `<span class="ptz-p"><button data-ptzir="${x.n}" title="Posição nº ${x.n} da câmera">📍 ${esc(x.nome)}</button><button class="ptz-x" data-ptzren="${x.n}" title="Trocar o nome">✎</button><button class="ptz-x" data-ptzdel="${x.n}" title="Tirar da lista (a câmera continua com ela)">✕</button></span>`).join('')}
+          <button data-ptz="trazer" title="As posições que já estão gravadas na câmera (ex.: pelo OBS) entram na lista, só para chamar">📥 Trazer da câmera</button>
+          <button data-ptz="guardar" class="primario" title="Grava na câmera a posição em que ela está agora (a partir do nº ${PTZ_PRIMEIRA_NOVA}, sem tocar nas do OBS)">＋ Guardar atual</button></div>
+      </details>
     </div>` : '<p class="sutil pequeno">Informe o IP para aparecerem os controles.</p>'}
   </details>`;
 }

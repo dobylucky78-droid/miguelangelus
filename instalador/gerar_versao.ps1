@@ -41,6 +41,10 @@ Assinar $instalador
 # 4) cópias
 $mesa = Split-Path $raiz -Parent
 Copy-Item $instalador (Join-Path $mesa $nomeInstalador) -Force
+# cópia com nome fixo, para anexar também na versão do GitHub: assim o link
+# https://github.com/dobylucky78-droid/miguelangelus/releases/latest/download/Instalar-MiguelAngelus.exe
+# sempre baixa a versão mais nova (a atualização automática pega qualquer .exe anexado; são o mesmo arquivo)
+Copy-Item $instalador (Join-Path $mesa 'Instalar-MiguelAngelus.exe') -Force
 $pendrive = Join-Path $mesa 'Pendrive MiguelAngelus'
 if (Test-Path $pendrive) { Copy-Item $instalador (Join-Path $pendrive $nomeInstalador) -Force }
 Write-Host "Pronto: $nomeInstalador assinado por $assinante"

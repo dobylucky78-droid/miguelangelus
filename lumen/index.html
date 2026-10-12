@@ -21,7 +21,7 @@
     </div>
     <div class="splash-info">
       <div class="splash-gratis"><b>Gratuito · uso livre</b></div>
-      <div>Versão 1.6.5</div>
+      <div>Versão 1.6.6</div>
       <div>© 2026 · PASCOM</div>
       <div><b>Paróquia São José Operário</b></div>
     </div>
@@ -315,6 +315,7 @@
     <div class="linha controles">
       <button id="btnLimpar" title="Limpar texto (Esc)">Limpar</button>
       <button id="btnMudo" title="Mudo: o telão fica só com o fundo enquanto você navega pelos slides; clique de novo (ou M) para mostrar o slide que estiver no ar">Mudo</button>
+      <button id="btnTirarCamera" title="Tirar a câmera do telão (volta o slide)" disabled>📷 Tirar</button>
       <button id="btnAltar" title="Slide &quot;Todos dirijam seu olhar para o altar&quot; (L). Clique de novo para voltar ao slide que estava no ar.">⛪ Altar</button>
       <button id="btnAviso" title="Aviso na tela: placa de carro, responsável por criança… (A)">📢 Aviso</button>
       <button id="btnPix" title="QR code do Pix da paróquia no telão — ofertório, fim da Missa (P). Clique de novo para voltar ao que estava no ar.">💠 Pix</button>
@@ -344,6 +345,7 @@
         <button data-add="oracao">Oração</button>
         <button data-add="angelus" title="Ângelus (no Tempo Pascal, a Regina Caeli entra sozinha)">Ângelus</button>
         <button data-add="terco" title="Terço inteiro: abertura, os 5 mistérios do dia e o encerramento">📿 Terço</button>
+        <button data-add="ladainha" title="Ladainha rezada (escolha qual em Orações → Ladainhas) ou cantada (escolha um canto de Ladainha)">Ladainha</button>
         <button data-add="preces">Preces</button>
         <button data-add="ordinario">Parte da Missa</button>
         <button data-add="homilia" title="Slide para a homilia (fica no ar o tempo todo)">Homilia</button>
@@ -460,6 +462,7 @@
             <button type="button" id="btnSemFundo">Remover imagem</button>
           </div>
           <input type="file" id="arqFundo" accept="image/*" hidden>
+          <input type="file" id="arqFundoItem" accept="image/*" hidden>
           <label class="check"><input type="checkbox" data-cfg="sombra"> Sombra no texto</label>
           <label class="check"><input type="checkbox" data-cfg="maiusculas"> Texto em MAIÚSCULAS</label>
           <label class="check"><input type="checkbox" data-cfg="negrito"> Texto em <b>negrito</b></label>
@@ -487,11 +490,12 @@
             <label class="campo">Margem dos lados (% da tela) <input type="range" min="0" max="25" step="1" data-cfg="margemLados"></label>
             <label class="campo">Margem em cima e embaixo (%) <input type="range" min="0" max="25" step="1" data-cfg="margemTopo"></label>
           </div>
+          <label class="check" title="Cada imagem dos cantos (brasão, PASCOM, padroeiro) vira um quadrado; o texto ocupa a área toda e contorna os quadrados, usando os espaços entre eles. Desligado: a área do texto inteira desvia das imagens."><input type="checkbox" data-cfg="contornarCantos"> Texto contorna as imagens dos cantos (ocupa os espaços entre elas)</label>
           <div id="previaMargens" class="previa-margens" title="O telão em miniatura: pontilhado = limite das margens; tracejado = onde o texto ficou (desviando das imagens dos cantos)">
             <iframe src="projecao.html?preview&amp;mini=margens" title="Miniatura do telão" tabindex="-1"></iframe>
             <span class="pm-medidas"></span>
           </div>
-          <p class="sutil pequeno" style="margin-top:-4px">Pontilhado: limite das margens. Tracejado: onde o texto ficou, desviando das imagens dos cantos
+          <p class="sutil pequeno" style="margin-top:-4px">Pontilhado: limite das margens. Tracejado amarelo: a área do texto; azul: o quadrado de cada imagem, que o texto contorna
             (as da comunidade do roteiro aberto). O texto de exemplo é o slide que está no ar ou aberto.</p>
           <p class="sutil pequeno">Ligado: textos longos (leituras, orações) viram vários slides, sempre com letra grande e do mesmo tamanho.
             Desligado: cada slide mantém o texto inteiro e a letra diminui até caber na tela.</p>
@@ -716,7 +720,9 @@
     <div class="campo">Tema do telão (cor de fundo e letra)</div>
     <div id="layTemas" class="lay-temas"></div>
     <p class="sutil pequeno">Dica: use imagens PNG com fundo transparente (brasão, logos, santos recortados). O tema <b>Ajustes</b> usa a aparência de <b>Ferramentas → Ajustes</b>; na tela de controle dá para trocar o tema na hora.</p>
-    <div class="linha"><span class="espaco"></span><button value="ok" class="primario">Pronto</button></div>
+    <div class="linha">
+      <button type="button" id="btnLaySalvar" title="Grava agora e, com a nuvem ligada, já envia para os outros computadores">💾 Salvar e enviar para a nuvem</button>
+      <span class="espaco"></span><button value="ok" class="primario">Pronto</button></div>
   </form>
 </dialog>
 
@@ -951,7 +957,7 @@
       <figure><img src="img/brasao-paroquia.webp" alt="Brasão da Paróquia São José Operário"><figcaption>Paróquia São José Operário (RJ)</figcaption></figure>
       <figure><img src="img/brasao-pascom.webp" alt="Logotipo da PASCOM"><figcaption>PASCOM</figcaption></figure>
     </div>
-    <p class="sutil pequeno" id="versaoApp">Versão 1.6.5</p>
+    <p class="sutil pequeno" id="versaoApp">Versão 1.6.6</p>
     <div class="linha"><span class="espaco"></span><button value="ok" class="primario">OK</button></div>
   </form>
 </dialog>
@@ -1049,8 +1055,7 @@
     <h2>Oração</h2>
     <div class="linha">
       <label class="campo">Título <input name="titulo" required></label>
-      <label class="campo">Categoria <input name="categoria" list="categoriasOracao" placeholder="Ex.: Paróquia"></label>
-      <datalist id="categoriasOracao"></datalist>
+      <label class="campo">Categoria <select name="categoria" id="categoriasOracao"></select></label>
     </div>
     <label class="campo">Texto
       <small class="sutil">— linha em branco separa os slides; comece a linha com <b>—</b> para a resposta do povo (fica em negrito)</small>

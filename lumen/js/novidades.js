@@ -5,6 +5,19 @@
  * A versão mais nova fica em cima. Ao gerar uma versão nova, acrescente a entrada dela aqui.
  */
 const NOVIDADES = [
+  { versao: '1.6.6', data: '2026-10-12', itens: [
+    '💾 Salvar e enviar para a nuvem, no editor da Apresentação de cada capela (imagens dos cantos e tema): grava na hora e já sincroniza, sem esperar fechar o programa.',
+    'Correção: a apresentação de cada capela não é mais desfeita quando outro computador mexe na Agenda (ex.: cria um roteiro pela Agenda). Na sincronização, vale a versão mais nova de cada capela.',
+    '📱 Um QR code para cada rede no Controle pelo celular: botões em cima escolhem a rede (ex.: 📶 o roteador só do MiguelAngelus ou 🌐 o Wi-Fi da igreja) e aparece só o QR dela — assim a câmera do celular não pega o errado. A última escolhida fica lembrada; ⚠ marca a rede que o Firewall está barrando. Cada rede aparece com o nome que o celular vê: o do Wi-Fi em que o computador está (ex.: o da igreja) e "MiguelAngelus" para o roteador no cabo; o ✎ troca o nome.',
+    '✝ Sequências: a Sequência Pascal, a de Pentecostes e a de Corpus Christi (versão completa oficial, "Terra, exulta de alegria"), com as estrofes numeradas, estão em Orações → Sequências (editáveis) e entram sozinhas, antes da Aclamação ao Evangelho, no roteiro da Missa do Domingo da Páscoa, de Pentecostes e de Corpus Christi criado pela Agenda.',
+    '🎵 A Sequência no roteiro é como o Glória: vem rezada (o texto da oração) e dá para trocar por um canto do novo momento "Sequência".',
+    '📿 Ladainhas: nova categoria em Orações com a Ladainha de Todos os Santos, a do Sagrado Coração de Jesus, a de São Miguel Arcanjo e a de São José (com as invocações de 2021).',
+    '📿 Item Ladainha (Adicionar → Ladainha, ou "Adicionar ao roteiro" numa ladainha da aba Orações): como o Glória, vem rezada (escolha qual) e dá para trocar por um canto do novo momento "Ladainha".',
+    '🙏 Orações: ✎ editar e ✕ excluir direto na lista (aparecem ao passar o mouse); na oração nova, a categoria é uma lista com todas as que existem e "➕ Nova categoria…".',
+    '🧩 Texto contorna as imagens dos cantos: cada imagem habilitada (brasão, PASCOM, padroeiro) vira um quadrado, e o texto ocupa a área das margens inteira, usando os espaços entre os quadrados (as linhas de cima entre o brasão e a PASCOM, as do meio na largura toda, as de baixo desviando só do padroeiro). Na miniatura dos Ajustes, os quadrados aparecem tracejados em azul. Liga e desliga em Ajustes → Tamanho dos slides.',
+    '🖼 Fundo próprio para itens do roteiro: no cabeçalho do item, escolha uma imagem de fundo só para os slides dele (no lugar do fundo do tema), com "Usar" para ligar e desligar e "Escurecer" para a letra aparecer bem.',
+    '📷 Câmeras em tela pequena: a conexão e as posições de cada câmera recolhem e expandem (fica lembrado), ✎/✕ das posições só aparecem ao passar o mouse, e a prévia fica mais baixa em notebook. O botão "📷 Tirar" (câmera do telão) foi para o painel, junto de Limpar e Mudo.',
+  ] },
   { versao: '1.6.5', data: '2026-10-11', itens: [
     '💡 Melhorias sugeridas pelo Hermínio, depois de usar o MiguelAngelus na Missa das 7h — obrigado, Hermínio!',
     'Nome de cada parte: o 1º slide de cada parte do roteiro mostra o nome dela, em letra grande (Entrada e o canto, Saudação, Ato Penitencial, Coleta, Salmo…). Opção de numerar ("3. Ato Penitencial"). Liga e desliga em Ajustes → Aparência do telão.',

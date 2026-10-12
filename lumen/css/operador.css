@@ -252,8 +252,13 @@ code { background: var(--painel2); padding: 1px 4px; border-radius: 4px; }
 .preview iframe { width: 100%; height: 100%; border: 0; display: block; pointer-events: none; }
 .controles button { flex: 1; }
 /* os botões quebram em mais de uma linha quando não cabem (painel estreito: Tela preta, Limpar, Altar, Aviso, Pix…) */
-.linha.controles { display: grid; grid-template-columns: repeat(auto-fit, minmax(68px, 1fr)); }
+.linha.controles { display: grid; grid-template-columns: repeat(auto-fit, minmax(56px, 1fr)); gap: 4px; }
+.linha.controles button { padding-left: 4px; padding-right: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 #btnMudo.ligado { background: #6b2b2b; border-color: #e0463c; color: #fff; }
+#btnTirarCamera.ligado { background: #1f4a2a; border-color: #4caf6a; color: #fff; }
+#btnTirarCamera:disabled { opacity: .45; }
+.fundo-item { gap: 8px; flex-wrap: wrap; align-items: center; }
+.fundo-mini { height: 30px; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 4px; border: 1px solid var(--borda); }
 .linha.controles button { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .roteiro-painel .linha button { flex: 0 0 auto; }
 .roteiro-painel .adicionar button { padding: 3px 7px; font-size: 12px; }
@@ -398,7 +403,7 @@ button.cards-sec:hover, button.cards-dia:hover { border-bottom-color: var(--bord
 .bf-paleta button { width: 20px; height: 20px; border-radius: 50%; border: 1px solid rgba(128,128,128,.6); }
 .bf-paleta .bf-semcor { background: transparent; font-size: 11px; }
 /* cor e tamanho no texto (marcas <vermelho>, <g>, <gg>, <pq>) — na lista de slides e nas prévias */
-font.m-vermelho { color: #ff5a4f; } font.m-dourado { color: #f2c14e; } font.m-azul { color: #5aa9ff; } font.m-verde { color: #5cc46a; }
+font.m-vermelho { color: #c8102e; } font.m-dourado { color: #f2c14e; } font.m-azul { color: #5aa9ff; } font.m-verde { color: #5cc46a; }
 font.m-roxo { color: #b57cf0; } font.m-branco { color: #fff; } font.m-preto { color: #111; }
 big.m-g { font-size: 1.3em; } big.m-gg { font-size: 1.7em; } small.m-pq { font-size: .75em; }
 /* Câmera PTZ */
@@ -414,8 +419,19 @@ big.m-g { font-size: 1.3em; } big.m-gg { font-size: 1.7em; } small.m-pq { font-s
 .ptz-pos { flex: 1; min-width: 220px; }
 .ptz-p { display: inline-flex; }
 .ptz-p .ptz-x { padding: 2px 6px; opacity: .6; }
+/* blocos que recolhem (conexão, posições) — notebook de 14" */
+.ptz-sub { margin: 6px 0; }
+.ptz-sub > summary { cursor: pointer; font-size: 13px; font-weight: 600; padding: 2px 0; }
+.ptz-lista-pos { flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+/* ✎ e ✕ das posições só aparecem ao passar o mouse: sobra espaço para os nomes */
+.ptz-p .ptz-x { display: none; }
+.ptz-p:hover .ptz-x { display: inline-block; }
+/* prévia da câmera mais baixa em tela pequena */
+@media (max-height: 900px) { .player.camera .cam-previa { max-height: 34vh; width: auto; max-width: 100%; } }
 .cam-ptz { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; margin: 4px 0; }
 .cam-ptz button { padding: 3px 8px; font-size: 12px; }
+.cam-ptz .cam-pos-cab { background: transparent; border: 0; padding: 2px 4px; font-weight: 600; cursor: pointer; }
+.cam-ptz.fechado { margin: 2px 0; }
 /* Cantos: favoritos e cifras */
 .visao-cantos { display: flex; gap: 6px; margin: 6px 0 4px; flex-wrap: wrap; }
 .visao-cantos button { padding: 4px 10px; border-radius: 16px; font-size: 12.5px; }
@@ -453,7 +469,29 @@ big.m-g { font-size: 1.3em; } big.m-gg { font-size: 1.7em; } small.m-pq { font-s
 .lay-previa.com-mini > img, .lay-previa.com-mini > .lay-texto { display: none !important; }
 .previa-margens .pm-medidas { position: absolute; bottom: 3px; left: 5px; font-size: 10px; color: #f2c14e; background: rgba(0,0,0,.6);
   padding: 0 4px; border-radius: 3px; }
-.cel-rede select { flex: 1; min-width: 0; }
+/* um QR code por vez: botões escolhem a rede */
+.cel-abas { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.cel-abas button { display: flex; flex-direction: column; align-items: flex-start; line-height: 1.2; padding: 5px 10px; }
+.cel-abas button.sel { background: var(--acento); color: #1b1503; border-color: var(--acento); }
+.cel-abas button.sel .sutil { color: #3a2d05; }
+.cel-abas button.bloqueada:not(.sel) { border-color: #e0463c; }
+/* cartão da rede escolhida */
+.cel-redes { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 8px; }
+.cel-rede-cartao { flex: 1 1 220px; max-width: 300px; border: 1px solid var(--borda); border-radius: 10px; padding: 8px 10px;
+  display: flex; flex-direction: column; align-items: center; gap: 6px; background: var(--painel2); }
+.cel-rede-cartao.bloqueada { border-color: #e0463c; }
+.cel-rede-nome { font-weight: 700; text-align: center; }
+.cel-renomear { padding: 0 6px; font-size: 12px; margin-left: 4px; background: transparent; border: 0; opacity: .7; cursor: pointer; }
+.cel-renomear:hover { opacity: 1; }
+/* ✎ / ✕ nas orações: aparecem ao passar o mouse */
+#listaOracoes .it { display: flex; align-items: center; gap: 4px; }
+#listaOracoes .it .tit { flex: 1; min-width: 0; }
+#listaOracoes .or-acao { visibility: hidden; padding: 0 5px; font-size: 12px; background: transparent; border: 0; cursor: pointer; opacity: .75; }
+#listaOracoes .it:hover .or-acao { visibility: visible; }
+#listaOracoes .or-acao:hover { opacity: 1; }
+#listaOracoes [data-excluir-oracao]:hover { color: #c8102e; }
+.cel-rede-cartao .cel-qr { width: 100%; max-width: 200px; }
+.cel-rede-cartao .cel-end { font-size: 17px; user-select: all; }
 .cel-cod { font: 700 22px/1 Consolas, monospace; letter-spacing: 2px; color: var(--acento); }
 .cel-lista { display: flex; flex-direction: column; gap: 4px; margin-bottom: 8px; }
 .cel-ap { display: flex; align-items: center; gap: 8px; padding: 5px 8px; border: 1px solid var(--borda); border-radius: 7px; }

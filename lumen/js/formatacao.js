@@ -11,7 +11,7 @@ const TAGS = { negrito: 'b', italico: 'i', sublinhado: 'u' };
 // Cor e tamanho (1.6.3): <vermelho>…</vermelho>, <g>…</g> (grande), <gg>…</gg> (título), <pq>…</pq> (pequeno).
 // Paleta fixa, que lê bem no telão. No HTML viram <font> (cor) e <big>/<small> (tamanho): o navegador conserta
 // sozinho quando essas marcas se cruzam com negrito/itálico (como já faz com <b> e <i>).
-const CORES_TEXTO = [['vermelho', '#ff5a4f'], ['dourado', '#f2c14e'], ['azul', '#5aa9ff'], ['verde', '#5cc46a'],
+const CORES_TEXTO = [['vermelho', '#c8102e'], ['dourado', '#f2c14e'], ['azul', '#5aa9ff'], ['verde', '#5cc46a'],
   ['roxo', '#b57cf0'], ['branco', '#ffffff'], ['preto', '#111111']];
 const TAMANHOS_TEXTO = ['pq', '', 'g', 'gg'];
 const RX_MARCAS = /<\/?(?:b|i|u|gg|g|pq|vermelho|dourado|azul|verde|roxo|branco|preto)>/gi;
