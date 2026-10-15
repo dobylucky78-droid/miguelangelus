@@ -13,7 +13,7 @@ const semAcento = s => (s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowe
 const debounce = (fn, ms) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; };
 
 const MOMENTOS = ['Entrada', 'Ato Penitencial', 'Aspersão', 'Glória', 'Salmo', 'Sequência', 'Aclamação ao Evangelho', 'Ofertório', 'Santo',
-  'Cordeiro', 'Comunhão', 'Ação de Graças', 'Final', 'Mariano', 'Ladainha', 'Adoração', 'Outros'];
+  'Cordeiro', 'Comunhão', 'Ação de Graças', 'Final', 'Animação', 'Mariano', 'Ladainha', 'Adoração', 'Outros'];
 // Momentos cujo "rezado" é uma oração cadastrada (Orações → Sequências / Ladainhas): o item guarda oracaoId e dá para trocar por um canto
 const MOMENTOS_COM_ORACAO = { 'Sequência': 'Sequências', 'Ladainha': 'Ladainhas' };
 const oracoesDoMomento = m => Oracoes.lista.filter(o => o.categoria === MOMENTOS_COM_ORACAO[m] || (m === 'Ladainha' && /^Ladainha/i.test(o.titulo)))
@@ -879,7 +879,9 @@ function opcoesCantos(momento, sel, soFav = false, rezado = false) {
   // ⭐ favoritos deste momento primeiro (o acervo inteiro continua logo abaixo)
   const fav = S.cantos.filter(c => c.favorito && doMomento(c, momento)).sort(porTitulo);
   if (fav.length) h += `<optgroup label="⭐ Favoritos — ${esc(momento)}">${fav.map(opFav).join('')}</optgroup>`;
-  for (const m of [momento, ...MOMENTOS.filter(x => x !== momento)]) {
+  // os momentos conhecidos e também qualquer outro que venha de um canto importado (nenhum canto fica de fora da lista)
+  const extras = [...new Set(S.cantos.map(c => c.momento || 'Outros'))].filter(m => !MOMENTOS.includes(m)).sort((a, b) => a.localeCompare(b, 'pt-BR'));
+  for (const m of [momento, ...MOMENTOS.filter(x => x !== momento), ...extras.filter(x => x !== momento)]) {
     const lista = S.cantos.filter(c => (c.momento || 'Outros') === m).sort(porTitulo);
     if (lista.length) h += `<optgroup label="${esc(m)}">${lista.map(c => `<option value="${c.id}" ${c.id === sel ? 'selected' : ''}>${esc(c.titulo)}${ficha(c)}</option>`).join('')}</optgroup>`;
   }
@@ -2565,7 +2567,7 @@ async function iniciar() {
   renderBiblia();
   renderCabecalho();
   renderEstadoProj();
-  $('#versaoApp').textContent = NO_APP ? 'Versão 1.6.9 · aplicativo para Windows' : 'Versão 1.6.9 · no navegador';
+  $('#versaoApp').textContent = NO_APP ? 'Versão 1.6.10 · aplicativo para Windows' : 'Versão 1.6.10 · no navegador';
   // pede armazenamento permanente (o navegador não apaga os dados para liberar espaço)
   try { navigator.storage?.persist?.(); } catch (_) {}
   enviarConfigTelao(); renderTemasRapidos();

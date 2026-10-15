@@ -5,6 +5,11 @@
  * A versão mais nova fica em cima. Ao gerar uma versão nova, acrescente a entrada dela aqui.
  */
 const NOVIDADES = [
+  { versao: '1.6.10', data: '2026-10-15', itens: [
+    '🎉 Nova classificação de canto: Animação (para os cantos de animação, como "Incendeia"). Aparece na aba Cantos, no editor do canto e no momento dos itens do roteiro.',
+    'A lista de cantos do roteiro passa a mostrar também cantos de qualquer classificação nova que venha numa importação — nenhum canto fica de fora.',
+    'Ajuda → Sobre: as redes da Paróquia São José Operário (Instagram, Facebook e YouTube) e o site do MiguelAngelus (pascom-sjo.github.io), com o botão de baixar a versão mais nova. A tela de abertura agora diz PASCOM — São José Operário Ilha.',
+  ] },
   { versao: '1.6.9', data: '2026-10-15', itens: [
     '🎮 Joysticks (Ferramentas → Ajustes → 🎮 Joysticks): até dois controles USB tipo Xbox (como o GameSir), lidos direto do Windows — funcionam com o MiguelAngelus minimizado ou atrás do OBS. O desenho do controle mostra o botão apertado e cada botão tem uma lista de funções: posições (da câmera do joystick ou de uma câmera escolhida), controlar uma câmera (um controle só para as duas), zoom, foco, brilho, contraluz, velocidades, câmera no telão, próximo slide, Mudo, Altar, Pix…',
     '🎮 Padrão pronto: alavanca esquerda move (quanto mais empurra, mais rápido); alavanca direita e setas movem devagar, para o ajuste fino; gatilhos dão zoom proporcional; A/B/X/Y chamam as posições 1 a 4; Back troca a câmera; Start passa o slide; o clique das alavancas muda a velocidade.',

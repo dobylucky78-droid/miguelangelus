@@ -313,7 +313,7 @@ dialog::backdrop { background: rgba(0,0,0,.6); }
 .creditos { display: flex; flex-direction: column; gap: 10px; padding: 12px 0; border-top: 1px solid var(--borda); border-bottom: 1px solid var(--borda); }
 .credito { display: flex; align-items: center; gap: 12px; }
 .sobre-brasoes { display: flex; justify-content: center; gap: 14px; }
-.sobre-brasoes figure { margin: 0; flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.sobre-brasoes figure { margin: 0; flex: 0 1 260px; display: flex; flex-direction: column; align-items: center; gap: 6px; }
 .sobre-brasoes img { height: 92px; width: 100%; object-fit: contain; background: #fff; border-radius: 10px; padding: 8px; box-sizing: border-box; }
 .sobre-brasoes figcaption { font-size: 12px; color: var(--sutil); text-align: center; }
 .credito > div:last-child { display: flex; flex-direction: column; }
@@ -960,3 +960,11 @@ html[data-tema-app="claro"] .tema-amostra { border-color: #aab1ba; }
 .joy-poscam { display: grid; grid-template-columns: minmax(90px, 0.8fr) minmax(0, 1.2fr); gap: 6px; align-items: center; font-size: 13px; }
 .joy-poscam > span:first-child { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 @media (max-width: 760px) { .joy-poscams { grid-column: 1; } }
+
+/* Sobre: redes da paróquia e site */
+.sobre-redes { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin: 10px 0 4px; }
+.sobre-redes a { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 18px; border: 1px solid rgba(128,128,128,.35);
+  text-decoration: none; color: inherit; font-size: 13px; font-weight: 600; }
+.sobre-redes a:hover { background: rgba(128,128,128,.15); }
+.sobre-redes svg { width: 18px; height: 18px; flex: none; }
+.sobre-redes .ig svg { color: #d6249f; } .sobre-redes .fb svg { color: #1877f2; } .sobre-redes .yt svg { color: #ff0000; } .sobre-redes .site svg { color: #d4a72c; }
