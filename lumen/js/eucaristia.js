@@ -105,8 +105,15 @@ const normEuc = s => semAcento(s || '').replace(/\([^)]*\)/g, ' ').replace(/\bpr
 const TEMAS_PREF = [[/assun[cç][aã]o/i, 'assun'], [/imaculada/i, 'imac'], [/trindade/i, 'trin'], [/pentecostes/i, 'pent'],
   [/cristo,? rei|rei do universo/i, 'cristorei'], [/ramos/i, 'ramos'], [/epifania/i, 'epif'], [/batismo do senhor/i, 'batismo'],
   [/apresenta[cç][aã]o do senhor/i, 'apres'], [/transfigura/i, 'transf'], [/santa cruz/i, 'cruz'], [/sagrado cora/i, 'corac'],
+  [/tenta[cç][aã]o do senhor/i, 'qd1'], [/samaritana/i, 'qd3'], [/cego de nascen/i, 'qd4'], [/l[aá]zaro/i, 'qd5'], [/mist[eé]rio de maria e da igreja/i, 'imac'],
   [/s[aã]o jos[eé]/i, 'jose'], [/jo[aã]o batista/i, 'joaob'], [/pedro e (s[aã]o )?paulo/i, 'pedropaulo'], [/anuncia[cç][aã]o/i, 'anunc']];
 const prefPorTema = nome => { const t = TEMAS_PREF.find(([re]) => re.test(nome || '')); return t ? prefDe(t[1]) : null; };
+// "Páscoa, I O mistério pascal", "Santíssima Eucaristia I Sacrifício e Sacramento de Cristo": o nome do catálogo seguido do tema
+// (o nome mais comprido que serve: "Páscoa II" não vira "Páscoa I")
+const prefPorInicio = nome => {
+  const n = normEuc(nome) + ' ';
+  return listaPrefacios().filter(p => !p.extra && n.startsWith(normEuc(p.nome) + ' ')).sort((a, b) => b.nome.length - a.nome.length)[0] || null;
+};
 
 function criarExtra(tipo, nome) {
   const x = { id: 'x-' + uid(), tipo, nome, grupo: 'Outros (vindos dos folhetos)' };
@@ -137,7 +144,7 @@ function capturarEucaristia(cap) {
     else if (nomeFolheto) {
       const nome = nomeFolheto.replace(/^pref[aá]cio\s+/i, '').replace(/^(dos|das|do|da|de)\s+/i, '');
       p = listaPrefacios().find(x => normEuc(x.nome) === normEuc(nomeFolheto))
-        || prefPorTema(cap.pref.nome)
+        || prefPorInicio(nomeFolheto) || prefPorTema(cap.pref.nome)
         || criarExtra('pref', nome.charAt(0).toUpperCase() + nome.slice(1));
     }
     guardar(p, cap.pref.texto);

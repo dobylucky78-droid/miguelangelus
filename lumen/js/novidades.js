@@ -5,6 +5,13 @@
  * A versão mais nova fica em cima. Ao gerar uma versão nova, acrescente a entrada dela aqui.
  */
 const NOVIDADES = [
+  { versao: '1.6.12', data: '2026-10-15', itens: [
+    '📄 Folheto do Presidente (o do padre, "PE"): agora é lido direito. A fala do padre, em letra grande, não vira mais um monte de títulos — o roteiro sai com as mesmas partes da versão Celular (antes saíam 55 a 99 pedaços).',
+    '📄 Folhetos feitos no Word (como o da São José Operário): títulos sem número ("Canto de Entrada", "Saudação") e "REFRÃO" sem dois-pontos são reconhecidos; as duas colunas não se misturam mais.',
+    '📄 O nome da celebração vem certo da capa em mais casos: Domingo de Ramos e da Paixão do Senhor, Quinta-Feira da Ceia do Senhor, Sexta-Feira da Paixão, Vigília Pascal, Ascensão, Natal, Quarta-Feira de Cinzas, Santos Pedro e Paulo… com "— Solenidade" quando é.',
+    '📄 Também: as palavras da consagração não viram título; as leituras da semana e os anúncios do fim do folheto ficam fora do roteiro; autores dos cantos sem texto a mais; sílabas soltas de texto justificado ("Res - surreição") juntadas; rubricas como "(De pé)" e "(Sentados)" fora do telão.',
+    '✝ Prefácios lidos dos folhetos caem no nome certo do catálogo ("Páscoa I", "Ascensão do Senhor I", "Santíssima Eucaristia I", "Imaculada Conceição", "1º Domingo da Quaresma — A tentação do Senhor") em vez de virar um nome novo.',
+  ] },
   { versao: '1.6.11', data: '2026-10-15', itens: [
     '🌐 Acompanhar pela internet (Ajustes → Transmissão): os slides do telão, só o texto, aparecem na hora no celular, tablet ou TV de quem lê o QR code — pelo 4G, de qualquer lugar, sem instalar nada (pascom-sjo.github.io/aovivo.html). A cor segue o tema do telão; Mudo e Limpar também valem lá.',
     '🌐 Código do dia: muda sozinho todo dia (ou no ↻ Trocar); a página não aparece no Google e só abre com o código. Escolha o que vai: cantos, leituras, respostas e avisos. O botão 📺 Mostrar o QR no telão põe no canto da tela o QR code e o código para a assembleia.',
