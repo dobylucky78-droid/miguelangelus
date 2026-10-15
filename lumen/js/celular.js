@@ -82,6 +82,7 @@ function estadoCelular() {
     prox,
     preto: !!live.preto, mudo: !!S.mudo, altar: !!live.altar, pix: !!S.pixNoAr, temPix: !!(typeof Pix !== 'undefined' && Pix.qr),
     projecao: !!(S.projWin && !S.projWin.closed),
+    aoVivo: typeof cfgAV === 'function' && !!cfgAV().ligado, qrAoVivo: typeof AoVivo !== 'undefined' && !!AoVivo.qrNoTelao,
     aviso: Avisos.atual ? { texto: semMarcasAviso(Avisos.atual.texto) } : null,
     recentes: Avisos.recentes.map(x => semMarcasAviso(x.texto)),
     salvos: AvPar.convites.map(x => semMarcasAviso(x.texto)),
@@ -138,6 +139,7 @@ function comandoCelular(c) {
     case 'projecao': alternarProjecao(); setTimeout(agendarEstadoCelular, 800); break;   // abre/fecha a janela do telão
     case 'altar': alternarAltar(); break;
     case 'pix': alternarPix(); break;
+    case 'qrAoVivo': if (typeof alternarQrAoVivo === 'function') alternarQrAoVivo(); break;
     case 'aviso': {
       const texto = String(c.texto || '').trim().replace(/\s*\n\s*/g, ' ').slice(0, 300);
       if (texto) mostrarAviso({ tipo: 'livre', texto, icone: ICONE_AVISO.livre, duracao: S.config.avisoDuracao ?? 60, pos: S.config.avisoPosicao || 'alto' });

@@ -96,6 +96,8 @@ function enviar(msg, destinos) {
   for (const w of destinos || alvos()) try { w.postMessage(m, '*'); } catch (_) { /* janela fechada */ }
   // o que vai para o telão também alimenta a faixa de letras da transmissão (NDI)
   if (!destinos && (msg.tipo === 'slide' || msg.tipo === 'preto' || msg.tipo === 'aviso')) atualizarFaixa();
+  // … e quem acompanha pela internet (aovivo.js): também Mudo e troca de tema
+  if (!destinos && ['slide', 'preto', 'aviso', 'mudo', 'config'].includes(msg.tipo) && typeof atualizarAoVivo === 'function') atualizarAoVivo();
 }
 
 // Miniaturas do telão (Ajustes → margens; editor de Apresentação): recebem o tema, as imagens dos cantos e um slide de
@@ -134,6 +136,7 @@ function enviarEstado(w) {
   enviarEstadoAviso(w);
   enviarEstadoCamera(w);
   if (typeof enviarEstadoPix === 'function') enviarEstadoPix(w);
+  if (typeof AoVivo !== 'undefined' && AoVivo.qrNoTelao) enviar(msgQrAoVivo(), [w]);
 }
 
 window.addEventListener('message', e => {
@@ -880,8 +883,7 @@ function opcoesCantos(momento, sel, soFav = false, rezado = false) {
   const fav = S.cantos.filter(c => c.favorito && doMomento(c, momento)).sort(porTitulo);
   if (fav.length) h += `<optgroup label="⭐ Favoritos — ${esc(momento)}">${fav.map(opFav).join('')}</optgroup>`;
   // os momentos conhecidos e também qualquer outro que venha de um canto importado (nenhum canto fica de fora da lista)
-  const extras = [...new Set(S.cantos.map(c => c.momento || 'Outros'))].filter(m => !MOMENTOS.includes(m)).sort((a, b) => a.localeCompare(b, 'pt-BR'));
-  for (const m of [momento, ...MOMENTOS.filter(x => x !== momento), ...extras.filter(x => x !== momento)]) {
+  for (const m of [momento, ...momentosCantos().filter(x => x !== momento)]) {
     const lista = S.cantos.filter(c => (c.momento || 'Outros') === m).sort(porTitulo);
     if (lista.length) h += `<optgroup label="${esc(m)}">${lista.map(c => `<option value="${c.id}" ${c.id === sel ? 'selected' : ''}>${esc(c.titulo)}${ficha(c)}</option>`).join('')}</optgroup>`;
   }
@@ -913,7 +915,7 @@ function renderCabecalho() {
       const c = S.cantos.find(c => c.id === it.cantoId);
       h = noRoteiro
         ? `<div class="cab-linha"><span class="tag t-canto">Canto</span>
-             <select data-campo="momento" class="estreito">${MOMENTOS.map(m => `<option ${m === it.momento ? 'selected' : ''}>${m}</option>`).join('')}</select>
+             <select data-campo="momento" class="estreito">${momentosCantos().map(m => `<option ${m === it.momento ? 'selected' : ''}>${esc(m)}</option>`).join('')}</select>
              <select data-campo="cantoId" title="${it.textoRezado || MOMENTOS_COM_ORACAO[it.momento] ? 'Deixe “rezado” para usar o texto, ou escolha um canto' : ''}">${opcoesCantos(it.momento, it.cantoId, soFavoritosNoRoteiro(), !!(it.textoRezado || MOMENTOS_COM_ORACAO[it.momento]))}</select>
              ${MOMENTOS_COM_ORACAO[it.momento] && !c ? `<select data-campo="oracaoId" title="Texto rezado (Orações → ${MOMENTOS_COM_ORACAO[it.momento]})">
                <option value="">— qual ${it.momento === 'Ladainha' ? 'ladainha' : 'sequência'}? —</option>${oracoesDoMomento(it.momento).map(o => `<option value="${o.id}" ${o.id === it.oracaoId ? 'selected' : ''}>${esc(o.titulo)}</option>`).join('')}</select>` : ''}
@@ -1227,6 +1229,7 @@ function itemParaRoteiro(it) {
 // =====================================================================
 
 function renderCantos() {
+  if (typeof preencherMomentos === 'function') preencherMomentos();
   const termo = semAcento($('#buscaCanto').value.trim());
   const mom = $('#filtroMomento').value;
   // Visão: ⭐ Favoritos (os que a paróquia usa) ou Acervo completo (fonte de consulta) — cifras.js
@@ -1271,7 +1274,7 @@ function renderCantos() {
     return;
   }
   // Sem busca nem filtro: uma pasta por momento da Missa (começam fechadas; clique abre/fecha)
-  el.innerHTML = [...MOMENTOS, ...new Set(lista.map(c => c.momento || 'Outros'))].filter((m, i, a) => a.indexOf(m) === i).map(m => {
+  el.innerHTML = momentosCantos().map(m => {
     const l = lista.filter(c => (c.momento || 'Outros') === m);
     if (!l.length) return '';
     const chave = (soFav ? 'fav:' : 'canto:') + m;        // nos favoritos, as pastas começam abertas
@@ -2064,7 +2067,7 @@ async function importarBackup(arquivo) {
     if (d.agenda) await DB.salvar('config', { id: 'agenda', valor: d.agenda });
     if (d.eucaristia) await DB.salvar('config', { id: 'eucaristia', valor: d.eucaristia });
     for (const c of d.cantos || []) {
-      if (!MOMENTOS.includes(c.momento)) c.momento = 'Outros';
+      if (!c.momento) c.momento = 'Outros';           // classificação nova (de outra paróquia) entra como veio
       await DB.salvar('cantos', c);
     }
     for (const r of d.roteiros || []) await DB.salvar('roteiros', r);
@@ -2514,9 +2517,8 @@ async function iniciar() {
   await separarCantaveisNosRoteiros();  // Ato Penitencial, Glória, Santo e Cordeiro viram itens "cantado ou rezado"
   await aberturasNoJeitoDaCapa();
 
-  const opcoesMomento = MOMENTOS.map(m => `<option>${m}</option>`).join('');
-  $('#filtroMomento').innerHTML = '<option value="">Todos os momentos</option>' + opcoesMomento;
-  $('#formCanto').momento.innerHTML = opcoesMomento;
+  await carregarClassificacoes();         // 🏷 classificações dos cantos (ordem e as criadas aqui): preenche o filtro e o editor
+  ligarClassificacoes();
 
   ligarAjustes();
   ligarEventos();
@@ -2554,6 +2556,7 @@ async function iniciar() {
   ligarCelular();
   ligarLinks();                          // links.js: botões de links no celular (mesa de som…)
   ligarJoystick();                       // joystick.js: até 2 joysticks (câmeras PTZ e telão), Ajustes → 🎮 Joysticks
+  ligarAoVivo();                         // aovivo.js: 🌐 acompanhar pela internet (Ajustes → Transmissão)
   ligarPix();
   ligarDivisoria();
   ligarZoomApp();
@@ -2567,7 +2570,7 @@ async function iniciar() {
   renderBiblia();
   renderCabecalho();
   renderEstadoProj();
-  $('#versaoApp').textContent = NO_APP ? 'Versão 1.6.10 · aplicativo para Windows' : 'Versão 1.6.10 · no navegador';
+  $('#versaoApp').textContent = NO_APP ? 'Versão 1.6.11 · aplicativo para Windows' : 'Versão 1.6.11 · no navegador';
   // pede armazenamento permanente (o navegador não apaga os dados para liberar espaço)
   try { navigator.storage?.persist?.(); } catch (_) {}
   enviarConfigTelao(); renderTemasRapidos();

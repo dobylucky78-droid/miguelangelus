@@ -230,6 +230,7 @@
       <button data-cmd="altar" id="btAltar">Altar</button>
       <button id="btAviso">Aviso</button>
       <button data-cmd="pix" id="btPix" hidden style="grid-column: 1 / -1">💠 Pix da paróquia (QR code)</button>
+      <button data-cmd="qrAoVivo" id="btQrAoVivo" hidden style="grid-column: 1 / -1" title="QR code no canto do telão para acompanhar pela internet">📱 QR “Acompanhe no celular” no telão</button>
     </div>
     <button data-cmd="projecao" id="btProjecao" style="width:100%;margin-top:8px">Abrir o telão</button>
   </section>
@@ -435,6 +436,8 @@ function render() {
   $('#btAltar').classList.toggle('ligado', !!est.altar);
   $('#btPix').hidden = !est.temPix;                    // só aparece com o QR code do Pix cadastrado no computador
   $('#btPix').classList.toggle('ligado', !!est.pix);
+  $('#btQrAoVivo').hidden = !est.aoVivo;                // só com o "Acompanhar pela internet" ligado no computador
+  $('#btQrAoVivo').classList.toggle('ligado', !!est.qrAoVivo);
 
   // roteiro
   renderRoteiros();

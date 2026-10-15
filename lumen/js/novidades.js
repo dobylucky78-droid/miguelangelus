@@ -5,6 +5,13 @@
  * A versão mais nova fica em cima. Ao gerar uma versão nova, acrescente a entrada dela aqui.
  */
 const NOVIDADES = [
+  { versao: '1.6.11', data: '2026-10-15', itens: [
+    '🌐 Acompanhar pela internet (Ajustes → Transmissão): os slides do telão, só o texto, aparecem na hora no celular, tablet ou TV de quem lê o QR code — pelo 4G, de qualquer lugar, sem instalar nada (pascom-sjo.github.io/aovivo.html). A cor segue o tema do telão; Mudo e Limpar também valem lá.',
+    '🌐 Código do dia: muda sozinho todo dia (ou no ↻ Trocar); a página não aparece no Google e só abre com o código. Escolha o que vai: cantos, leituras, respostas e avisos. O botão 📺 Mostrar o QR no telão põe no canto da tela o QR code e o código para a assembleia.',
+    '🌐 Sem código (link aberto): marque e quem abrir pascom-sjo.github.io/aovivo.html (ou ler o QR) já acompanha, sem digitar nada. Desmarcando, volta a pedir o código do dia.',
+    '🌐 No topo da tela, o selo 🌐 mostra quantas pessoas estão acompanhando (clique para os ajustes). O QR "Acompanhe no celular" agora tem botão 📱 QR no painel, ao lado do Pix, e no celular de controle — sem abrir os Ajustes no meio da Missa.',
+    '🏷 Classificações dos cantos (aba Cantos → ⚙, ou Editar → Classificações dos cantos…): crie as suas (Batizado, Crisma, Natal…), renomeie, apague e ponha em ordem — as pastas da aba Cantos e as listas seguem essa ordem. As da Missa (🔒) não mudam de nome nem são apagadas, mas mudam de lugar. Apagar uma classificação não apaga cantos: eles vão para Outros. Vai para os outros computadores pela nuvem.',
+  ] },
   { versao: '1.6.10', data: '2026-10-15', itens: [
     '🎉 Nova classificação de canto: Animação (para os cantos de animação, como "Incendeia"). Aparece na aba Cantos, no editor do canto e no momento dos itens do roteiro.',
     'A lista de cantos do roteiro passa a mostrar também cantos de qualquer classificação nova que venha numa importação — nenhum canto fica de fora.',

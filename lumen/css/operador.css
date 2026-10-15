@@ -968,3 +968,22 @@ html[data-tema-app="claro"] .tema-amostra { border-color: #aab1ba; }
 .sobre-redes a:hover { background: rgba(128,128,128,.15); }
 .sobre-redes svg { width: 18px; height: 18px; flex: none; }
 .sobre-redes .ig svg { color: #d6249f; } .sobre-redes .fb svg { color: #1877f2; } .sobre-redes .yt svg { color: #ff0000; } .sobre-redes .site svg { color: #d4a72c; }
+
+/* 🌐 Acompanhar pela internet (Ajustes → Transmissão) */
+.av-grade { display: grid; grid-template-columns: 170px 1fr; gap: 14px; align-items: start; margin: 8px 0; }
+.av-qr { background: #fff; border-radius: 10px; padding: 6px; min-height: 60px; display: grid; place-items: center; }
+.av-qr svg { width: 100%; height: auto; display: block; }
+.av-qr .sutil { color: #555; text-align: center; padding: 10px; }
+.av-cod { font: 700 22px Consolas, monospace; letter-spacing: .15em; color: var(--acento, #d4a72c); margin: 0 6px; }
+.av-config { margin-top: 8px; }
+.av-config summary { cursor: pointer; font-weight: 600; }
+@media (max-width: 760px) { .av-grade { grid-template-columns: 1fr; } .av-qr { max-width: 200px; } }
+
+/* 🏷 Classificações dos cantos */
+.classif { width: min(560px, 92vw); }
+.classif-lista { max-height: 52vh; overflow: auto; border: 1px solid var(--borda, rgba(127,127,127,.3)); border-radius: 8px; margin: 10px 0; }
+.classif-it { display: flex; align-items: center; gap: 6px; padding: 5px 8px; border-bottom: 1px solid var(--borda, rgba(127,127,127,.18)); }
+.classif-it:last-child { border-bottom: 0; }
+.classif-it .classif-nome { font-weight: 600; }
+.classif-it button { padding: 2px 8px; min-width: 0; }
+.classif-it button:disabled { opacity: .3; }

@@ -88,6 +88,7 @@ function acaoMenu(acao) {
     case 'importar': return $('#arqBackup').click();
     case 'novoCanto': return $('#btnNovoCanto').click();
     case 'novaOracao': return $('#btnNovaOracao').click();
+    case 'classificacoes': return abrirClassificacoes();
     case 'telaCheia': return alternarTelaCheiaPainel();
     case 'projecao': return alternarProjecao();
     case 'proximo': return proximo();

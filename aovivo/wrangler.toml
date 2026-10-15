@@ -1,0 +1,14 @@
+# MiguelAngelus — "Acompanhar pela internet" (Cloudflare Workers, plano gratuito)
+# Publicar:  npx wrangler deploy        (dentro desta pasta, depois de "npx wrangler login")
+# Chave:     npx wrangler secret put SEGREDO   (cole a chave mostrada em Ajustes → Transmissão → Acompanhar pela internet)
+name = "miguelangelus-aovivo"
+main = "worker.js"
+compatibility_date = "2026-10-01"
+
+[[durable_objects.bindings]]
+name = "SALA"
+class_name = "Sala"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["Sala"]

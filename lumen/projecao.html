@@ -59,6 +59,14 @@
     flex-direction: column; align-items: center; gap: 1.2vh; padding: 1.4vh 1.4vh 1.8vh; background: #fff; border-radius: 1.6vh;
     box-shadow: 0 .6vh 2.4vh rgba(0,0,0,.45); box-sizing: border-box; }
   body.pix-on #pixCaixa { display: flex; }
+  /* 🌐 "Acompanhe no celular": cartão no canto de baixo, por cima de tudo (o slide continua) */
+  #qrAoVivo { position: fixed; right: 2vw; bottom: 3vh; z-index: 6; display: none; align-items: center; gap: 1.4vw; padding: 1.2vh 1.4vw 1.2vh 1.2vh;
+    background: #fff; color: #111; border-radius: 1.6vh; box-shadow: 0 .8vh 3vh rgba(0,0,0,.45); font-family: "Segoe UI", sans-serif; }
+  #qrAoVivo.on { display: flex; }
+  #qrAoVivo img { width: 19vh; height: 19vh; image-rendering: pixelated; display: block; }
+  #qrAoVivo .av-t { font-size: 2.6vh; font-weight: 700; line-height: 1.25; }
+  #qrAoVivo .av-l { font-size: 2vh; color: #444; margin-top: .6vh; }
+  #qrAoVivo .av-c { font: 700 3.6vh Consolas, monospace; letter-spacing: .18em; color: #0f2347; margin-top: .4vh; }
   #pixCaixa .pix-faixa { height: calc(var(--pix-cartao) * .16); max-width: 80vw; object-fit: contain; flex: none; }
   #pixCaixa .pix-qr { flex: 1 1 auto; min-height: 0; aspect-ratio: 1; object-fit: contain; image-rendering: pixelated; }
   body.pix-on:not(.camera) #imgSlide, body.pix-on:not(.camera) #rodape { display: none !important; }
@@ -144,6 +152,7 @@
 <div id="veu"></div>
 <div id="avisosTela"></div>
 <div id="pixCaixa"></div>
+<div id="qrAoVivo"></div>
 <div id="area"><div id="texto"></div></div>
 <div id="rodape"></div>
 <video id="video" playsinline preload="auto"></video>
@@ -681,6 +690,11 @@ window.addEventListener('message', e => {
   else if (m.tipo === 'aviso') aviso(m.aviso);
   else if (m.tipo === 'camera') camera(m);
   else if (m.tipo === 'pix') pix(m);
+  else if (m.tipo === 'qrAoVivo') {       // 🌐 acompanhar pela internet: QR code + código do dia (só imagem gerada no programa)
+    const el = $('qrAoVivo'), on = !!m.on && /^data:image\//.test(m.qr || '');
+    el.classList.toggle('on', on);
+    el.innerHTML = on ? `<img src="${m.qr}" alt=""><div><div class="av-t">📱 Acompanhe<br>no celular</div><div class="av-l">${esc(m.link || '')}</div><div class="av-c">${esc(m.codigo || '')}</div></div>` : '';
+  }
   else if (m.tipo === 'posicionar') {
     try { window.moveTo(m.x, m.y); window.resizeTo(m.w, m.h); } catch (_) { /* o usuário arrasta manualmente */ }
   }
