@@ -21,7 +21,7 @@
     </div>
     <div class="splash-info">
       <div class="splash-gratis"><b>Gratuito · uso livre</b></div>
-      <div>Versão 1.6.8</div>
+      <div>Versão 1.6.9</div>
       <div>© 2026 · PASCOM</div>
       <div><b>Paróquia São José Operário</b></div>
     </div>
@@ -371,6 +371,7 @@
         <button type="button" data-ajsec="pix">💠 Pix da paróquia</button>
         <button type="button" data-ajsec="ndi">📡 Transmissão (OBS)</button>
         <button type="button" data-ajsec="celular">📱 Controle pelo celular</button>
+        <button type="button" data-ajsec="joystick">🎮 Joysticks</button>
         <button type="button" data-ajsec="sync">☁ Sincronização</button>
         <button type="button" data-ajsec="backup">💾 Backup</button>
       </nav>
@@ -576,6 +577,13 @@
             MiguelAngelus: o celular no Wi-Fi MiguelAngelus). Vão para os outros computadores pela nuvem.</p>
           <div id="linksCel"></div>
           <button type="button" id="btnLinkNovo">＋ Adicionar link</button>
+        </section>
+
+        <section data-ajpainel="joystick">
+          <h3>🎮 Joysticks</h3>
+          <p class="sutil pequeno">Até dois controles USB (tipo Xbox, como o GameSir) para mexer nas câmeras PTZ e no telão. Funcionam mesmo com o
+            MiguelAngelus minimizado ou atrás do OBS. A configuração vale para este computador.</p>
+          <div id="joyPainel"></div>
         </section>
 
         <section data-ajpainel="sync">
@@ -965,7 +973,7 @@
       <figure><img src="img/brasao-paroquia.webp" alt="Brasão da Paróquia São José Operário"><figcaption>Paróquia São José Operário (RJ)</figcaption></figure>
       <figure><img src="img/brasao-pascom.webp" alt="Logotipo da PASCOM"><figcaption>PASCOM</figcaption></figure>
     </div>
-    <p class="sutil pequeno" id="versaoApp">Versão 1.6.8</p>
+    <p class="sutil pequeno" id="versaoApp">Versão 1.6.9</p>
     <div class="linha"><span class="espaco"></span><button value="ok" class="primario">OK</button></div>
   </form>
 </dialog>
@@ -1236,6 +1244,7 @@
 <script src="lib/qrcode/qrcode.min.js"></script>
 <script src="js/celular.js"></script>
 <script src="js/links.js"></script>
+<script src="js/joystick.js"></script>
 <script src="js/menus.js"></script>
 <script src="js/app.js"></script>
 </body>

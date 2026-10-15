@@ -920,3 +920,43 @@ html[data-tema-app="claro"] .tema-amostra { border-color: #aab1ba; }
 .link-cel .link-img { position: relative; width: 64px; height: 34px; padding: 2px; display: grid; place-items: center; }
 .link-cel .link-img img { max-width: 30px; max-height: 30px; border-radius: 6px; }
 .link-cel .link-img span { position: absolute; top: -6px; right: -6px; font-size: 10px; background: #b3261e; color: #fff; border-radius: 50%; width: 16px; height: 16px; display: grid; place-items: center; }
+
+/* 🎮 Joysticks (Ajustes) */
+.joy-abas { display: flex; gap: 6px; margin-bottom: 6px; }
+.joy-abas button { display: flex; flex-direction: column; align-items: flex-start; padding: 6px 12px; }
+.joy-abas button.sel { border-color: var(--acento, #d4a72c); background: rgba(212,167,44,.15); }
+.joy-id { margin: 0 0 6px; }
+.joy-grade { display: grid; grid-template-columns: 1fr; gap: 10px; }
+.joy-desenho { max-width: 480px; width: 100%; margin: 0 auto; text-align: center; }
+.joy-desenho .check { justify-content: center; }
+.joy-vel { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+.joy-vel b { float: right; color: var(--acento, #d4a72c); }
+@media (max-width: 760px) { .joy-vel { grid-template-columns: 1fr; } }
+.joy-svg { width: 100%; height: auto; display: block; }
+.joy-svg .corpo { fill: #2a2f38; stroke: #4a515e; stroke-width: 2; }
+.joy-svg .jb circle, .joy-svg .jb rect { fill: #3a404c; stroke: #5b6372; stroke-width: 2; cursor: pointer; transition: fill .08s; }
+.joy-svg .jb circle[style] { stroke: var(--cor); }
+.joy-svg .jb text { fill: #e8eaee; font: 700 15px "Segoe UI", sans-serif; text-anchor: middle; pointer-events: none; }
+.joy-svg .jb text.leg, .joy-svg text.leg { font: 11px "Segoe UI", sans-serif; fill: #9aa3b2; text-anchor: middle; }
+.joy-svg .jb.on circle, .joy-svg .jb.on rect { fill: #e0463c; stroke: #fff; }
+.joy-svg .jb.on circle[style] { fill: var(--cor); }
+.joy-svg .gat .enche { fill: #e0463c; stroke: none; pointer-events: none; }
+.joy-svg .gat.on rect:first-child { fill: #3a404c; }
+.joy-svg .alav .pino { fill: #5b6372; stroke: #8a93a3; }
+.joy-svg .alav.mexendo .pino { fill: #e8b923; stroke: #fff; }
+.joy-svg .alav.on > circle:first-child { fill: #e0463c; }
+.joy-cfg .campo { margin-bottom: 6px; }
+.joy-linha { display: grid; grid-template-columns: 230px minmax(0, 1fr); gap: 6px; align-items: center; padding: 4px 6px; border-radius: 8px; margin-bottom: 2px; transition: background .08s; }
+.joy-linha select + select, .joy-linha select + span { grid-column: 2; }
+.joy-linha.on { background: rgba(224,70,60,.28); }
+.joy-linha.piscar { outline: 2px solid var(--acento, #d4a72c); }
+.joy-linha .jb-nome i { display: inline-block; min-width: 34px; font-style: normal; font-weight: 700; color: var(--acento, #d4a72c); }
+.joy-botoes { margin: 6px 0 8px; border-top: 1px solid rgba(128,128,128,.25); padding-top: 6px; }
+@media (max-width: 760px) { .joy-linha { grid-template-columns: 1fr; } .joy-linha select + select, .joy-linha select + span { grid-column: 1; } }
+.joy-perfis { display: flex; flex-wrap: wrap; gap: 6px; align-items: flex-end; padding: 8px 10px; margin-bottom: 8px; border-radius: 10px; background: rgba(128,128,128,.12); }
+.joy-perfis .campo { flex: 1 1 220px; margin: 0; }
+.joy-um { margin: 4px 0; }
+.joy-poscams { grid-column: 2; display: grid; gap: 4px; }
+.joy-poscam { display: grid; grid-template-columns: minmax(90px, 0.8fr) minmax(0, 1.2fr); gap: 6px; align-items: center; font-size: 13px; }
+.joy-poscam > span:first-child { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+@media (max-width: 760px) { .joy-poscams { grid-column: 1; } }

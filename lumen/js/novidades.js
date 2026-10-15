@@ -5,6 +5,12 @@
  * A versão mais nova fica em cima. Ao gerar uma versão nova, acrescente a entrada dela aqui.
  */
 const NOVIDADES = [
+  { versao: '1.6.9', data: '2026-10-15', itens: [
+    '🎮 Joysticks (Ferramentas → Ajustes → 🎮 Joysticks): até dois controles USB tipo Xbox (como o GameSir), lidos direto do Windows — funcionam com o MiguelAngelus minimizado ou atrás do OBS. O desenho do controle mostra o botão apertado e cada botão tem uma lista de funções: posições (da câmera do joystick ou de uma câmera escolhida), controlar uma câmera (um controle só para as duas), zoom, foco, brilho, contraluz, velocidades, câmera no telão, próximo slide, Mudo, Altar, Pix…',
+    '🎮 Padrão pronto: alavanca esquerda move (quanto mais empurra, mais rápido); alavanca direita e setas movem devagar, para o ajuste fino; gatilhos dão zoom proporcional; A/B/X/Y chamam as posições 1 a 4; Back troca a câmera; Start passa o slide; o clique das alavancas muda a velocidade.',
+    '🎮 Um botão, uma posição para cada câmera: em "Posição da câmera do joystick", escolha pelo nome a posição de cada câmera (ex.: A → Central: Altar · Lateral: Músicos). O botão leva a câmera que está sendo controlada à posição dela.',
+    '🎮 Perfis dos joysticks (ex.: "Missa das crianças", com um botão para a posição do teatrinho; "Adoração"): guardam os dois controles com um nome e vão para os outros computadores pela nuvem.',
+  ] },
   { versao: '1.6.8', data: '2026-10-12', itens: [
     '🔗 Links no celular (Ajustes → 📱 Controle pelo celular → Links): botões que abrem outra página direto do MiguelAngelus no celular — na aba 🎸 Cifras dos músicos e na aba 🎬 Mídia do controle. Já vem com a 🎚️ Mesa de som (http://192.168.0.20, a mesa no roteador do MiguelAngelus). Cada link tem nome, endereço, ícone (emoji ou uma imagem sua) e para quem aparece (todos, só músicos ou só o controle). Vão para os outros computadores pela nuvem.',
     '🎨 Manual da aparência dos slides (Ajuda): guia com fotos para os operadores — as 4 camadas (comunidade, tema, perfil, roteiro), o seu perfil, os ajustes em slides específicos na preparação e os combinados da equipe.',

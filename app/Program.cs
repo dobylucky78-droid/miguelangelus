@@ -274,8 +274,10 @@ namespace MiguelAngelus
                 catch (Exception ex) { Program.Erro("iniciar o MiguelAngelus", ex); Close(); }
             };
             relogioNdi.Tick += (s, e) => InformarNdi();
-            FormClosed += (s, e) => { relogioNdi.Stop(); ndi?.Dispose(); celular?.Dispose(); };
+            FormClosed += (s, e) => { relogioNdi.Stop(); ndi?.Dispose(); celular?.Dispose(); joystick?.Dispose(); };
         }
+
+        LeitorJoystick joystick;     // ligado quando a página pede ({tipo:'joyLigar'}), depois de carregar
 
         // Mensagens da página: {tipo:'ndi', ligar, nome} e {tipo:'faixa', linhas, negrito, fonte, tamanho, opacidade, corTexto}
         void AoReceberMensagem(object sender, CoreWebView2WebMessageReceivedEventArgs e)
@@ -286,6 +288,8 @@ namespace MiguelAngelus
                 var tipo = m.TryGetValue("tipo", out var t) ? t as string : null;
                 if (tipo == "ndi") LigarNdi(m.TryGetValue("ligar", out var l) && l is bool b && b, m.TryGetValue("nome", out var n) ? n as string : null);
                 else if (tipo == "faixa") ndi?.Desenhar(LerFaixa(m));
+                else if (tipo == "joyLigar" && joystick == null)
+                    joystick = new LeitorJoystick(o => { try { Web.CoreWebView2?.PostWebMessageAsJson(json.Serialize(o)); } catch { } });
                 else if (tipo == "ndiPix") ndi?.DefinirPix(m.TryGetValue("on", out var po) && po is bool pb && pb,
                     m.TryGetValue("qr", out var pq) ? pq as string : null, m.TryGetValue("faixa", out var pf) ? pf as string : null,
                     m.TryGetValue("qrTam", out var qt) ? Convert.ToDouble(qt, System.Globalization.CultureInfo.InvariantCulture) : 36,

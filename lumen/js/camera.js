@@ -115,6 +115,7 @@ function mostrarCamera(c, it) {
   if (ehCameraNdi(c)) garantirNdiWebcam(true);
   Camera.ativa = c.id;
   if (typeof PTZ !== 'undefined') PTZ.alvo = null;   // o joystick volta a seguir a câmera do telão
+  if (typeof JOY !== 'undefined') JOY.est.forEach(e => { e.alvo = null; });
   S.live = { slide: null, preto: false, item: it || null, idx: -1 };
   enviar({ tipo: 'slide', slide: null });
   enviar({ tipo: 'preto', on: false });
@@ -160,13 +161,14 @@ function renderCameraAtiva() {
   const ativa = cams.find(c => c.id === Camera.ativa);
   const fechado = Recolher.fechado('quadro:cameras', false);
   el.classList.toggle('no-ar', !!ativa);
-  // com joystick conectado, marca 🎮 a câmera que ele está controlando (Select troca)
-  const joy = typeof PTZ !== 'undefined' && PTZ.pad ? cameraPtzAlvo()?.id : null;
+  // com joystick conectado, marca 🎮 (1 ou 2) a câmera que cada um está controlando (Back troca)
+  const joys = typeof JOY !== 'undefined' ? JOY.pads.map((p, n) => p ? cameraDoJoy(n)?.id : null) : [];
+  const marcaJoy = id => joys.map((j, n) => j === id ? n + 1 : 0).filter(Boolean);
   el.innerHTML = `<button class="toc-tit cam-cab" data-camativa="recolher" title="Recolher / expandir">
       <span class="seta">${fechado ? '▸' : '▾'}</span>📷 Câmeras${ativa ? ` · <span class="cam-noar">● ${esc(ativa.nome)} no telão</span>` : ''}</button>
     ${fechado ? '' : `<div class="cam-lista">${cams.map(c => `
       <button class="cam-bt ${c.id === Camera.ativa ? 'ativa' : ''}" data-camquadro="${c.id}" title="${c.id === Camera.ativa ? 'No telão' : 'Mostrar no telão'}">
-        ${c.id === Camera.ativa ? '●' : '📷'} ${esc(c.nome)}${c.id === joy ? '<span class="cam-joy" title="O joystick está controlando esta câmera (Select troca)">🎮</span>' : ''}</button>`).join('')}</div>
+        ${c.id === Camera.ativa ? '●' : '📷'} ${esc(c.nome)}${marcaJoy(c.id).length ? `<span class="cam-joy" title="Joystick ${marcaJoy(c.id).join(' e ')} controlando esta câmera (Back troca; Ajustes → Joysticks)">🎮${joys.filter(Boolean).length > 1 ? marcaJoy(c.id).join('') : ''}</span>` : ''}</button>`).join('')}</div>
     ${(() => {
       // posições de cada câmera recolhem (notebook de 14"): com uma câmera só, começam abertas; com mais, fechadas
       const comPos = cams.filter(c => c.ptz?.ip && c.ptzPosicoes?.length);
