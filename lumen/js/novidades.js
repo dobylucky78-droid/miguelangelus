@@ -5,6 +5,10 @@
  * A versão mais nova fica em cima. Ao gerar uma versão nova, acrescente a entrada dela aqui.
  */
 const NOVIDADES = [
+  { versao: '1.6.13', data: '2026-10-16', itens: [
+    '🎮 Joystick: a câmera para na hora em que você solta a alavanca. Antes, soltando rápido (menos de 1/10 de segundo depois do último movimento), o "parar" podia se perder e a câmera continuava andando. Agora o "parar" vai na hora e é repetido logo depois, por segurança.',
+    '🎮 Dica para o controle GameSir: se a câmera anda sozinha devagar com a alavanca solta, aumente a "Folga das alavancas" para 0,40 em Ajustes → 🎮 Joysticks (essa alavanca não volta bem ao centro).',
+  ] },
   { versao: '1.6.12', data: '2026-10-15', itens: [
     '📄 Folheto do Presidente (o do padre, "PE"): agora é lido direito. A fala do padre, em letra grande, não vira mais um monte de títulos — o roteiro sai com as mesmas partes da versão Celular (antes saíam 55 a 99 pedaços).',
     '📄 Folhetos feitos no Word (como o da São José Operário): títulos sem número ("Canto de Entrada", "Saudação") e "REFRÃO" sem dois-pontos são reconhecidos; as duas colunas não se misturam mais.',

@@ -235,10 +235,23 @@ function aplicarPad(n, pad) {
   }
   const agora = performance.now();
   const chave = mov ? `${Math.sign(mov.x)}:${Math.sign(mov.y)}:${Math.round(mov.forca * 8)}` : '';
-  if (chave !== (est.mov || '') && agora - (est.movEm || 0) > 110) {
-    est.movEm = agora;
-    if (mov) ptzMover(c, Math.sign(mov.x), Math.sign(mov.y), mov.forca); else ptzParar(c);
-    est.mov = chave;
+  clearTimeout(est.movDepois);
+  if (chave !== (est.mov || '')) {
+    if (!mov) {
+      // soltou: "parar" vai NA HORA (sem esperar o intervalo) e de novo logo depois, caso a câmera ainda estivesse
+      // ocupada com o comando anterior. (O Windows só avisa quando o controle MUDA: um "parar" adiado se perdia
+      // e a câmera continuava andando com a alavanca já solta.)
+      ptzParar(c); est.mov = ''; est.movEm = agora;
+      clearTimeout(est.pararDeNovo);
+      est.pararDeNovo = setTimeout(() => { if (!JOY.est[n].mov && JOY.est[n].cam === c.id) ptzParar(c); }, 250);
+    } else if (agora - (est.movEm || 0) > 110) {
+      est.movEm = agora;
+      ptzMover(c, Math.sign(mov.x), Math.sign(mov.y), mov.forca);
+      est.mov = chave;
+    } else {
+      // mudou rápido demais: manda a mudança assim que o intervalo passar (sem esperar outro aviso do controle)
+      est.movDepois = setTimeout(() => { if (JOY.pads[n]) aplicarPad(n, JOY.pads[n]); }, 115 - (agora - (est.movEm || 0)));
+    }
   }
   // zoom: botões/gatilhos com Zoom + / − (gatilho: quanto mais aperta, mais rápido) ou alavanca no modo Zoom
   if (!zoomDir) pad.botoes.forEach((b, i) => {
