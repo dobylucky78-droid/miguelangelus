@@ -296,6 +296,19 @@ function povoDaLinha(l, povo) {
   return /^\s*(—|R\.)/.test(l) ? true : povo;
 }
 
+// Partes fixas da Missa: a letra (P./T.) só vem onde a fala muda; o slide que continua a fala do povo, sem letra no
+// começo, segue em negrito (sem repetir o "T.")
+function continuarFalas(textos) {
+  let povo = false;
+  return textos.map(t => {
+    let marcou = false;
+    return t.split('\n').map(l => {
+      if (RX_QUEM.test(l) || /^\s*(—|R\.)/.test(l)) { marcou = true; povo = povoDaLinha(l, povo); return l; }
+      return !marcou && povo && l.trim() ? `<b>${l}</b>` : l;
+    }).join('\n');
+  });
+}
+
 function limitarSlide(s) {
   const L = Math.max(1, +S.config.linhasPorSlide || 4);
   const C = Math.max(10, +S.config.caracteresPorLinha || 40);
@@ -432,13 +445,25 @@ function nomeDaSecao(it) {
   return null;
 }
 
+// Item que continua o anterior não ganha slide de título: o marcado (semSecao) e o Pai-Nosso logo depois do
+// "Rito da Comunhão" do folheto (que termina chamando o Pai-Nosso) e o "Eis o Cordeiro" logo depois do Cordeiro
+function continuaAnterior(item, itens) {
+  if (item.semSecao) return true;
+  if (item.tipo !== 'ordinario') return false;
+  const ant = itens[itens.indexOf(item) - 1];
+  if (!ant) return false;
+  if (item.parte === 'pai-nosso') return (ant.tipo === 'texto' && /rito da comunhao/.test(semAcento(ant.titulo || ''))) || (ant.tipo === 'ordinario' && ant.parte === 'rito-comunhao');
+  if (item.parte === 'eis-cordeiro') return (ant.tipo === 'canto' && ant.momento === 'Cordeiro') || (ant.tipo === 'ordinario' && ant.parte === 'cordeiro');   // emenda no Cordeiro
+  return false;
+}
+
 function slideDaSecao(item) {
-  if (!S.config.slideSecao || !S.roteiro?.itens.includes(item)) return null;
+  if (!S.config.slideSecao || !S.roteiro?.itens.includes(item) || continuaAnterior(item, S.roteiro.itens)) return null;
   const nome = nomeDaSecao(item);
   if (!nome || !nome[0]) return null;
   let titulo = tirarMarcas(nome[0]);
   if (S.config.numerarSecoes) {
-    const n = S.roteiro.itens.slice(0, S.roteiro.itens.indexOf(item) + 1).filter(i => nomeDaSecao(i)).length;
+    const n = S.roteiro.itens.slice(0, S.roteiro.itens.indexOf(item) + 1).filter(i => nomeDaSecao(i) && !continuaAnterior(i, S.roteiro.itens)).length;
     titulo = `${n}. ${titulo}`;
   }
   return { texto: `<gg>${titulo}</gg>` + (nome[1] ? `\n${tirarMarcas(nome[1])}` : ''), rodape: '', secao: true };
@@ -530,7 +555,7 @@ function gerarSlidesBase(item) {
     }
     case 'ordinario': {
       const p = Ordinario.parte(item.parte);
-      return p ? p.slides.map(t => ({ texto: t, rodape: p.titulo })) : [];
+      return p ? continuarFalas(p.slides).map(t => ({ texto: t, rodape: p.titulo })) : [];
     }
     case 'oracao': {
       const o = oracaoDe(item);
@@ -596,6 +621,7 @@ function abrirItem(item, rIdx = -1, idx = -1) {
   if (S.modoEuc) mostrarEucaristia(false);  // saindo do catálogo de orações eucarísticas
   if (item !== S.atual?.item) { Apres.editando = false; Apres.sel = -1; }   // abriu outro item (ou pelo roteiro): clique volta a projetar
   S.atual = { item, slides: gerarSlides(item), idx, rIdx };
+  if (rIdx >= 0) S.ultimoDoRoteiro = item;      // o que vier da aba Orações/Cantos entra depois dele (adicionarAoRoteiro)
   renderCabecalho();
   renderSlides();
   renderRoteiroLista();
@@ -1161,7 +1187,9 @@ function trocarRoteiro(r) {
 
 function adicionarAoRoteiro(item) {
   const itens = S.roteiro.itens;
-  const pos = S.atual && S.atual.rIdx >= 0 ? S.atual.rIdx + 1 : itens.length;
+  // depois do item aberto no roteiro; aberto pela aba Orações/Cantos: depois do último item do roteiro que estava aberto
+  const ult = itens.indexOf(S.ultimoDoRoteiro);
+  const pos = S.atual && S.atual.rIdx >= 0 ? S.atual.rIdx + 1 : ult >= 0 ? ult + 1 : itens.length;
   itens.splice(pos, 0, item);
   salvarRoteiro();
   return pos;
@@ -1723,13 +1751,40 @@ function separarCordeiro(itens) {
     return [...itens.slice(0, k), ...novos, ...itens.slice(k + 1)];
   }
   let p = itens.findIndex(i => i.tipo === 'texto' && /rito da comunhao/.test(semAcento(i.titulo || '')));
-  if (p >= 0) p++;
+  if (p >= 0) { p++; while (itens[p]?.tipo === 'ordinario' && itens[p].parte === 'pai-nosso') p++; }   // depois do Pai-Nosso e Rito da Paz
   else p = itens.findIndex(i => i.tipo === 'canto' && i.momento === 'Comunhão');
   if (p < 0) return null;
-  const novo = itemRezado(null, 'Cordeiro', Ordinario.parte('cordeiro').slides.join('\n\n'));
+  const novo = itemRezado(null, 'Cordeiro', Ordinario.parte('cordeiro').slides.map(s => RX_QUEM.test(s) ? s : 'T. ' + s).join('\n\n'));
   return [...itens.slice(0, p), novo, ...itens.slice(p)];
 }
 
+// O folheto da Arquidiocese termina o Rito da Comunhão com "T. Pai nosso..." (às vezes "(O Presidente continua...)"):
+// sai essa linha e entra, logo depois, o "Pai-Nosso e Rito da Paz" das partes fixas — sem o slide de título, porque é a
+// continuação do rito (1.6.14). Folheto que traz o Pai-Nosso inteiro fica como está.
+const RX_PAI_NOSSO_CURTO = /^\s*(?:T\.\s*|—\s*)?Pai[- ]nosso\s*[.…]*\s*(?:\([^)]*\)\s*[.…]*)?\s*$/i;
+function separarPaiNosso(itens) {
+  if (itens.some(i => i.tipo === 'ordinario' && i.parte === 'pai-nosso')) return null;
+  const k = itens.findIndex(i => i.tipo === 'texto' && /rito da comunhao/.test(semAcento(i.titulo || '')) && (i.texto || '').split('\n').some(l => RX_PAI_NOSSO_CURTO.test(l)));
+  if (k < 0) return null;
+  const it = itens[k], linhas = it.texto.split('\n');
+  const a = linhas.findIndex(l => RX_PAI_NOSSO_CURTO.test(l));
+  const antes = linhas.slice(0, a).join('\n').trim(), depois = linhas.slice(a + 1).join('\n').trim();
+  const novos = [];
+  if (antes) novos.push({ ...it, texto: antes });
+  novos.push({ id: uid(), tipo: 'ordinario', parte: 'pai-nosso', semSecao: true });
+  if (depois) novos.push({ ...it, id: uid(), texto: depois });
+  return [...itens.slice(0, k), ...novos, ...itens.slice(k + 1)];
+}
+
+// Depois do Cordeiro: o "Eis o Cordeiro de Deus" (Provai e vede… / não sou digno… / Que o Corpo e o Sangue…) das partes
+// fixas, sem slide de título (1.6.14). Só quando o folheto ainda não traz o "não sou digno".
+function separarEisCordeiro(itens) {
+  if (itens.some(i => i.tipo === 'ordinario' && i.parte === 'eis-cordeiro')) return null;
+  if (itens.some(i => /n[aã]o sou digno/i.test([i.texto, i.textoRezado, i.textoDepois].join(' ')))) return null;
+  const k = itens.findIndex(i => i.tipo === 'canto' && i.momento === 'Cordeiro');
+  if (k < 0) return null;
+  return [...itens.slice(0, k + 1), { id: uid(), tipo: 'ordinario', parte: 'eis-cordeiro', semSecao: true }, ...itens.slice(k + 1)];
+}
 // A aclamação do folheto (refrão + versículo) vira item de canto "rezado" com o mesmo refrão e versículo:
 // assim dá para trocar por um canto de aclamação, como no Santo
 function aclamacaoRezada(it) {
@@ -1746,7 +1801,7 @@ function separarAclamacao(itens) {
 
 function separarCantaveis(itens) {
   let r = itens, mudou = false;
-  for (const f of [separarPenitencial, separarGloria, separarAclamacao, separarSanto, separarCordeiro]) {
+  for (const f of [separarPenitencial, separarGloria, separarAclamacao, separarSanto, separarPaiNosso, separarCordeiro, separarEisCordeiro]) {
     const n = f(r);
     if (n) { r = n; mudou = true; }
   }
@@ -2570,7 +2625,7 @@ async function iniciar() {
   renderBiblia();
   renderCabecalho();
   renderEstadoProj();
-  $('#versaoApp').textContent = NO_APP ? 'Versão 1.6.13 · aplicativo para Windows' : 'Versão 1.6.13 · no navegador';
+  $('#versaoApp').textContent = NO_APP ? 'Versão 1.6.14 · aplicativo para Windows' : 'Versão 1.6.14 · no navegador';
   // pede armazenamento permanente (o navegador não apaga os dados para liberar espaço)
   try { navigator.storage?.persist?.(); } catch (_) {}
   enviarConfigTelao(); renderTemasRapidos();

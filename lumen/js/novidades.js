@@ -5,6 +5,15 @@
  * A versão mais nova fica em cima. Ao gerar uma versão nova, acrescente a entrada dela aqui.
  */
 const NOVIDADES = [
+  { versao: '1.6.14', data: '2026-10-16', itens: [
+    '✝ Todas as partes fixas da Missa agora mostram quem fala, como no folheto: P. (padre), T. (povo, em negrito) e L. (leitor). A letra só aparece onde a fala muda — o slide que continua a fala anterior não repete o "P." ou o "T." (a do povo continua em negrito). Se você tinha editado o texto de alguma parte, a sua versão continua valendo (use Restaurar para ficar com a nova).',
+    '✝ Partes fixas da Missa (aba Orações): nova "Oração da Coleta", logo depois do Glória, para as Missas da semana cujo folheto não traz a Coleta. Dá para editar o texto com duplo clique, como as outras partes, e a mudança vai pela nuvem.',
+    '📖 Liturgia do dia (Missas de semana): o roteiro montado com a Paulus agora traz a Oração da Coleta (depois do Senhor, tende piedade / Glória) e o Orai, irmãos (antes do Prefácio) e o convite ao Pai-Nosso ("Rito da Comunhão": Obedientes à palavra do Salvador… ousamos dizer:), com o Pai-Nosso emendado logo depois; as leituras e o Evangelho saem com L., P. e T.',
+    '✝ O Pai-Nosso (partes fixas da Missa) agora continua até o abraço da paz, com P. e T. como no folheto: Livrai-nos, Vosso é o reino, oração pela paz com o Amém, A paz do Senhor e o convite à saudação da paz — o que o folheto não traz entre o Pai-Nosso e o Cordeiro. Os modelos de roteiro já usam assim. Num roteiro antigo com "Pai-Nosso" seguido de "Saudação da Paz", pode tirar a Saudação da Paz (ela já está no fim do Pai-Nosso).',
+    '📄 Folheto da Arquidiocese: o "Rito da Comunhão" termina em "T. Pai nosso..." — agora, ao importar, essa linha sai e entra logo depois o Pai-Nosso e Rito da Paz completo, sem slide de título (é a continuação do rito), antes do Cordeiro. Vale também para os roteiros já importados. Folheto que traz o Pai-Nosso inteiro fica como está.',
+    '✝ "Eis o Cordeiro de Deus" com o texto novo do Missal e P./T.: Provai e vede como o Senhor é bom… / Senhor, eu não sou digno(a)… / Que o Corpo e o Sangue de Cristo nos guarde para a vida eterna. Amém. Ao importar o folheto, entra sozinho logo depois do Cordeiro, sem slide de título (se o folheto ainda não traz o "não sou digno").',
+    '➕ Adicionar algo aberto pela aba Orações ou Cantos agora entra logo depois do último item do roteiro em que você clicou (antes ia para o fim do roteiro). O Pai-Nosso posto logo depois do "Rito da Comunhão" também entra sem slide de título.',
+  ] },
   { versao: '1.6.13', data: '2026-10-16', itens: [
     '🎮 Joystick: a câmera para na hora em que você solta a alavanca. Antes, soltando rápido (menos de 1/10 de segundo depois do último movimento), o "parar" podia se perder e a câmera continuava andando. Agora o "parar" vai na hora e é repetido logo depois, por segurança.',
     '🎮 Dica para o controle GameSir: se a câmera anda sozinha devagar com a alavanca solta, aumente a "Folga das alavancas" para 0,40 em Ajustes → 🎮 Joysticks (essa alavanca não volta bem ao centro).',

@@ -7,7 +7,7 @@
 ;   nem ao instalar uma versão nova por cima.
 
 #define Nome "MiguelAngelus"
-#define Versao "1.6.13"
+#define Versao "1.6.14"
 #define Editor "Paróquia São José Operário — PASCOM"
 
 [Setup]

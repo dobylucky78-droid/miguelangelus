@@ -97,8 +97,9 @@ function itensDaLiturgia(r, domingo, comOE2) {
   // leituras: troca os espaços do modelo pelo texto da liturgia
   const slotLeitura = nome => achar(i => i.tipo === 'leitura' && (nome === 'Evangelho' ? i.evangelho : i.titulo?.startsWith(nome === 'Primeira Leitura' ? '1ª' : '2ª')));
   for (const l of r.leituras) {
-    const fechamento = l.evangelho ? 'Palavra da Salvação.\n— Glória a vós, Senhor.' : 'Palavra do Senhor.\n— Graças a Deus.';
-    const abertura = l.evangelho ? `O Senhor esteja convosco.\n— Ele está no meio de nós.\n\n${l.intro}.\n— Glória a vós, Senhor.` : l.intro + '.';
+    // quem fala, como nas partes fixas (1.6.14): L. leitor, P. padre, T. povo
+    const fechamento = l.evangelho ? 'P. Palavra da Salvação.\nT. Glória a vós, Senhor.' : 'L. Palavra do Senhor.\nT. Graças a Deus.';
+    const abertura = l.evangelho ? `P. O Senhor esteja convosco.\nT. Ele está no meio de nós.\n\nP. ${l.intro}.\nT. Glória a vós, Senhor.` : 'L. ' + l.intro + '.';
     const item = { id: uid(), tipo: 'texto', titulo: `${l.nome} (${l.ref})`, texto: `${abertura}\n\n${l.texto}\n\n${fechamento}` };
     const s = slotLeitura(l.nome);
     if (s >= 0) itens[s] = item; else itens.splice(achar(i => i.tipo === 'salmo') + (l.nome === 'Primeira Leitura' ? 0 : 1), 0, item);
