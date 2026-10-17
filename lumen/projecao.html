@@ -15,6 +15,11 @@
   #canto-sd { top: 2.5vh; right: 1.8vw; }
   #canto-ie { bottom: 0; left: 1vw; object-position: left bottom; }
   #canto-id { bottom: 0; right: 1vw; object-position: right bottom; }
+  /* Terço (1.6.15): imagens nos cantos de baixo (no lugar das da comunidade) — o texto desvia delas como das outras */
+  #terco-ie { bottom: 1.5vh; left: 1.5vw; height: 34vh; max-width: 22vw; object-position: left bottom; }
+  #terco-id { bottom: 1.5vh; right: 1.5vw; height: 36vh; max-width: 22vw; object-position: right bottom; }
+  body.terco #canto-ie, body.terco #canto-id { display: none !important; }
+  body.terco #texto .contas { display: none; }     /* a dezena já aparece no desenho do terço */
   #area { position: fixed; inset: 5vh 5vw 12vh; display: flex; align-items: center; justify-content: center; }
   /* Slide com imagem (item "Imagem + texto") */
   /* Câmera ao vivo (NDI Webcam / webcam): tela cheia; as imagens dos cantos continuam por cima */
@@ -148,6 +153,9 @@
 <img id="canto-sd" class="canto" alt="">
 <img id="canto-ie" class="canto" alt="">
 <img id="canto-id" class="canto" alt="">
+<!-- terço (1.6.15): Nossa Senhora à esquerda e o terço que se preenche à direita, no lugar das imagens de baixo -->
+<img id="terco-ie" class="canto" alt="">
+<img id="terco-id" class="canto" alt="">
 <img id="imgSlide" alt="">
 <div id="veu"></div>
 <div id="avisosTela"></div>
@@ -250,6 +258,8 @@ function acabamento(html) {
 // estreitada pelos cantos: a letra diminui na mesma proporção da largura perdida (senão sobram poucas palavras por linha e
 // o justificado abre buracos); na largura normal, nada muda.
 function tamanhoLetra(larg, alt, soTexto) {
+  // slide "largo" (Ave-Maria do terço, 1.6.15): letra para ~6 linhas na altura da área, podendo passar do tamanho máximo
+  if (slide?.largo) return Math.min(alt / (6 * 1.22), window.innerHeight * 0.13);
   const maxPx = (+cfg.fonteMax || 9) * window.innerHeight / 100;
   if (!cfg.quebraAuto) return maxPx;
   const L = +cfg.linhasPorSlide || 4;
@@ -328,7 +338,7 @@ function ajustar() {
   if (cfg.quebraAuto) {
     const C = +cfg.caracteresPorLinha || 40;
     f = tamanhoLetra(area.clientWidth, area.clientHeight, !slide?.img || slide.layout === 'fundo' || document.body.classList.contains('camera'));
-    texto.style.maxWidth = `min(100%, ${(C * 0.55).toFixed(1)}em)`;
+    texto.style.maxWidth = slide?.largo ? '100%' : `min(100%, ${(C * 0.55).toFixed(1)}em)`;   // largo: a área inteira
   } else {
     texto.style.maxWidth = '100%';
   }
@@ -468,8 +478,48 @@ function aplicarFundo() {
   document.body.classList.toggle('fundo-proprio', proprio);
 }
 
-function desenhar() {
-  aplicarFundo();
+// ---------- Terço nos cantos (1.6.15) ----------
+// Desenho do terço (SVG): a cruz, o Pai-Nosso e as 3 Ave-Marias no pingente, a medalha, e as 5 dezenas em volta.
+// Contas já rezadas cheias (dourado), a da vez acesa (cor da letra de quem fala), as que faltam vazias.
+function svgTerco(feitas, atual) {
+  const ouro = '#e2b84a', vez = cfg.corRotulo || '#ff5a4f', linha = cfg.corTexto || '#ffffff';
+  const conta = (i, x, y, r) => i < feitas && i !== atual
+    ? `<circle cx="${x}" cy="${y}" r="${r}" fill="${ouro}" stroke="${ouro}" stroke-width="1"/>`
+    : i === atual
+      ? `<circle cx="${x}" cy="${y}" r="${r + 5}" fill="${vez}" opacity=".35"/><circle cx="${x}" cy="${y}" r="${r + 1.5}" fill="${vez}"/>`
+      : `<circle cx="${x}" cy="${y}" r="${r}" fill="none" stroke="${linha}" stroke-opacity=".6" stroke-width="1.6"/>`;
+  const cx = 100, cy = 92, R = 72, sm = 4.6, gr = 7;
+  let h = `<circle cx="${cx}" cy="${cy}" r="${R}" fill="none" stroke="${linha}" stroke-opacity=".3" stroke-width="1.2"/>
+    <line x1="${cx}" y1="${cy + R}" x2="${cx}" y2="262" stroke="${linha}" stroke-opacity=".3" stroke-width="1.2"/>`;
+  // pingente: 0 cruz (embaixo), 1 Pai-Nosso, 2–4 Ave-Marias, 5 Pai-Nosso do 1º mistério; a medalha no encontro
+  const cor0 = 0 < feitas && atual !== 0 ? ouro : atual === 0 ? vez : 'none';
+  h += `<g transform="translate(${cx} 276)"><path d="M-3 -18 h6 v8 h8 v6 h-8 v20 h-6 v-20 h-8 v-6 h8 z" fill="${cor0}" stroke="${atual === 0 ? vez : cor0 === 'none' ? linha : ouro}" stroke-opacity="${cor0 === 'none' ? .7 : 1}" stroke-width="1.6"/></g>`;
+  h += conta(1, cx, 240, gr) + conta(2, cx, 225, sm) + conta(3, cx, 213, sm) + conta(4, cx, 201, sm) + conta(5, cx, 184, gr);
+  h += `<ellipse cx="${cx}" cy="${cy + R}" rx="8" ry="10" fill="${feitas >= 6 ? ouro : 'none'}" stroke="${feitas >= 6 ? ouro : linha}" stroke-opacity=".8" stroke-width="1.6"/>`;
+  // em volta: 54 lugares (5 dezenas + 4 Pai-Nossos entre elas), deixando o vão da medalha
+  const passo = 360 / 57;
+  for (let j = 0; j < 54; j++) {
+    const i = 6 + j, ang = (90 - (j + 1.5) * passo) * Math.PI / 180;
+    const grande = (j + 1) % 11 === 0;                           // 16, 27, 38, 49: Pai-Nosso entre as dezenas
+    h += conta(i, (cx + R * Math.cos(ang)).toFixed(1), (cy + R * Math.sin(ang)).toFixed(1), grande ? gr : sm);
+  }
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="200" height="300" viewBox="0 0 200 300">${h}</svg>`;
+}
+
+function desenharTerco() {
+  const t = !!slide?.terco && cfg.tercoCantos !== false && !document.body.classList.contains('camera') && !MINI;
+  document.body.classList.toggle('terco', t);
+  const e = $('terco-ie'), d = $('terco-id');
+  e.classList.toggle('on', t); d.classList.toggle('on', t);
+  if (!t) { e.removeAttribute('src'); d.removeAttribute('src'); return; }
+  const img = /^data:image\//.test(cfg.tercoImagem || '') ? cfg.tercoImagem : 'img/nossa-senhora-terco.svg';
+  if (e.getAttribute('src') !== img) e.src = img;
+  const url = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svgTerco(+slide.terco.feitas || 0, slide.terco.atual ?? -1));
+  if (d.getAttribute('src') !== url) d.src = url;
+}
+
+function desenhar() {  aplicarFundo();
+  desenharTerco();
   desenharImagem();
   desenharAvisos();
   htmlAtual = slide && !slide.avisos ? htmlSlide(slide) : '';

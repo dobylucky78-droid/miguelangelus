@@ -124,12 +124,18 @@ function renderCardsRoteiros() {
       <button data-recolher-tudo="1" title="Recolher todos os dias">▸ Recolher tudo</button>
       <button data-recolher-tudo="0" title="Expandir todos os dias">▾ Expandir tudo</button></div>
     ${chips}
-    <div class="cards-grade">
-      <button class="card-novo" data-card-novo><span>＋</span>Novo roteiro</button>
-      <button class="card-novo" data-card-folheto><span>📄</span>Do folheto (PDF, Word, TXT)</button>
-      <button class="card-novo" data-card-agenda><span>📅</span>Pela Agenda</button>
-      <button class="card-novo" data-card-terco><span>📿</span>Terço</button>
-    </div>
+    ${(() => {
+      // (1.6.15) criar roteiro: recolhe como as outras seções (começa recolhido — no notebook os cartões altos empurravam
+      // os roteiros para baixo); aberto, é uma faixa baixa de botões
+      const f = fechado('sec:Criar', true);
+      return `<button class="cards-sec" data-recolher="sec:Criar" data-padrao="1">${seta(f)}➕ Criar roteiro</button>
+        ${f ? '' : `<div class="cards-criar">
+          <button class="card-novo" data-card-novo><span>＋</span>Novo roteiro</button>
+          <button class="card-novo" data-card-folheto><span>📄</span>Do folheto (PDF, Word, TXT)</button>
+          <button class="card-novo" data-card-agenda><span>📅</span>Pela Agenda</button>
+          <button class="card-novo" data-card-terco><span>📿</span>Terço</button>
+        </div>`}`;
+    })()}
     ${secao('Próximas', proximas)}${secao('Sem data', semData)}${secao('Anteriores', anteriores, true)}
     ${!lista.length && (termo || capela) ? `<p class="vazio">Nenhum roteiro${capela ? ' desta comunidade' : ''} encontrado.</p>` : ''}`;
 }

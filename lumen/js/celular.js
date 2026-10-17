@@ -233,8 +233,11 @@ function renderCelular() {
       <span class="sutil pequeno">${r.internet ? 'com internet' : 'só celulares'}</span>${r.bloqueada ? ' ⚠' : ''}</button>`).join('')}</div>` : ''}
     <div class="cel-redes">${cartao(rede)}</div>
     <div class="cel-txt">
-      <p><b>1.</b> No celular, conecte num destes Wi-Fi${redes.some(r => !r.internet) ? ' — de preferência no do <b>roteador do MiguelAngelus</b> (📶): ele não tem internet; se o celular perguntar, toque em <b>Manter conexão</b> (o resto do celular segue pelo 4G)' : ''}.</p>
+      <p><b>1.</b> No celular, conecte num destes Wi-Fi${redes.some(r => !r.internet) ? ' — de preferência no do <b>roteador do MiguelAngelus</b> (📶): ele não tem internet; se o celular perguntar, toque em <b>Manter conexão</b>' : ''}.</p>
       <p><b>2.</b> ${redes.length > 1 ? 'Escolha acima <b>a rede em que o celular está</b> e aponte' : 'Aponte'} a câmera do celular para o QR code (ou digite o endereço no navegador).</p>
+      ${redes.some(r => !r.internet) ? `<p class="aviso-cel">📵 <b>Android não abriu a página?</b> Ele está mandando tudo pelos dados móveis (a rede do MiguelAngelus não tem
+        internet). <b>Desligue os dados móveis</b> — ou, em Configurações → Wi-Fi → Avançado, desligue <b>"Alternar para dados móveis"</b>
+        ("Troca inteligente de rede" na Samsung, "Wi-Fi+" na Huawei).</p>` : ''}
       <p>Código: <span class="cel-cod">${esc(i.codigo.split('').join(' '))}</span>
         <button type="button" data-cel-atualizar title="Ler as redes do computador de novo">↻ Redes</button></p>
       <p class="sutil pequeno">🎸 <b>Músicos</b>: o mesmo QR; no celular, escolham <b>Músico</b> — veem só as cifras dos cantos, acompanhando o telão.

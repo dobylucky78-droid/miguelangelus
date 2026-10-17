@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="200" height="300" viewBox="0 0 200 300">
+  <!-- Nossa Senhora do Rosário, estilizada (desenho do MiguelAngelus, uso livre): manto azul, coroa de 12 estrelas e o terço nas mãos -->
+  <defs>
+    <radialGradient id="halo" cx="50%" cy="50%" r="50%">
+      <stop offset="0" stop-color="#fff6d6" stop-opacity=".95"/>
+      <stop offset=".6" stop-color="#f3d27a" stop-opacity=".55"/>
+      <stop offset="1" stop-color="#f3d27a" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="manto" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3f74c9"/>
+      <stop offset="1" stop-color="#1d3f86"/>
+    </linearGradient>
+    <linearGradient id="vestido" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fbf7ee"/>
+      <stop offset="1" stop-color="#e3dccb"/>
+    </linearGradient>
+    <path id="estrela" d="M0 -5 L1.5 -1.5 L5 -1.5 L2.2 0.8 L3.2 4.5 L0 2.3 L-3.2 4.5 L-2.2 0.8 L-5 -1.5 L-1.5 -1.5 Z"/>
+  </defs>
+  <!-- auréola e coroa de estrelas -->
+  <circle cx="100" cy="66" r="46" fill="url(#halo)"/>
+  <g fill="#f5cf52">
+    <use href="#estrela" x="52.1" y="63.8"/><use href="#estrela" x="56.0" y="52.4"/><use href="#estrela" x="62.7" y="42.3"/><use href="#estrela" x="71.6" y="34.1"/><use href="#estrela" x="82.2" y="28.3"/><use href="#estrela" x="94.0" y="25.4"/><use href="#estrela" x="106.0" y="25.4"/><use href="#estrela" x="117.8" y="28.3"/><use href="#estrela" x="128.4" y="34.1"/><use href="#estrela" x="137.3" y="42.3"/><use href="#estrela" x="144.0" y="52.4"/><use href="#estrela" x="147.9" y="63.8"/>
+  </g>
+  <!-- vestido -->
+  <path d="M100 96 C88 96 82 108 82 122 C80 168 74 236 68 292 L132 292 C126 236 120 168 118 122 C118 108 112 96 100 96 Z" fill="url(#vestido)"/>
+  <!-- manto: cobre a cabeça e desce aberto até os pés -->
+  <path d="M100 38 C77 38 64 57 64 80 C64 104 57 136 49 174 C40 222 35 258 30 292 L82 292 C84 250 86 200 88 160
+           C90 132 92 112 100 108 C108 112 110 132 112 160 C114 200 116 250 118 292 L170 292 C165 258 160 222 151 174
+           C143 136 136 104 136 80 C136 57 123 38 100 38 Z" fill="url(#manto)"/>
+  <!-- barra dourada do manto -->
+  <path d="M64 80 C64 104 57 136 49 174 C40 222 35 258 30 292" fill="none" stroke="#f0c75e" stroke-width="2.4"/>
+  <path d="M136 80 C136 104 143 136 151 174 C160 222 165 258 170 292" fill="none" stroke="#f0c75e" stroke-width="2.4"/>
+  <!-- véu branco em volta do rosto e rosto -->
+  <path d="M100 50 C84 50 77 62 77 76 C77 92 86 104 100 106 C114 104 123 92 123 76 C123 62 116 50 100 50 Z" fill="#fbf7ee"/>
+  <ellipse cx="100" cy="78" rx="15" ry="18.5" fill="#f2d3b7"/>
+  <!-- olhos baixos, em oração -->
+  <path d="M92 76 q3 2.2 6 0 M102 76 q3 2.2 6 0" fill="none" stroke="#7a5640" stroke-width="1.4" stroke-linecap="round"/>
+  <path d="M97 88 q3 1.6 6 0" fill="none" stroke="#b9776a" stroke-width="1.3" stroke-linecap="round"/>
+  <!-- mãos postas -->
+  <path d="M100 128 C95 136 93 148 95 156 L100 160 L105 156 C107 148 105 136 100 128 Z" fill="#f2d3b7" stroke="#d9b494" stroke-width=".8"/>
+  <!-- mangas do manto sobre os braços -->
+  <path d="M88 160 C78 150 74 136 80 124 C86 132 92 146 96 156 Z" fill="#2c5bab"/>
+  <path d="M112 160 C122 150 126 136 120 124 C114 132 108 146 104 156 Z" fill="#2c5bab"/>
+  <!-- o terço pendurado das mãos -->
+  <g fill="#f5cf52">
+    <circle cx="96" cy="164" r="2"/><circle cx="95" cy="170" r="2"/><circle cx="95.5" cy="176" r="2"/><circle cx="97" cy="182" r="2"/>
+    <circle cx="104" cy="164" r="2"/><circle cx="105" cy="170" r="2"/><circle cx="104.5" cy="176" r="2"/><circle cx="103" cy="182" r="2"/>
+    <circle cx="100" cy="188" r="2.6"/><circle cx="100" cy="195" r="2"/><circle cx="100" cy="201" r="2"/><circle cx="100" cy="207" r="2.6"/>
+    <path d="M98.6 212 h2.8 v4 h4 v2.8 h-4 v9 h-2.8 v-9 h-4 v-2.8 h4 z"/>
+  </g>
+  <!-- nuvem / lua aos pés -->
+  <path d="M40 292 C50 278 70 276 84 284 C92 274 108 274 116 284 C130 276 150 278 160 292 Z" fill="#ffffff" opacity=".85"/>
+</svg>

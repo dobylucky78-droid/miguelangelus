@@ -356,6 +356,10 @@ dialog::backdrop { background: rgba(0,0,0,.6); }
 .card-novo { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; min-height: 92px; border: 2px dashed var(--borda); background: transparent; border-radius: 10px; color: var(--sutil); font-size: 14px; }
 .card-novo span { font-size: 24px; }
 .card-novo:hover { border-color: var(--acento); color: var(--texto); }
+/* "➕ Criar roteiro" aberto: faixa baixa (ícone ao lado do texto) */
+.cards-criar { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 4px; }
+.cards-criar .card-novo { flex: 1 1 170px; flex-direction: row; min-height: 46px; gap: 8px; font-size: 13.5px; padding: 6px 10px; }
+.cards-criar .card-novo span { font-size: 18px; }
 
 .cards-dia { margin: 14px 0 8px; font-size: 14px; font-weight: 600; }
 /* cabeçalhos que recolhem/expandem */
@@ -423,9 +427,14 @@ big.m-g { font-size: 1.3em; } big.m-gg { font-size: 1.7em; } small.m-pq { font-s
 .ptz-sub { margin: 6px 0; }
 .ptz-sub > summary { cursor: pointer; font-size: 13px; font-weight: 600; padding: 2px 0; }
 .ptz-lista-pos { flex-wrap: wrap; gap: 4px; margin-top: 4px; }
-/* ✎ e ✕ das posições só aparecem ao passar o mouse: sobra espaço para os nomes */
-.ptz-p .ptz-x { display: none; }
-.ptz-p:hover .ptz-x { display: inline-block; }
+/* ✎ e ✕ das posições só aparecem ao passar o mouse, FLUTUANDO no canto de cima do botão: não alargam o botão nem
+   empurram os vizinhos (antes a grade se rearrumava embaixo do mouse e o clique caía na posição errada) */
+.ptz-p { position: relative; }
+.ptz-p .ptz-x { display: none; position: absolute; top: -9px; z-index: 3; padding: 0 5px; min-width: 0; font-size: 11px; line-height: 17px;
+  border-radius: 9px; opacity: 1; background: var(--painel2); border: 1px solid var(--borda); box-shadow: 0 1px 4px rgba(0,0,0,.35); }
+.ptz-p .ptz-x[data-ptzren] { right: 16px; }
+.ptz-p .ptz-x[data-ptzdel] { right: -6px; }
+.ptz-p:hover .ptz-x { display: block; }
 /* prévia da câmera mais baixa em tela pequena */
 @media (max-height: 900px) { .player.camera .cam-previa { max-height: 34vh; width: auto; max-width: 100%; } }
 .cam-ptz { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; margin: 4px 0; }
@@ -987,3 +996,14 @@ html[data-tema-app="claro"] .tema-amostra { border-color: #aab1ba; }
 .classif-it .classif-nome { font-weight: 600; }
 .classif-it button { padding: 2px 8px; min-width: 0; }
 .classif-it button:disabled { opacity: .3; }
+
+/* aviso do Android sem internet (Controle pelo celular) */
+.aviso-cel { border-left: 4px solid #d4a93a; background: rgba(212,169,58,.12); padding: 5px 8px; border-radius: 4px; font-size: 12.5px; }
+
+/* Coluna da esquerda estreita (notebook de 14" com zoom 125%): os botões compridos ("Liturgia do dia (Missas de semana)")
+   quebram a linha, as linhas de botões descem quando não cabem e nada passa da largura (antes aparecia a barra de
+   rolagem de lado embaixo de Duplicar/Excluir) */
+.modulos .aba { overflow-x: hidden; }
+.modulos .aba button.euc-atalho { white-space: normal; line-height: 1.25; }
+.modulos .aba .linha { flex-wrap: wrap; }
+.modulos .aba input, .modulos .aba select, .modulos .aba textarea { min-width: 0; max-width: 100%; }

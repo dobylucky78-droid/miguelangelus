@@ -53,13 +53,13 @@ const ORACOES_TERCO = [
     'Ó meu Jesus, perdoai-nos,\nlivrai-nos do fogo do inferno,\nlevai as almas todas para o céu\ne socorrei principalmente as que mais precisarem.' },
   { titulo: 'Ângelus', categoria: 'Marianas', texto:
     'O Anjo do Senhor anunciou a Maria.\n— E ela concebeu do Espírito Santo.\n\n' +
-    'Ave, Maria, cheia de graça, o Senhor é convosco;\nbendita sois vós entre as mulheres,\ne bendito é o fruto do vosso ventre, Jesus.\n' +
+    'Ave Maria, cheia de graça, o Senhor é convosco;\nbendita sois vós entre as mulheres,\ne bendito é o fruto do vosso ventre, Jesus.\n' +
     '— Santa Maria, Mãe de Deus, rogai por nós, pecadores,\nagora e na hora de nossa morte. Amém.\n\n' +
     'Eis aqui a serva do Senhor.\n— Faça-se em mim segundo a vossa palavra.\n\n' +
-    'Ave, Maria, cheia de graça, o Senhor é convosco;\nbendita sois vós entre as mulheres,\ne bendito é o fruto do vosso ventre, Jesus.\n' +
+    'Ave Maria, cheia de graça, o Senhor é convosco;\nbendita sois vós entre as mulheres,\ne bendito é o fruto do vosso ventre, Jesus.\n' +
     '— Santa Maria, Mãe de Deus, rogai por nós, pecadores,\nagora e na hora de nossa morte. Amém.\n\n' +
     'E o Verbo se fez carne.\n— E habitou entre nós.\n\n' +
-    'Ave, Maria, cheia de graça, o Senhor é convosco;\nbendita sois vós entre as mulheres,\ne bendito é o fruto do vosso ventre, Jesus.\n' +
+    'Ave Maria, cheia de graça, o Senhor é convosco;\nbendita sois vós entre as mulheres,\ne bendito é o fruto do vosso ventre, Jesus.\n' +
     '— Santa Maria, Mãe de Deus, rogai por nós, pecadores,\nagora e na hora de nossa morte. Amém.\n\n' +
     'Rogai por nós, santa Mãe de Deus.\n— Para que sejamos dignos das promessas de Cristo.\n\n' +
     'Oremos: Infundi, Senhor, como vos pedimos, a vossa graça em nossas almas,\npara que nós, que pela anunciação do Anjo\n' +
@@ -395,13 +395,35 @@ function resumoTerco(it) {
 
 // Ave-Maria num slide só, a 2ª parte como resposta do povo; com as contas da dezena embaixo
 function slideAveMaria(k, total, rodape) {
-  const partes = dividir(textoOracao('Ave-Maria'));
-  const texto = partes.length > 1 ? `${partes[0]}\n— ${partes.slice(1).join('\n')}` : partes[0] || 'Ave, Maria…';
-  return { texto, rodape: `${rodape} · Ave-Maria ${k}/${total}`, contas: { total, atual: k } };
+  // (1.6.15) texto corrido em dois blocos (Ave Maria… Jesus. / — Santa Maria… Amém) e "largo": o telão usa a largura
+  // toda da área e a letra cabe em ~6 linhas (antes as quebras curtas da oração davam 11 linhas de letra miúda)
+  const corrido = p => p.replace(/\s*\n\s*/g, ' ').trim();
+  const partes = dividir(textoOracao('Ave-Maria')).map(corrido);
+  const resto = partes.slice(1).join(' ').replace(/^—\s*/, '');
+  const texto = partes.length > 1 ? `${partes[0]}\n— ${resto}` : partes[0] || 'Ave Maria…';
+  return { texto, rodape: `${rodape} · Ave-Maria ${k}/${total}`, contas: { total, atual: k }, largo: true };
 }
 
 const slidesOracao = (titulo, rodape = titulo) => dividir(textoOracao(titulo)).map(t => ({ texto: t, rodape }));
 const SINAL_DA_CRUZ = 'Em nome do Pai, e do Filho e do Espírito Santo.\n— Amém.';
+
+// (1.6.15) Diagramação do terço no telão: cada oração em texto corrido (as quebras curtas viram espaço; a resposta do
+// povo "— …" e a letra de quem fala continuam em linha própria) e "largo" — usa a largura toda e a letra cabe em ~6 linhas
+function corridoTerco(t) {
+  const out = [];
+  for (const l of String(t || '').split('\n')) {
+    const novo = !out.length || /^\s*(—|R\.|[PTLCD]\.\s)/.test(l) || /^\s*<b>/.test(l) !== /^\s*<b>/.test(out[out.length - 1]);
+    if (novo) out.push(l.trim()); else out[out.length - 1] += ' ' + l.trim();
+  }
+  return out.join('\n');
+}
+const largoTerco = s => s.versos || s.titulo ? s : { ...s, texto: corridoTerco(s.texto), largo: true };
+
+// Onde está no terço (para o desenho do terço que se preenche, no canto do telão — 1.6.15). As contas, na ordem em que
+// se reza: 0 a cruz · 1 Pai-Nosso · 2–4 as três Ave-Marias · 5 Pai-Nosso do 1º mistério · 6–15 a 1ª dezena · 16 Pai-Nosso
+// do 2º · … · 50–59 a 5ª dezena. feitas = contas já rezadas; atual = a da vez (-1: nenhuma acesa)
+const contaDoPaiNosso = n => 5 + 11 * (n - 1);
+const marcarTerco = (slides, feitas, atual = -1) => slides.map(s => ({ ...s, terco: { feitas, atual } }));
 
 function slidesTerco(it) {
   const g = MISTERIOS[it.grupo] || MISTERIOS.gozosos;
@@ -411,37 +433,37 @@ function slidesTerco(it) {
     if (jac) out.push(...dividir(jac.texto).map(t => ({ texto: t, rodape: jac.titulo })));
     return out;
   };
+  const pronto = l => l.map(largoTerco);
   if (it.parte === 'abertura') {
     const creio = Ordinario.parte('creio-apostolico');
     return [
-      { texto: `Santo Terço\nMistérios ${g.nome}`, rodape: '' },
-      { texto: SINAL_DA_CRUZ, rodape: 'Sinal da cruz' },
-      ...(creio ? creio.slides.map(t => ({ texto: t, rodape: 'Creio' })) : []),
-      ...slidesOracao('Pai-Nosso'),
-      ...[1, 2, 3].map(k => slideAveMaria(k, 3, 'Fé, esperança e caridade')),
-      ...slidesOracao('Glória ao Pai'),
+      ...marcarTerco([{ texto: `Santo Terço\nMistérios ${g.nome}`, rodape: '' }], 0),
+      ...marcarTerco(pronto([{ texto: SINAL_DA_CRUZ, rodape: 'Sinal da cruz' },
+        ...(creio ? continuarFalas(creio.slides).map(t => ({ texto: t, rodape: 'Creio' })) : [])]), 0, 0),
+      ...marcarTerco(pronto(slidesOracao('Pai-Nosso')), 1, 1),
+      ...[1, 2, 3].map(k => ({ ...slideAveMaria(k, 3, 'Fé, esperança e caridade'), terco: { feitas: 1 + k, atual: 1 + k } })),
+      ...marcarTerco(pronto(slidesOracao('Glória ao Pai')), 5),
     ];
   }
   if (it.parte === 'final') {
-    return [
+    return marcarTerco(pronto([
       ...slidesOracao('Salve-Rainha'),
       ...(it.ladainha ? slidesOracao('Ladainha de Nossa Senhora') : []),
       { texto: SINAL_DA_CRUZ, rodape: 'Sinal da cruz' },
-    ];
+    ]), 60);
   }
-  const m = misterioDe(it);
+  const m = misterioDe(it), b = contaDoPaiNosso(it.n || 1);
   const titulo = `${it.n}º Mistério ${g.um}`;
-  const out = [{ texto: `${titulo}\n${m.nome}`, rodape: `Mistérios ${g.nome} · ${m.ref}` }];
+  const out = marcarTerco([{ texto: `${titulo}\n${m.nome}`, rodape: `Mistérios ${g.nome} · ${m.ref}` }], b);
   if (it.comBiblia && S.biblia) {
     const r = Biblia.resolver(S.biblia, m.ref);
-    if (!r.erro) out.push(...versosEmSlides(r));
+    if (!r.erro) out.push(...marcarTerco(versosEmSlides(r), b));
   }
-  out.push(...slidesOracao('Pai-Nosso'));
-  for (let k = 1; k <= 10; k++) out.push(slideAveMaria(k, 10, titulo));
-  out.push(...slidesOracao('Glória ao Pai'), ...fim());
+  out.push(...marcarTerco(pronto(slidesOracao('Pai-Nosso')), b, b));
+  for (let k = 1; k <= 10; k++) out.push({ ...slideAveMaria(k, 10, titulo), terco: { feitas: b + k, atual: b + k } });
+  out.push(...marcarTerco(pronto([...slidesOracao('Glória ao Pai'), ...fim()]), b + 11));
   return out;
 }
-
 function slidesAngelus(it) {
   const titulo = tempoPascal(dataDoItemTerco(it)) ? 'Regina Caeli (Rainha do Céu)' : 'Ângelus';
   return slidesOracao(titulo);
@@ -471,7 +493,10 @@ function htmlCabTerco(it) {
       <label class="check" title="Oração depois do Glória, em cada mistério (cadastre outras em Orações)">Depois do Glória <select data-campo="jaculatoria" class="estreito">${jac}</select></label>
       ${linha2}</div>
     ${it.comBiblia && !S.biblia ? '<p class="sutil pequeno" style="margin:0">Sem Bíblia no programa: o trecho não entra.</p>' : ''}
-    <p class="sutil pequeno" style="margin:0">Cada <b>Próximo</b> avança uma Ave-Maria; o telão mostra a dezena com a conta da vez acesa. As escolhas acima valem para o terço inteiro.</p>`;
+    <p class="sutil pequeno" style="margin:0">Cada <b>Próximo</b> avança uma Ave-Maria; o telão mostra a dezena com a conta da vez acesa. As escolhas acima valem para o terço inteiro.</p>
+    <div class="cab-linha"><label class="check" title="No telão, durante o terço: Nossa Senhora no canto de baixo à esquerda e o terço que vai se preenchendo à direita (este computador)"><input type="checkbox" data-tercocantos ${S.config.tercoCantos !== false ? 'checked' : ''}> Imagens nos cantos (Nossa Senhora e o terço que se preenche)</label>
+      <button type="button" data-tercoimg title="Uma imagem sua de Nossa Senhora para o canto de baixo à esquerda (PNG ou JPG, de preferência com fundo transparente)">🖼 ${S.config.tercoImagem ? 'Trocar' : 'Escolher'} a imagem de Nossa Senhora…</button>
+      ${S.config.tercoImagem ? '<button type="button" data-tercoimg-padrao title="Volta para o desenho que vem com o programa">Usar a padrão</button>' : ''}</div>`;
 }
 
 // Texto para imprimir (sem repetir as 10 Ave-Marias)
@@ -504,3 +529,49 @@ function novoRoteiroTerco() {
   abrirItem(r.itens[0], 0);
   toast(`Terço montado com os Mistérios ${MISTERIOS[r.itens[0].grupo].nome}. Dá para trocar no item.`);
 }
+
+// Ajustes → 📿 Terço (as mesmas opções do cabeçalho do item, com a prévia da imagem)
+function renderTercoAjustes() {
+  const el = $('#tercoAjustes');
+  if (!el) return;
+  const img = S.config.tercoImagem || 'img/nossa-senhora-terco.svg';
+  el.innerHTML = `
+    <label class="check"><input type="checkbox" data-tercocantos ${S.config.tercoCantos !== false ? 'checked' : ''}> Imagens nos cantos de baixo durante o terço</label>
+    <p class="sutil pequeno">À esquerda, Nossa Senhora; à direita, o desenho do terço que vai se preenchendo conforme se reza (contas rezadas
+      em dourado, a da vez acesa). O texto desvia das imagens; as imagens de baixo da comunidade dão lugar às do terço só durante o terço.</p>
+    <div class="linha" style="align-items:flex-end;gap:14px">
+      <img src="${esc(img)}" alt="" style="height:150px;background:#4a1016;border-radius:8px;padding:6px">
+      <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-start">
+        <button type="button" data-tercoimg>🖼 ${S.config.tercoImagem ? 'Trocar' : 'Escolher'} a imagem de Nossa Senhora…</button>
+        ${S.config.tercoImagem ? '<button type="button" data-tercoimg-padrao>Usar a padrão (o desenho do programa)</button>' : '<span class="sutil pequeno">Agora: o desenho que vem com o programa.</span>'}
+        <span class="sutil pequeno">De preferência PNG com fundo transparente. Fica neste computador.</span>
+      </div>
+    </div>
+    <p class="sutil pequeno">Também dá para mudar no cabeçalho de qualquer item do terço no roteiro. A letra, as cores e as margens seguem
+      a 🎨 Aparência do telão.</p>`;
+}
+const atualizarTercoTelas = () => { renderTercoAjustes(); if (S.atual?.item?.tipo === 'terco') renderCabecalho(); };
+
+// Imagens do terço no telão (1.6.15): liga/desliga e imagem própria de Nossa Senhora (ficam na config deste computador)
+document.addEventListener('change', e => {
+  if (!e.target.matches?.('[data-tercocantos]')) return;
+  S.config.tercoCantos = e.target.checked; salvarConfig(); enviarConfigTelao(); atualizarTercoTelas();
+});
+document.addEventListener('click', e => {
+  if (e.target.closest('[data-tercoimg-padrao]')) { S.config.tercoImagem = ''; salvarConfig(); enviarConfigTelao(); atualizarTercoTelas(); return; }
+  if (!e.target.closest('[data-tercoimg]')) return;
+  const inp = Object.assign(document.createElement('input'), { type: 'file', accept: 'image/*' });
+  inp.onchange = async () => {
+    const f = inp.files[0];
+    if (!f || !/^image\//.test(f.type)) return;
+    // reduz para no máximo 700 px de altura (a config vai para o telão a cada mudança)
+    const url = await new Promise(ok => { const r = new FileReader(); r.onload = () => ok(r.result); r.readAsDataURL(f); });
+    const img = await new Promise(ok => { const i = new Image(); i.onload = () => ok(i); i.src = url; });
+    const esc = Math.min(1, 700 / img.height), c = document.createElement('canvas');
+    c.width = Math.round(img.width * esc); c.height = Math.round(img.height * esc);
+    c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+    S.config.tercoImagem = c.toDataURL('image/png'); salvarConfig(); enviarConfigTelao(); atualizarTercoTelas();
+    toast('🖼 Imagem de Nossa Senhora do terço trocada.');
+  };
+  inp.click();
+});

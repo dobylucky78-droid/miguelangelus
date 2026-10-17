@@ -10,7 +10,7 @@ const CATEGORIAS_ORACAO = ['Marianas', 'Anjos e Santos', 'Espírito Santo', 'Euc
 
 const ORACOES_PADRAO = [
   { titulo: 'Ave-Maria', categoria: 'Marianas', texto:
-    'Ave, Maria, cheia de graça,\no Senhor é convosco;\nbendita sois vós entre as mulheres,\ne bendito é o fruto do vosso ventre, Jesus.\n\n' +
+    'Ave Maria, cheia de graça,\no Senhor é convosco;\nbendita sois vós entre as mulheres,\ne bendito é o fruto do vosso ventre, Jesus.\n\n' +
     'Santa Maria, Mãe de Deus,\nrogai por nós, pecadores,\nagora e na hora de nossa morte.\nAmém.' },
   { titulo: 'Salve-Rainha', categoria: 'Marianas', texto:
     'Salve, Rainha, Mãe de misericórdia,\nvida, doçura e esperança nossa, salve!\nA vós bradamos, os degredados filhos de Eva;\n' +
@@ -50,6 +50,12 @@ const oracaoDe = it => Oracoes.lista.find(o => o.id === it?.oracaoId) || null;
 async function carregarOracoes() {
   Oracoes.lista = await DB.todos('oracoes');
   await juntarOracoesRepetidas();
+  // (1.6.15) "Ave Maria, cheia de graça" não tem vírgula entre Ave e Maria: corrige só isso nas orações já gravadas
+  for (const o of Oracoes.lista) {
+    if (!/Ave, Maria, cheia de graça/.test(o.texto || '')) continue;
+    o.texto = o.texto.replace(/Ave, Maria, cheia de graça/g, 'Ave Maria, cheia de graça');
+    await DB.salvar('oracoes', o);
+  }
   if (!S.config.oracoesSemeadas) {
     for (const o of ORACOES_PADRAO) {
       if (Oracoes.lista.some(x => x.titulo === o.titulo)) continue;   // já existe (ex.: veio de um backup)

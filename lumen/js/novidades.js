@@ -5,6 +5,16 @@
  * A versão mais nova fica em cima. Ao gerar uma versão nova, acrescente a entrada dela aqui.
  */
 const NOVIDADES = [
+  { versao: '1.6.15', data: '2026-10-17', itens: [
+    '📿 Terço no telão: todas as orações (Ave-Maria, Pai-Nosso, Glória, Creio, Salve-Rainha…) agora em texto corrido, ocupando a largura toda e com letra bem maior — sem as linhas curtas e os buracos do justificado.',
+    '✝ "Ave Maria, cheia de graça" sem a vírgula entre Ave e Maria — corrigido sozinho na Ave-Maria e no Ângelus já gravados (só essa vírgula; o resto do texto fica como estava).',
+    '📿 Terço com imagens nos cantos de baixo: Nossa Senhora à esquerda e, à direita, o desenho do terço que vai se preenchendo conforme se reza (contas rezadas em dourado, a da vez acesa). O texto desvia das imagens. Liga/desliga e troca da imagem de Nossa Senhora por uma sua em Ajustes → 📿 Terço (ou no cabeçalho do item do terço).',
+    '🎮 Zoom pelo gatilho mais suave: o começo do aperto agora é bem lento (chega à velocidade mais lenta da câmera) e a velocidade só sobe no fim do curso. Com o gatilho pela metade, o zoom vai na velocidade 2 de 7 (antes, 4). Para deixar ainda mais lento, baixe a "Velocidade do zoom" em Ajustes → 🎮 Joysticks.',
+    '🎮 Posições da câmera (Controle PTZ): o ✎ e o ✕ agora aparecem flutuando no canto do botão ao passar o mouse — as posições não pulam mais de lugar embaixo do mouse (no notebook a grade se rearrumava e o clique caía na posição errada).',
+    '📋 Roteiros: os botões de criar (Novo roteiro, Do folheto, Pela Agenda, Terço) ficam numa seção "➕ Criar roteiro" que recolhe como as outras e começa recolhida — os roteiros aparecem logo no alto. Aberta, é uma faixa baixa de botões. (Os botões Novo, Folheto e Agenda da coluna da esquerda continuam lá.)',
+    '💻 Notebook (tela menor): na coluna da esquerda, os botões compridos ("Liturgia do dia (Missas de semana)") quebram a linha em vez de ficar cortados, e não aparece mais a barra de rolagem de lado.',
+    '📵 Controle pelo celular: aviso na tela do QR code — Android com chip que não abre a página está usando os dados móveis (a rede do MiguelAngelus não tem internet): desligue os dados móveis ou a opção "Alternar para dados móveis" do Wi-Fi.',
+  ] },
   { versao: '1.6.14', data: '2026-10-16', itens: [
     '✝ Todas as partes fixas da Missa agora mostram quem fala, como no folheto: P. (padre), T. (povo, em negrito) e L. (leitor). A letra só aparece onde a fala muda — o slide que continua a fala anterior não repete o "P." ou o "T." (a do povo continua em negrito). Se você tinha editado o texto de alguma parte, a sua versão continua valendo (use Restaurar para ficar com a nova).',
     '✝ Partes fixas da Missa (aba Orações): nova "Oração da Coleta", logo depois do Glória, para as Missas da semana cujo folheto não traz a Coleta. Dá para editar o texto com duplo clique, como as outras partes, e a mudança vai pela nuvem.',

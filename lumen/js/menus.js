@@ -49,6 +49,7 @@ function mostrarAjuste(sec) {
   $$('#dlgAjustes [data-ajsec]').forEach(b => b.classList.toggle('ativa', b.dataset.ajsec === sec));
   $$('#dlgAjustes [data-ajpainel]').forEach(p => p.classList.toggle('ativa', p.dataset.ajpainel === sec));
   try { localStorage.setItem('lumen.ajuste', sec); } catch {}
+  if (sec === 'terco' && typeof renderTercoAjustes === 'function') renderTercoAjustes();
 }
 function abrirAjustes(sec) {
   let ultima = 'aparencia';

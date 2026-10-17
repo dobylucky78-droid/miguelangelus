@@ -226,11 +226,14 @@ function aplicarPad(n, pad) {
   const fontes = [['esq', morto(pad.eixos[0] || 0), morto(pad.eixos[1] || 0)], ['dir', morto(pad.eixos[2] || 0), morto(pad.eixos[3] || 0)],
     ['setas', pad.botoes[14]?.p ? -1 : pad.botoes[15]?.p ? 1 : 0, pad.botoes[12]?.p ? -1 : pad.botoes[13]?.p ? 1 : 0]];
   const velM = Math.max(0.1, Math.min(1, +cfg.velMov || 1)), velZ = Math.max(1, Math.min(7, +cfg.velZoom || 7));
+  // (1.6.15) zoom proporcional mais suave: a velocidade sobe com o QUADRADO do aperto e pode ir a 0 (a mais lenta da câmera)
+  // — aperto leve = bem devagar; o máximo (a "Velocidade do zoom") só no fim do curso do gatilho
+  const velZoomDe = f => Math.round(Math.min(1, f) * Math.min(1, f) * velZ);
   let mov = null, zoomDir = 0, zoomVel = 0;
   for (const [k, x, y] of fontes) {
     const modo = cfg[k];
     if (!modo || (!x && !y)) continue;
-    if (modo === 'zoom') { if (y && !zoomDir) { zoomDir = y < 0 ? 1 : -1; zoomVel = Math.max(1, Math.round(Math.abs(y) * velZ)); } continue; }
+    if (modo === 'zoom') { if (y && !zoomDir) { zoomDir = y < 0 ? 1 : -1; zoomVel = velZoomDe(Math.abs(y)); } continue; }
     if (!mov) mov = { x, y, forca: modo === 'fino' ? 0.02 + Math.min(1, Math.hypot(x, y)) * 0.13 : Math.max(0.05, Math.min(1, Math.hypot(x, y)) * velM) };
   }
   const agora = performance.now();
@@ -257,8 +260,8 @@ function aplicarPad(n, pad) {
   if (!zoomDir) pad.botoes.forEach((b, i) => {
     const a = cfg.botoes?.[i]?.acao;
     if (!b.p || (a !== 'zoomMais' && a !== 'zoomMenos') || (SETAS_JOY.includes(i) && cfg.setas)) return;
-    const v = i === 6 || i === 7 ? Math.max(1, Math.round(b.v * velZ)) : velZ;
-    if (v > zoomVel) { zoomDir = a === 'zoomMais' ? 1 : -1; zoomVel = v; }
+    const v = i === 6 || i === 7 ? velZoomDe(b.v) : velZ;
+    if (!zoomDir || v > zoomVel) { zoomDir = a === 'zoomMais' ? 1 : -1; zoomVel = v; }
   });
   const z = zoomDir ? `${zoomDir}:${zoomVel}` : '';
   if (z !== (est.zoom || '')) { ptzZoom(c, zoomDir, zoomVel); est.zoom = z; }
