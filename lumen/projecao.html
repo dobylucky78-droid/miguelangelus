@@ -258,6 +258,8 @@ function acabamento(html) {
 // estreitada pelos cantos: a letra diminui na mesma proporção da largura perdida (senão sobram poucas palavras por linha e
 // o justificado abre buracos); na largura normal, nada muda.
 function tamanhoLetra(larg, alt, soTexto) {
+  // (1.7.0) slides automáticos: começa grande (16% da altura) e o ajuste diminui até o texto ocupar a área das margens
+  if (cfg.slideAuto) return window.innerHeight * 0.16;
   // slide "largo" (Ave-Maria do terço, 1.6.15): letra para ~6 linhas na altura da área, podendo passar do tamanho máximo
   if (slide?.largo) return Math.min(alt / (6 * 1.22), window.innerHeight * 0.13);
   const maxPx = (+cfg.fonteMax || 9) * window.innerHeight / 100;
@@ -328,19 +330,31 @@ function ajustarContorno() {
   if (fundoTexto() > Hh) esp.style.height = '0px';
 }
 
-function ajustar() {
-  const texto = $('texto'), area = $('area');
-  if (usaContorno()) { ajustarContorno(); ajustarAvisos(); return; }
+// (1.7.0) Slides automáticos: o espaço entre as palavras. Com bastante palavra por linha, justifica (as duas margens retas,
+// ocupando a largura toda, em texto corrido como as leituras); com menos de 8 palavras por linha, centraliza
+function espacoAuto() {
+  const t = $('texto');
+  if (!cfg.slideAuto) return;
+  t.style.textAlign = 'justify'; t.style.textAlignLast = 'center';
+  const f = parseFloat(t.style.fontSize) || 16, lh = parseFloat(getComputedStyle(t).lineHeight) || f * 1.25;
+  const linhas = Math.max(1, Math.round(t.scrollHeight / lh));
+  const palavras = (t.innerText || '').split(/\s+/).filter(Boolean).length;
+  if (palavras / linhas < 8) t.style.textAlign = 'center';      // poucas palavras por linha: justificar abriria buracos
+}
+
+function ajustar() {  const texto = $('texto'), area = $('area');
+  if (usaContorno()) { ajustarContorno(); espacoAuto(); ajustarAvisos(); return; }
   // sem contorno: desfaz o que o modo contorno mudou
   if (texto.querySelector('.ct-f, .ct-esp')) texto.innerHTML = htmlAtual;
   area.style.alignItems = ''; texto.style.width = '';
   let f = (+cfg.fonteMax || 9) * window.innerHeight / 100;
-  if (cfg.quebraAuto) {
+  if (cfg.quebraAuto && !cfg.slideAuto) {
     const C = +cfg.caracteresPorLinha || 40;
     f = tamanhoLetra(area.clientWidth, area.clientHeight, !slide?.img || slide.layout === 'fundo' || document.body.classList.contains('camera'));
     texto.style.maxWidth = slide?.largo ? '100%' : `min(100%, ${(C * 0.55).toFixed(1)}em)`;   // largo: a área inteira
   } else {
     texto.style.maxWidth = '100%';
+    if (cfg.slideAuto) f = tamanhoLetra(area.clientWidth, area.clientHeight, true);
   }
   // A+ / A− deste slide (ideia do Hermínio): 10% por passo; maior que a área não fica (o laço abaixo diminui até caber)
   const passo = Math.max(-6, Math.min(6, +(slide?.escala || 0)));
@@ -350,6 +364,7 @@ function ajustar() {
     f *= 0.96;
     texto.style.fontSize = f + 'px';
   }
+  espacoAuto();
   ajustarAvisos();
 }
 
@@ -596,7 +611,8 @@ function aplicarConfig(c) {
   t.style.color = $('rodape').style.color = cfg.corTexto || '#fff';
   // justificado: as linhas que quebram sozinhas ficam com as duas margens retas; a última linha de cada parágrafo e as
   // linhas curtas (versos) não esticam — ficam à esquerda ou, no "justificado e centralizado", no centro
-  const al = cfg.alinhamento || 'center';
+  // (1.7.0) automático: justificado e centralizado (espacoAuto decide, slide a slide, se justifica ou centraliza)
+  const al = cfg.slideAuto ? 'justify-center' : cfg.alinhamento || 'center';
   t.style.textAlign = al.startsWith('justify') ? 'justify' : al;
   t.style.textAlignLast = al === 'justify-center' ? 'center' : al === 'justify' ? 'left' : 'auto';
   t.style.textTransform = cfg.maiusculas ? 'uppercase' : 'none';

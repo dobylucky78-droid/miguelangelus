@@ -9,7 +9,7 @@ const Perfis = { lista: [] };
 const CAMPOS_PERFIL = ['fonte', 'fonteMax', 'corTexto', 'corFundo', 'alinhamento', 'sombra', 'maiusculas', 'negrito', 'rodape',
   'mostrarRotulos', 'corRotulo', 'espacoResposta',
   // Tamanho dos slides (outra seção dos Ajustes, mas também é "o jeito da tela")
-  'quebraAuto', 'linhasPorSlide', 'caracteresPorLinha', 'quebraCantos', 'versosPorSlide', 'salmoCorrido',
+  'slideAuto', 'quebraAuto', 'linhasPorSlide', 'caracteresPorLinha', 'quebraCantos', 'versosPorSlide', 'numerarVersos', 'salmoCorrido',
   'margemLados', 'margemTopo', 'slideSecao', 'numerarSecoes', 'contornarCantos',
   'textoAltar'];                       // a tela do botão Altar (que já usa a aparência acima)
 
@@ -45,6 +45,7 @@ function sincronizarCamposAjustes() {
     const k = el.dataset.cfg;
     if (el.type === 'checkbox') el.checked = !!S.config[k]; else el.value = S.config[k] ?? '';
   }
+  $('#dlgAjustes')?.classList.toggle('auto-slides', !!S.config.slideAuto);    // controles manuais apagados no automático
 }
 
 // Escolher um perfil aplica os valores dele; "Padrão" ('') volta à aparência que estava antes do primeiro perfil escolhido

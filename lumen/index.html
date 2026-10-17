@@ -21,7 +21,7 @@
     </div>
     <div class="splash-info">
       <div class="splash-gratis"><b>Gratuito · uso livre</b></div>
-      <div>Versão 1.6.16</div>
+      <div>Versão 1.7.0</div>
       <div>© 2026</div>
       <div><b>PASCOM</b></div>
       <div><b>São José Operário Ilha</b></div>
@@ -450,14 +450,14 @@
               </optgroup>
             </select>
           </label>
-          <label class="campo">Tamanho máximo do texto
+          <label class="campo so-manual">Tamanho máximo do texto
             <input type="range" min="4" max="14" step="0.5" data-cfg="fonteMax">
           </label>
           <div class="linha">
             <label class="campo">Cor do texto <input type="color" data-cfg="corTexto"></label>
             <label class="campo">Cor de fundo <input type="color" data-cfg="corFundo"></label>
           </div>
-          <label class="campo">Alinhamento
+          <label class="campo so-manual">Alinhamento
             <select data-cfg="alinhamento">
               <option value="center">Centralizado</option>
               <option value="left">À esquerda</option>
@@ -488,12 +488,15 @@
           <p class="sutil pequeno">As imagens dos cantos da tela (brasão, padroeiro…) ficam em <b>Agenda → Paróquia</b>, para cada comunidade.</p>
 
           <h3 class="aj-sub">📏 Tamanho dos slides</h3>
-          <label class="check"><input type="checkbox" data-cfg="quebraAuto"> Limitar linhas e caracteres por slide</label>
-          <div class="linha">
+          <label class="check auto-chave" title="A cada slide, o programa calcula o tamanho da letra, as linhas e o espaço entre as palavras para o texto ocupar toda a área das margens abaixo"><input type="checkbox" data-cfg="slideAuto"> ✨ <b>Automático</b>: a letra, as linhas e o espaço entre as palavras se ajustam a cada slide para ocupar toda a área das margens</label>
+          <p class="sutil pequeno auto-dica">Para <b>separar</b> um slide em dois, deixe uma <b>linha em branco</b> no texto (Enter duas vezes); para <b>juntar</b>, tire a linha em branco.
+            Cada slide tem no máximo 6 linhas (7 quando a última ficaria sozinha): um bloco maior é dividido sozinho, em partes iguais e no fim de uma frase. Negrito, itálico, sublinhado e cores do editor continuam valendo.</p>
+          <label class="check so-manual"><input type="checkbox" data-cfg="quebraAuto"> Limitar linhas e caracteres por slide</label>
+          <div class="linha so-manual">
             <label class="campo">Linhas por slide <input type="number" min="1" max="12" data-cfg="linhasPorSlide"></label>
             <label class="campo">Caracteres por linha <input type="number" min="15" max="90" data-cfg="caracteresPorLinha"></label>
           </div>
-          <label class="check"><input type="checkbox" data-cfg="quebraCantos"> Aplicar também às letras dos cantos</label>
+          <label class="check so-manual"><input type="checkbox" data-cfg="quebraCantos"> Aplicar também às letras dos cantos</label>
           <div class="linha" title="Área útil do slide (ideia do Hermínio): o texto, as linhas e o tamanho da letra ficam dentro destas margens">
             <label class="campo">Margem dos lados (% da tela) <input type="range" min="0" max="25" step="1" data-cfg="margemLados"></label>
             <label class="campo">Margem em cima e embaixo (%) <input type="range" min="0" max="25" step="1" data-cfg="margemTopo"></label>
@@ -505,7 +508,7 @@
           </div>
           <p class="sutil pequeno" style="margin-top:-4px">Pontilhado: limite das margens. Tracejado amarelo: a área do texto; azul: o quadrado de cada imagem, que o texto contorna
             (as da comunidade do roteiro aberto). O texto de exemplo é o slide que está no ar ou aberto.</p>
-          <p class="sutil pequeno">Ligado: textos longos (leituras, orações) viram vários slides, sempre com letra grande e do mesmo tamanho.
+          <p class="sutil pequeno so-manual">Ligado: textos longos (leituras, orações) viram vários slides, sempre com letra grande e do mesmo tamanho.
             Desligado: cada slide mantém o texto inteiro e a letra diminui até caber na tela.</p>
         </section>
 
@@ -1017,7 +1020,7 @@
       <a href="https://pascom-sjo.github.io/" target="_blank" rel="noopener" class="site" title="Site do MiguelAngelus">
         <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M3 12h18M12 3c2.5 2.6 3.8 5.6 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.6-3.8-9S9.5 5.6 12 3z" fill="none" stroke="currentColor" stroke-width="2"/></svg>pascom-sjo.github.io</a>
     </div>
-    <p class="sutil pequeno" id="versaoApp">Versão 1.6.16</p>
+    <p class="sutil pequeno" id="versaoApp">Versão 1.7.0</p>
     <div class="linha"><span class="espaco"></span><button value="ok" class="primario">OK</button></div>
   </form>
 </dialog>

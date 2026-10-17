@@ -82,10 +82,12 @@ function novoRoteiro(nome) {
 // Comunicação com a projeção
 // =====================================================================
 
+// slide em edição mostrado na prévia (ligarEdicaoNaPrevia); -1 = a prévia espelha o telão
+const Edicao = { i: -1 };
 function alvos() {
   const a = [];
   const pv = $('#preview').contentWindow;
-  if (pv) a.push(pv);
+  if (pv && Edicao.i < 0) a.push(pv);     // editando um texto: a prévia mostra o slide em edição (volta ao sair da caixa)
   if (S.projWin && !S.projWin.closed) a.push(S.projWin);
   return a;
 }
@@ -235,7 +237,9 @@ const sobrescrito = n => String(n).replace(/\d/g, d => '⁰¹²³⁴⁵⁶⁷⁸
 // 1) usa o MENOR número de slides possível; 2) corta de preferência no fim de uma frase, depois numa vírgula,
 // e só em último caso no meio da frase; 3) reparte por igual. Referências entre parênteses "(cf. Jo 17,21)" nunca se partem.
 const ABREVIACOES = /^(cf|Cf|S|Sto|Sta|Sr|Sra|Pe|Dom|Fr|Ir|Mons|Pr|n|nº|p|pp|v|vv|cap|ex|etc|séc)\.$/;
-function unidadesTexto(texto) {
+// aspasLeves (slides automáticos): dentro de aspas, o fim de frase vale como pausa (1) — uma parábola inteira entre aspas
+// não pode ficar sem nenhum lugar bom para dividir
+function unidadesTexto(texto, aspasLeves = false) {
   const tam = s => tirarMarcas(s).length;
   // palavras; o que está entre parênteses (até ~40 letras) vira uma palavra só
   const palavras = [];
@@ -250,23 +254,26 @@ function unidadesTexto(texto) {
   if (grupo !== null) palavras.push(grupo);
   // tipo do corte DEPOIS de cada palavra: 0 = fim de frase, 1 = vírgula/pausa, 2 = meio da frase (ou dentro de aspas)
   let aspas = 0;
-  return palavras.map(p => {
+  return palavras.map((p, k) => {
     const limpo = tirarMarcas(p);
     aspas += (limpo.match(/[“«]/g) || []).length - (limpo.match(/[”»]/g) || []).length;
+    // número ou letra de quem fala no começo ("1.", "P.", "T.", "R.", "—") nunca fica sozinho num slide
+    if (k === 0 && /^(\d+[.)]?|[PTLCDR]\.|—)$/.test(limpo)) return { t: p, n: tam(p), corte: 3 };
     const fim = /[.!?…;:]["”’»)]*$/.test(limpo) && !ABREVIACOES.test(limpo.replace(/^\(/, ''));
-    return { t: p, n: tam(p), corte: aspas > 0 ? 2 : fim ? 0 : (/[,—–]["”’»)]*$/.test(limpo) ? 1 : 2) };
+    return { t: p, n: tam(p), corte: aspas > 0 ? (aspasLeves && fim ? 1 : 2) : fim ? 0 : (/[,—–]["”’»)]*$/.test(limpo) ? 1 : 2) };
   });
 }
 
-function quebrarLongo(texto, cap) {
-  const u = unidadesTexto(texto);
+// forte (slides automáticos, 1.7.0): cortar no meio da frase quase nunca — melhor um slide um pouco maior ou menor
+function quebrarLongo(texto, cap, forte = false) {
+  const u = unidadesTexto(texto, forte);
   if (!u.length) return [texto];
   const N = u.length;
   // comprimento do pedaço u[i..j-1]
   const pre = [0];
   u.forEach((x, k) => pre.push(pre[k] + x.n + (k ? 1 : 0)));
   const comp = (i, j) => pre[j] - pre[i] - (i ? 1 : 0);
-  const MULTA = [0, 0.15, 0.6];      // preferências de corte
+  const MULTA = forte ? [0, 0.6, 5, 1e6] : [0, 0.15, 0.6, 1e6];      // preferências de corte (3 = proibido)
   // melhor[j] = { n: nº de slides, custo } para os primeiros j itens (menos slides primeiro, depois menor custo)
   const melhor = Array(N + 1).fill(null);
   melhor[0] = { n: 0, custo: 0, de: -1 };
@@ -279,7 +286,9 @@ function quebrarLongo(texto, cap) {
       const custo = melhor[i].custo + folga * folga + (j < N ? MULTA[u[j - 1].corte] : 0);
       const cand = { n: melhor[i].n + 1, custo, de: i };
       const b = melhor[j];
-      if (!b || cand.n < b.n || (cand.n === b.n && cand.custo < b.custo)) melhor[j] = cand;
+      // forte: um slide a mais "custa" 1,5 — vale mais que cortar uma frase ao meio (5); senão, menos slides primeiro
+      const melhorQue = forte ? cand.custo + cand.n * 1.5 < b?.custo + b?.n * 1.5 : cand.n < b?.n || (cand.n === b?.n && cand.custo < b.custo);
+      if (!b || melhorQue) melhor[j] = cand;
     }
   }
   const out = [];
@@ -309,9 +318,21 @@ function continuarFalas(textos) {
   });
 }
 
+// (1.7.0) Slides automáticos: quanto cabe num slide (em linhas e letras por linha), para limitarSlide dividir os blocos longos.
+// O que couber fica num slide só e o telão aumenta a letra até ocupar a área.
+function capacidadeAuto() {
+  const mx = Math.min(30, Math.max(0, +(S.config.margemLados ?? 5))) / 100, my = Math.min(30, Math.max(0, +(S.config.margemTopo ?? 5))) / 100;
+  const larg = (1 - 2 * mx) * 16 / 9, alt = .93 - 2 * my;            // em alturas de tela (telão 16:9)
+  // (1.7.0, pedido da paróquia) no máximo 6 linhas por slide — 7 só quando a 7ª ficaria sozinha no slide seguinte (a regra
+  // "sobra de uma linha fica no slide de cima" de limitarSlide). A letra é a que faz 6 linhas encherem a altura da área.
+  const L = 6, f = alt / (L * 1.25), letra = S.config.maiusculas ? .7 : .56;   // largura média de uma letra, em tamanhos de letra
+  return { L, C: Math.max(16, Math.floor(larg / (f * letra))) };
+}
+
 function limitarSlide(s) {
-  const L = Math.max(1, +S.config.linhasPorSlide || 4);
-  const C = Math.max(10, +S.config.caracteresPorLinha || 40);
+  const auto = S.config.slideAuto ? capacidadeAuto() : null;
+  const L = auto ? auto.L : Math.max(1, +S.config.linhasPorSlide || 4);
+  const C = auto ? auto.C : Math.max(10, +S.config.caracteresPorLinha || 40);
   const texto = s.versos
     ? s.versos.map(v => (S.config.numerarVersos ? sobrescrito(v.n) + ' ' : '') + v.t).join(' ')
     : s.texto;
@@ -336,7 +357,7 @@ function limitarSlide(s) {
       if (visuais > lim) {
         fechar();
         if (marcada) povo = povoDaLinha(linha, povo);
-        quebrarLongo(linha, lim * C).forEach((p, i) => pedacos.push([i > 0 ? marcar(p) : p]));
+        quebrarLongo(linha, lim * C, !!S.config.slideAuto).forEach((p, i) => pedacos.push([i > 0 ? marcar(p) : p]));
         restante -= visuais;
         continue;
       }
@@ -378,12 +399,29 @@ function limitarSlide(s) {
   return pedacos.map((p, i) => ({ texto: p.join('\n'), rodape: s.rodape, refrao: s.refrao, ...(s.numerado && i === 0 ? { numerado: true } : {}), ...img }));
 }
 
+// (1.7.0) Slides automáticos: dentro de um bloco, as quebras de linha viram espaço — o telão decide quantas linhas o slide
+// tem. A linha só continua quebrando onde muda quem fala (P., T., "—", R.), no número da prece/estrofe e no começo/fim
+// de um trecho em negrito (refrão). Linha em branco continua separando os slides.
+function corridoAuto(t) {
+  const out = [];
+  for (const l of String(t || '').split('\n')) {
+    const anterior = out[out.length - 1];
+    const novo = anterior === undefined || !l.trim() || !anterior.trim() || /^\s*(—|R\.|[PTLCD]\.\s|\d+\.\s)/.test(l) ||
+      /^\s*<b>/.test(l) || /<\/b>\s*$/.test(anterior);
+    if (novo) out.push(l.trim()); else out[out.length - 1] = anterior + ' ' + l.trim();
+  }
+  return out.join('\n');
+}
+
 function gerarSlides(item) {
   let slides = gerarSlidesBase(item);
+  if (S.config.slideAuto && !['homilia', 'avisos'].includes(item.tipo) && !(item.tipo === 'imagem' && item.layout === 'capa'))
+    slides = slides.map(s => s.versos || s.secao || s.contas || !s.texto ? s : { ...s, texto: corridoAuto(s.texto) });
   // a Homilia é sempre um slide só (a letra diminui para caber todas as leituras)
   // (e a "Capa do folheto" também: título, linha e edição juntos)
-  if (S.config.quebraAuto && !(item.tipo === 'homilia' || item.tipo === 'avisos' || (item.tipo === 'imagem' && item.layout === 'capa') ||
-    (item.tipo === 'canto' && !S.config.quebraCantos)))
+  // (automático: cada bloco separado por linha em branco é um slide; só divide o que não caberia com letra legível, cantos também)
+  if ((S.config.slideAuto || S.config.quebraAuto) && !(item.tipo === 'homilia' || item.tipo === 'avisos' || (item.tipo === 'imagem' && item.layout === 'capa') ||
+    (item.tipo === 'canto' && !S.config.quebraCantos && !S.config.slideAuto)))
     // Ave-Maria do terço (com as contas) fica inteira num slide: cada Próximo é uma conta
     slides = slides.flatMap(s => s.contas ? [s] : limitarSlide(s));
   // 1º slide da parte com o nome dela (ideia do Hermínio)
@@ -645,6 +683,70 @@ function projetar(i) {
   renderSlides();
   renderRoteiroLista();
   renderControles();
+}
+
+// (1.7.0) Editando o texto de um item: a prévia da direita mostra, enquanto se digita, o slide onde está o cursor — só
+// a prévia; o telão continua com o que está no ar. Ao sair da caixa de texto, a prévia volta a espelhar o telão.
+const normEd = s => tirarMarcas(String(s || '')).replace(/^\s*(—|R\.|[PTLCD]\.)\s*/gm, '').replace(/[^\p{L}\p{N}]+/gu, ' ').trim().toLowerCase();
+function slideDoCursor(campo) {
+  const a = S.atual, v = campo.value, pos = campo.selectionStart ?? v.length;
+  const textos = a.slides.map(s => ' ' + normEd(s.texto) + ' '), rods = a.slides.map(s => ' ' + normEd(s.rodape) + ' ');
+  if (campo.tagName === 'INPUT') { const t = normEd(v); const k = t ? rods.findIndex(r => r.includes(' ' + t + ' ')) : -1; return k >= 0 ? k : textos.findIndex(x => t && x.includes(t)); }
+  // as palavras antes do cursor (na mesma linha, ou as do fim da linha de cima) — e quantas vezes o trecho já
+  // apareceu antes no campo (refrão repetido, mesma resposta…)
+  const ini = v.lastIndexOf('\n', pos - 1) + 1, fim = (v.indexOf('\n', pos) + 1 || v.length + 1) - 1;
+  const linha = normEd(v.slice(ini, fim));
+  if (!linha) { const resto = normEd(v.slice(pos)); return resto ? slideComTrecho(textos, resto.split(' ').slice(0, 4).join(' '), 0) : -1; }
+  const antes = normEd(v.slice(ini, pos)).split(' ').filter(Boolean), depois = normEd(v.slice(pos, fim)).split(' ').filter(Boolean);
+  for (const n of [6, 4, 3, 2, 1]) {
+    const trecho = [...antes.slice(-Math.ceil(n / 2)), ...depois.slice(0, Math.floor(n / 2))].join(' ') || depois.slice(0, n).join(' ');
+    if (!trecho) continue;
+    const vezes = (' ' + normEd(v.slice(0, ini)) + ' ').split(' ' + linha + ' ').length - 1;
+    const k = slideComTrecho(textos, trecho, vezes);
+    if (k >= 0) return k;
+  }
+  return -1;
+}
+function slideComTrecho(textos, trecho, vezes) {
+  const achados = textos.map((x, k) => x.includes(' ' + trecho + ' ') || x.includes(trecho) ? k : -1).filter(k => k >= 0);
+  return achados.length ? achados[Math.min(vezes, achados.length - 1)] : -1;
+}
+function mostrarEdicao(campo) {
+  const a = S.atual, pv = $('#preview').contentWindow;
+  if (!a || !pv || !a.slides.length || ehPlayer(a.item) || ehCamera(a.item)) return fimEdicao();
+  let k = slideDoCursor(campo);
+  if (k < 0) k = Edicao.i >= 0 && Edicao.i < a.slides.length ? Edicao.i : Math.max(0, a.slides.findIndex(s => !s.secao));
+  const nova = Edicao.i < 0;
+  Edicao.i = k;
+  if (nova) { enviar({ tipo: 'preto', on: false }, [pv]); enviar({ tipo: 'mudo', on: false }, [pv]); }
+  enviar({ tipo: 'slide', slide: a.slides[k] }, [pv]);
+  $('.rotulo-vivo').classList.add('editando');
+  $('#rotuloVivo').textContent = `EDITANDO — slide ${k + 1} de ${a.slides.length} (o telão não muda)`;
+  for (const s of document.querySelectorAll('#slides .slide.em-edicao')) s.classList.remove('em-edicao');
+  const c = document.querySelector(`#slides .slide[data-i="${k}"]`);
+  if (c) { c.classList.add('em-edicao'); c.scrollIntoView({ block: 'nearest' }); }
+}
+function fimEdicao() {
+  if (Edicao.i < 0) return;
+  Edicao.i = -1;
+  $('.rotulo-vivo').classList.remove('editando');
+  for (const s of document.querySelectorAll('#slides .slide.em-edicao')) s.classList.remove('em-edicao');
+  const pv = $('#preview').contentWindow;
+  if (pv) enviarEstado(pv);
+  renderControles();      // devolve o rótulo "AO VIVO"
+}
+function ligarEdicaoNaPrevia() {
+  const cab = $('#itemCab');
+  const campoTexto = el => el instanceof Element && el.matches('#itemCab textarea[data-campo], #itemCab input[data-campo]:not([type=checkbox]):not([type=range])');
+  let pend = 0;
+  const atualizar = () => { clearTimeout(pend); pend = setTimeout(() => { if (campoTexto(document.activeElement)) mostrarEdicao(document.activeElement); }, 30); };
+  cab.addEventListener('focusin', e => { if (campoTexto(e.target)) atualizar(); });
+  // depois do 'input' do cabeçalho (que já refaz os slides)
+  cab.addEventListener('input', e => { if (campoTexto(e.target)) setTimeout(atualizar); });
+  cab.addEventListener('keyup', e => { if (campoTexto(e.target) && /Arrow|Home|End|Page/.test(e.key)) atualizar(); });
+  cab.addEventListener('click', e => { if (campoTexto(e.target)) atualizar(); });
+  // sair da caixa (a barrinha de formatação não conta: o foco volta para a caixa)
+  cab.addEventListener('focusout', () => setTimeout(() => { if (!campoTexto(document.activeElement) && !document.activeElement?.closest('#barraFormato')) fimEdicao(); }, 150));
 }
 
 // Passagem contínua entre as partes do roteiro (ideia do Hermínio): no último slide, Próximo já projeta o 1º slide da
@@ -2093,9 +2195,14 @@ function ligarAjustes() {
       if (k === 'temaApp') return aplicarTemaApp();     // só o aplicativo; o telão não muda
       if (k === 'textoAltar') return atualizarAltarNoAr();
       enviarConfigTelao(); renderTemasRapidos(); desenharPreviaMargens();
-      if (['versosPorSlide', 'numerarVersos', 'quebraAuto', 'linhasPorSlide', 'caracteresPorLinha', 'quebraCantos', 'salmoCorrido', 'slideSecao', 'numerarSecoes'].includes(k)) atualizarSlides();
+      if (['versosPorSlide', 'numerarVersos', 'quebraAuto', 'linhasPorSlide', 'caracteresPorLinha', 'quebraCantos', 'salmoCorrido', 'slideSecao', 'numerarSecoes',
+        'slideAuto', 'margemLados', 'margemTopo', 'maiusculas'].includes(k)) atualizarSlides();
     });
   }
+  // slides automáticos ligados: os ajustes manuais (tamanho máximo, alinhamento, linhas/caracteres) ficam apagados
+  const marcarAuto = () => $('#dlgAjustes').classList.toggle('auto-slides', !!S.config.slideAuto);
+  marcarAuto();
+  $('[data-cfg="slideAuto"]')?.addEventListener('input', marcarAuto);
 }
 
 function baixar(nome, texto) {
@@ -2525,7 +2632,7 @@ function alternarMudo() {
 
 function renderControles() {
   // sem o botão, o aviso de tela preta fica no rótulo em cima da prévia
-  $('#rotuloVivo').textContent = S.live.preto ? 'TELA PRETA (B para voltar)' : S.mudo ? 'MUDO — só o fundo (M para voltar)' : 'AO VIVO';
+  if (Edicao.i < 0) $('#rotuloVivo').textContent = S.live.preto ? 'TELA PRETA (B para voltar)' : S.mudo ? 'MUDO — só o fundo (M para voltar)' : 'AO VIVO';
   $('.rotulo-vivo').classList.toggle('preto', !!S.live.preto || !!S.mudo);
   $('#btnMudo').classList.toggle('ligado', !!S.mudo);
   const camNoAr = typeof Camera !== 'undefined' && !!Camera.ativa;
@@ -2614,6 +2721,7 @@ async function iniciar() {
   ligarAoVivo();                         // aovivo.js: 🌐 acompanhar pela internet (Ajustes → Transmissão)
   ligarPix();
   ligarDivisoria();
+  ligarEdicaoNaPrevia();
   ligarZoomApp();
   lerPastaMidia('video'); lerPastaMidia('audio');     // pastas deste computador (os roteiros apontam para os arquivos delas)
   mostrarAba('roteiros', false);    // sempre abre nos Roteiros, com os cards das celebrações
@@ -2625,7 +2733,7 @@ async function iniciar() {
   renderBiblia();
   renderCabecalho();
   renderEstadoProj();
-  $('#versaoApp').textContent = NO_APP ? 'Versão 1.6.16 · aplicativo para Windows' : 'Versão 1.6.16 · no navegador';
+  $('#versaoApp').textContent = NO_APP ? 'Versão 1.7.0 · aplicativo para Windows' : 'Versão 1.7.0 · no navegador';
   // pede armazenamento permanente (o navegador não apaga os dados para liberar espaço)
   try { navigator.storage?.persist?.(); } catch (_) {}
   enviarConfigTelao(); renderTemasRapidos();

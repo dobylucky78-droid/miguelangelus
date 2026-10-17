@@ -5,6 +5,14 @@
  * A versão mais nova fica em cima. Ao gerar uma versão nova, acrescente a entrada dela aqui.
  */
 const NOVIDADES = [
+  { versao: '1.7.0', data: '2026-10-17', itens: [
+    '✨ Slides automáticos (Ajustes → Aparência do telão → 📏 Tamanho dos slides → "Automático"): a cada slide, o programa calcula o tamanho da letra, as linhas e o espaço entre as palavras para o texto ocupar toda a área das margens. Leituras em texto corrido saem justificadas; textos curtos e cantos, centralizados (sem buracos entre as palavras).',
+    '✨ No automático, cada bloco separado por uma linha em branco é um slide: para separar um slide em dois, deixe uma linha em branco no texto (Enter duas vezes); para juntar, tire a linha em branco. Cada slide tem no máximo 6 linhas (7 só quando a 7ª ficaria sozinha no slide seguinte): um bloco maior é dividido sozinho, em partes iguais e sempre no fim de uma frase.',
+    '✨ Com o automático ligado, o tamanho máximo, o alinhamento e os limites de linhas/caracteres ficam apagados (guardados, voltam se desligar). Negrito, itálico, sublinhado e cores do editor continuam valendo.',
+    '✨ Editando o texto de um item, a prévia da direita mostra o slide onde está o cursor, já como fica no telão, e muda enquanto você digita (o rótulo fica amarelo: "EDITANDO — slide N"; o slide também fica marcado em amarelo na grade). O telão não muda nada: continua com o que está no ar. Ao sair da caixa de texto, a prévia volta a mostrar o telão.',
+    '👤 O perfil (Salvar o atual como perfil) agora grava também a chave "Automático" e o "Numerar versículos". Perfis gravados antes não têm a chave: escolha o perfil, ligue ou desligue o Automático e use "Gravar o atual".',
+    '🐞 Numa prece ou estrofe longa, o número ("1.") ou a letra de quem fala (P., T.) não fica mais sozinho num slide: sempre vai junto do texto.',
+  ] },
   { versao: '1.6.16', data: '2026-10-17', itens: [
     '💻 Telas menores (como a da Capela NSF): os botões compridos da coluna da esquerda, em todas as abas ("Ler folhetos antigos (cantos e orações)…"), quebram a linha em vez de ficar cortados; os botões do painel (Tirar, Altar, Aviso, Pix) aparecem com o nome inteiro, em duas linhas quando não cabem; a liturgia na barra de cima mostra o começo de cada parte (antes sumia o início do nome do santo); "Recolher tudo" e "Expandir tudo" ficam juntos.',
   ] },

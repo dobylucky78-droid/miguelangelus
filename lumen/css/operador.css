@@ -760,6 +760,10 @@ big.m-g { font-size: 1.3em; } big.m-gg { font-size: 1.7em; } small.m-pq { font-s
 /* Apresentações (módulo Mídia) */
 .t-apres { background: #1f3340; color: #9fd8ff; }
 .slide.editando { border-color: #4fb3ff; box-shadow: 0 0 0 1px #4fb3ff; }
+/* (1.7.0) slide do cursor enquanto se edita o texto: a prévia da direita mostra este */
+.slide.em-edicao { border-color: #f0b429; box-shadow: 0 0 0 2px #f0b429; }
+.rotulo-vivo.editando { color: #f0b429; }
+.rotulo-vivo.editando .bolinha { background: #f0b429; animation: none; }
 .ap-slide-barra { background: var(--painel2); border-radius: 6px; padding: 4px 8px; }
 .ap-slide-barra button { padding: 3px 9px; }
 
@@ -1017,3 +1021,9 @@ html[data-tema-app="claro"] .tema-amostra { border-color: #aab1ba; }
 .liturgia > * { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .linha.controles { grid-template-columns: repeat(auto-fit, minmax(74px, 1fr)); }
 .cards-topo .cards-botoes { display: inline-flex; gap: 6px; flex: none; }
+
+/* (1.7.0) Slides automáticos: a chave em destaque; com ela ligada, os ajustes manuais ficam apagados (continuam guardados) */
+.auto-chave { border: 1px solid var(--acento); border-radius: 8px; padding: 8px 10px; background: rgba(212,169,58,.08); }
+.auto-dica { display: none; margin-top: -2px; }
+#dlgAjustes.auto-slides .auto-dica { display: block; }
+#dlgAjustes.auto-slides .so-manual { opacity: .4; pointer-events: none; }
