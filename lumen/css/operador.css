@@ -1007,3 +1007,13 @@ html[data-tema-app="claro"] .tema-amostra { border-color: #aab1ba; }
 .modulos .aba button.euc-atalho { white-space: normal; line-height: 1.25; }
 .modulos .aba .linha { flex-wrap: wrap; }
 .modulos .aba input, .modulos .aba select, .modulos .aba textarea { min-width: 0; max-width: 100%; }
+
+/* (1.6.16) Telas menores (computador da Capela NSF, 1366 px):
+   - aba Cantos e outras: os botões compridos da coluna da esquerda quebram a linha ("Ler folhetos antigos (cantos e orações)…")
+   - barra de cima: a liturgia corta no FIM de cada parte, com reticências (antes sumia o começo: "…tir (memória)")
+   - painel: Tirar/Altar/Aviso/Pix sem virar "Ti…/Al…/A…" (descem para uma 2ª linha quando não cabem)
+   - Roteiros: "Recolher tudo" e "Expandir tudo" ficam juntos */
+.modulos .aba > button, .modulos .aba > .linha > button { white-space: normal; line-height: 1.25; }
+.liturgia > * { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.linha.controles { grid-template-columns: repeat(auto-fit, minmax(74px, 1fr)); }
+.cards-topo .cards-botoes { display: inline-flex; gap: 6px; flex: none; }

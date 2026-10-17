@@ -121,8 +121,8 @@ function renderCardsRoteiros() {
   $('#cardsRoteiros').innerHTML = `
     <div class="cards-topo"><h2>Roteiros</h2><span class="sutil">Clique num roteiro para abri-lo na coluna da direita.</span>
       <span class="espaco"></span>
-      <button data-recolher-tudo="1" title="Recolher todos os dias">▸ Recolher tudo</button>
-      <button data-recolher-tudo="0" title="Expandir todos os dias">▾ Expandir tudo</button></div>
+      <span class="cards-botoes"><button data-recolher-tudo="1" title="Recolher todos os dias">▸ Recolher tudo</button>
+      <button data-recolher-tudo="0" title="Expandir todos os dias">▾ Expandir tudo</button></span></div>
     ${chips}
     ${(() => {
       // (1.6.15) criar roteiro: recolhe como as outras seções (começa recolhido — no notebook os cartões altos empurravam

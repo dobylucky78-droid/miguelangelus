@@ -5,6 +5,9 @@
  * A versão mais nova fica em cima. Ao gerar uma versão nova, acrescente a entrada dela aqui.
  */
 const NOVIDADES = [
+  { versao: '1.6.16', data: '2026-10-17', itens: [
+    '💻 Telas menores (como a da Capela NSF): os botões compridos da coluna da esquerda, em todas as abas ("Ler folhetos antigos (cantos e orações)…"), quebram a linha em vez de ficar cortados; os botões do painel (Tirar, Altar, Aviso, Pix) aparecem com o nome inteiro, em duas linhas quando não cabem; a liturgia na barra de cima mostra o começo de cada parte (antes sumia o início do nome do santo); "Recolher tudo" e "Expandir tudo" ficam juntos.',
+  ] },
   { versao: '1.6.15', data: '2026-10-17', itens: [
     '📿 Terço no telão: todas as orações (Ave-Maria, Pai-Nosso, Glória, Creio, Salve-Rainha…) agora em texto corrido, ocupando a largura toda e com letra bem maior — sem as linhas curtas e os buracos do justificado.',
     '✝ "Ave Maria, cheia de graça" sem a vírgula entre Ave e Maria — corrigido sozinho na Ave-Maria e no Ângelus já gravados (só essa vírgula; o resto do texto fica como estava).',
