@@ -58,11 +58,54 @@ const Euc = { dados: { textos: {}, extras: [] }, sel: { oe: 'oe3', pref: null },
 async function carregarEucaristia() {
   const reg = await DB.obter('config', 'eucaristia');
   if (reg?.valor) Object.assign(Euc.dados, reg.valor);
+  renderNomesLiturgia();
+}
+
+// Ajustes → 🙏 Papa e Bispo
+function renderNomesLiturgia() {
+  const n = nomesLiturgia(), p = $('#nomePapa'), b = $('#nomeBispo');
+  if (!p || !b) return;
+  if (document.activeElement !== p) p.value = n.papa;
+  if (document.activeElement !== b) b.value = n.bispo;
+  const ex = $('#nomesExemplo');
+  if (ex) ex.textContent = 'No telão: ' + trocarNomesN('“… com o vosso servo o Papa N., o nosso Bispo N., os bispos do mundo inteiro…”');
+}
+function ligarNomesLiturgia() {
+  for (const [id, k] of [['nomePapa', 'papa'], ['nomeBispo', 'bispo']]) $('#' + id)?.addEventListener('input', e => {
+    Euc.dados.nomes = { ...nomesLiturgia(), [k]: e.target.value };
+    salvarEucaristia();
+    renderNomesLiturgia();
+    if (typeof atualizarSlides === 'function') atualizarSlides();
+  });
+  renderNomesLiturgia();
 }
 let timerEuc = 0;
 function salvarEucaristia() {
   clearTimeout(timerEuc);
   timerEuc = setTimeout(() => DB.salvar('config', { id: 'eucaristia', valor: Euc.dados }), 200);
+}
+
+// (1.7.1) Nomes do Papa e do Bispo no lugar do "N." ("o vosso servo o Papa N., o nosso Bispo N."): nos folhetos importados, nas
+// orações eucarísticas e nas orações. A troca é feita ao montar os slides (o texto guardado continua com "N."), então quando
+// mudar o Papa ou o Bispo basta mudar aqui (Ajustes → 🙏 Papa e Bispo). Fica nos dados da Eucaristia: vai para os outros
+// computadores pela nuvem. Como no folheto da Arquidiocese: "o nosso Bispo Orani João" (a palavra antes do N. continua a mesma).
+const NOMES_PADRAO = { papa: 'Leão', bispo: 'Orani João' };
+const nomesLiturgia = () => ({ ...NOMES_PADRAO, ...(Euc.dados.nomes || {}) });
+function trocarNomesN(texto) {
+  if (!texto || !/\bN\./.test(texto)) return texto;
+  const n = nomesLiturgia();
+  const trocar = (rx, nome) => {
+    nome = String(nome || '').trim();
+    if (!nome) return;
+    texto = texto.replace(rx, (tudo, antes, pos, s) => {
+      // "N." no fim da frase (fim do texto/linha ou seguido de maiúscula) era também o ponto final: o ponto fica
+      const fimFrase = /^[ \t]*($|\n|[A-ZÀ-Ú—])/.test(s.slice(pos + tudo.length));
+      return antes + nome + (fimFrase ? '.' : '');
+    });
+  };
+  trocar(/(\b[Pp]apa\s+)N\./g, n.papa);
+  trocar(/(\b(?:[Aa]rce)?[Bb]ispo\s+)N\./g, n.bispo);
+  return texto;
 }
 
 const listaOEs = () => [...OES, ...Euc.dados.extras.filter(x => x.tipo === 'oe').map(x => ({ ...x, pref: 'livre', extra: true }))];
@@ -298,6 +341,7 @@ function aposMudarEuc() {
 }
 
 function ligarEucaristia() {
+  ligarNomesLiturgia();
   $('#btnAbrirEuc').addEventListener('click', () => mostrarEucaristia(true));
   const painel = $('#painelEucaristia');
   painel.addEventListener('click', e => {

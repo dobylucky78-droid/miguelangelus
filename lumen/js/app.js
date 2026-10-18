@@ -329,6 +329,23 @@ function capacidadeAuto() {
   return { L, C: Math.max(16, Math.floor(larg / (f * letra))) };
 }
 
+// Um trecho formatado (refrão em <b>…</b>, cor, tamanho) dividido em vários slides: cada slide fecha no fim o que ficou
+// aberto e o seguinte reabre — senão o 1º slide fica com a marca sem fechar e o 2º com a de fechar sobrando
+const RX_MARCA = /<(\/?)(b|i|u|g|gg|pq|vermelho|dourado|azul|verde|roxo|branco|preto)>/gi;
+function equilibrarMarcas(textos) {
+  let abertas = [];
+  return textos.map(t => {
+    const inicio = abertas.map(m => `<${m}>`).join('');
+    for (const [, fecha, nome] of t.matchAll(RX_MARCA)) {
+      const m = nome.toLowerCase();
+      if (!fecha) abertas.push(m);
+      else { const k = abertas.lastIndexOf(m); if (k >= 0) abertas.splice(k, 1); }
+    }
+    const quem = inicio ? /^\s*(—|R\.|[PTLCD]\.)\s*/.exec(t)?.[0] || '' : '';    // "T. " continua no começo (letra vermelha)
+    return quem + inicio + t.slice(quem.length) + [...abertas].reverse().map(m => `</${m}>`).join('');
+  });
+}
+
 function limitarSlide(s) {
   const auto = S.config.slideAuto ? capacidadeAuto() : null;
   const L = auto ? auto.L : Math.max(1, +S.config.linhasPorSlide || 4);
@@ -396,7 +413,7 @@ function limitarSlide(s) {
   }
   if (pedacos.length <= 1) return [s];
   const img = s.img ? { img: s.img, layout: s.layout, escurecer: s.escurecer } : {};   // slide com imagem: repete a imagem
-  return pedacos.map((p, i) => ({ texto: p.join('\n'), rodape: s.rodape, refrao: s.refrao, ...(s.numerado && i === 0 ? { numerado: true } : {}), ...img }));
+  return equilibrarMarcas(pedacos.map(p => p.join('\n'))).map((t, i) => ({ texto: t, rodape: s.rodape, refrao: s.refrao, ...(s.numerado && i === 0 ? { numerado: true } : {}), ...img }));
 }
 
 // (1.7.0) Slides automáticos: dentro de um bloco, as quebras de linha viram espaço — o telão decide quantas linhas o slide
@@ -415,6 +432,8 @@ function corridoAuto(t) {
 
 function gerarSlides(item) {
   let slides = gerarSlidesBase(item);
+  // "o Papa N., o nosso Bispo N." com os nomes (Ajustes → 🙏 Papa e Bispo)
+  if (typeof trocarNomesN === 'function') slides = slides.map(s => s.texto && !s.versos && /\bN\./.test(s.texto) ? { ...s, texto: trocarNomesN(s.texto) } : s);
   if (S.config.slideAuto && !['homilia', 'avisos'].includes(item.tipo) && !(item.tipo === 'imagem' && item.layout === 'capa'))
     slides = slides.map(s => s.versos || s.secao || s.contas || !s.texto ? s : { ...s, texto: corridoAuto(s.texto) });
   // a Homilia é sempre um slide só (a letra diminui para caber todas as leituras)
@@ -2733,7 +2752,7 @@ async function iniciar() {
   renderBiblia();
   renderCabecalho();
   renderEstadoProj();
-  $('#versaoApp').textContent = NO_APP ? 'Versão 1.7.0 · aplicativo para Windows' : 'Versão 1.7.0 · no navegador';
+  $('#versaoApp').textContent = NO_APP ? 'Versão 1.7.1 · aplicativo para Windows' : 'Versão 1.7.1 · no navegador';
   // pede armazenamento permanente (o navegador não apaga os dados para liberar espaço)
   try { navigator.storage?.persist?.(); } catch (_) {}
   enviarConfigTelao(); renderTemasRapidos();

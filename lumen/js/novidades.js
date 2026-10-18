@@ -5,6 +5,10 @@
  * A versão mais nova fica em cima. Ao gerar uma versão nova, acrescente a entrada dela aqui.
  */
 const NOVIDADES = [
+  { versao: '1.7.1', data: '2026-10-18', itens: [
+    '🙏 Nomes do Papa e do Bispo (Ajustes → 🙏 Papa e Bispo): no telão, "o vosso servo o Papa N., o nosso Bispo N." sai "o Papa Leão, o nosso Bispo Orani João" — nos folhetos importados, nas orações eucarísticas do catálogo e nas orações. Vale para todos os computadores; quando mudar o Papa ou o Bispo, é só trocar ali.',
+    '🐞 Refrão em negrito (ou trecho com cor/tamanho) dividido em dois slides: os dois saem formatados e a lista de slides não fica mais com espaços vazios entre os cartões.',
+  ] },
   { versao: '1.7.0', data: '2026-10-17', itens: [
     '✨ Slides automáticos (Ajustes → Aparência do telão → 📏 Tamanho dos slides → "Automático"): a cada slide, o programa calcula o tamanho da letra, as linhas e o espaço entre as palavras para o texto ocupar toda a área das margens. Leituras em texto corrido saem justificadas; textos curtos e cantos, centralizados (sem buracos entre as palavras).',
     '✨ No automático, cada bloco separado por uma linha em branco é um slide: para separar um slide em dois, deixe uma linha em branco no texto (Enter duas vezes); para juntar, tire a linha em branco. Cada slide tem no máximo 6 linhas (7 só quando a 7ª ficaria sozinha no slide seguinte): um bloco maior é dividido sozinho, em partes iguais e sempre no fim de uma frase.',
