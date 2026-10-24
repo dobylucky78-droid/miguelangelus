@@ -5,6 +5,12 @@
  * A versão mais nova fica em cima. Ao gerar uma versão nova, acrescente a entrada dela aqui.
  */
 const NOVIDADES = [
+  { versao: '1.7.3', data: '2026-10-24', itens: [
+    '📿 Versões do terço (Ajustes → 📿 Terço → Versões do terço): terços com outros textos — pelos Filhos, da Misericórdia… Cada parte pode trocar o texto: abertura, meditação de cada mistério, conta maior, contas menores (10×, com a conta da vez acesa no telão), depois da dezena (com ou sem o Glória) e encerramento; o que ficar vazio é o tradicional. Dá para fixar os mistérios (ex.: sempre os Luminosos). No roteiro, escolha a versão no cabeçalho de qualquer item do terço, ou use "Novo roteiro" na própria versão. Vão para os outros computadores pela nuvem; também dá para importar de arquivo.',
+    '📿 Terço com dezenas de tema próprio (ex.: Terço Vocacional — "1ª Dezena: Nazaré, escola da vocação"): na versão, dê um título a cada parte e ela entra no lugar do mistério do dia.',
+    '🐞 Terço no automático: o anúncio do mistério ("1º Mistério Gozoso" / "A Anunciação…") volta a sair em duas linhas no telão.',
+    '🐞 Nomes do Papa e do Bispo mudados em outro computador: chegam na hora (antes, só depois de fechar e abrir o programa).',
+  ] },
   { versao: '1.7.2', data: '2026-10-24', itens: [
     '✨ Prévia também nas janelas de editar canto, oração, parte fixa da Missa e texto da Oração Eucarística: no lugar da prévia da direita aparece o slide onde está o cursor, como vai ficar no telão, e muda enquanto você digita — antes de salvar. O telão não muda.',
     '🅿 Roteiros antigos (importados antes da 1.6.14) sem as letras P. e T.: abra o roteiro e clique em "🅿 Pôr P./T." (ao lado de Duplicar). As falas do povo ("—") viram "T." e as do padre ganham "P.", como nos folhetos importados agora. O botão só aparece nos roteiros que precisam.',

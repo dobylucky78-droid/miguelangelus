@@ -1033,3 +1033,10 @@ html[data-tema-app="claro"] .tema-amostra { border-color: #aab1ba; }
 .previa-dlg .pd-rotulo { font-size: 11.5px; font-weight: 700; letter-spacing: .5px; color: #f0b429; padding: 0 2px 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .previa-dlg .pd-rotulo small { font-weight: 400; color: var(--sutil); letter-spacing: 0; }
 .previa-dlg iframe { display: block; width: 100%; aspect-ratio: 16 / 9; border: 0; border-radius: 3px; background: #000; }
+
+/* (1.7.3) versões do terço (Ajustes → 📿 Terço) */
+.tv-lista { display: flex; flex-direction: column; gap: 4px; margin: 6px 0; }
+.tv-item { align-items: center; gap: 8px; padding: 5px 8px; border: 1px solid var(--borda); border-radius: 6px; background: var(--painel); }
+.terco-versao textarea { width: 100%; }
+.terco-versao .linha > .campo { flex: 1; }
+.tv-med summary { cursor: pointer; margin: 6px 0; }

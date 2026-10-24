@@ -336,6 +336,24 @@ function textoOracao(titulo) {
   return p ? p.texto : '';
 }
 
+// ---------- Versões do terço (1.7.3) ----------
+// Terços com outros textos ("pelos Filhos", da Misericórdia…): cada parte pode trocar o texto; o que ficar vazio é o
+// tradicional. Guardadas na config 'tercos' { lista } — vão para os outros computadores pela nuvem.
+// { id, nome, grupo ('' = os do dia), abertura, titulos[5], meditacoes[5], contaMaior, contasMenores, gloria (bool), depois, final }
+// titulos: dezenas com tema próprio ("1ª Dezena — Nazaré: Escola da vocação") no lugar dos mistérios
+const TercoVersoes = { lista: [] };
+async function carregarTercoVersoes() {
+  const r = await DB.obter('config', 'tercos');
+  TercoVersoes.lista = r?.valor?.lista || [];
+  if (typeof renderTercoAjustes === 'function') renderTercoAjustes();
+}
+const salvarTercoVersoes = () => DB.salvar('config', { id: 'tercos', valor: { lista: TercoVersoes.lista } });
+const versaoTerco = it => (it?.versao && TercoVersoes.lista.find(v => v.id === it.versao)) || null;
+const VERSAO_VAZIA = () => ({ id: uid(), nome: '', grupo: '', abertura: '', titulos: ['', '', '', '', ''], meditacoes: ['', '', '', '', ''], contaMaior: '', contasMenores: '', gloria: true, depois: '', final: '' });
+const preenchido = t => !!String(t || '').trim();
+const comDezenas = v => !!v?.titulos?.some(preenchido);          // versão com títulos próprios nas dezenas
+const tituloDezena = (v, n) => String(v?.titulos?.[n - 1] || '').trim();
+
 // data do roteiro a que o item pertence (não só o aberto: a lista de cards e a Agenda também perguntam); sem data, hoje
 const dataDoItemTerco = it => {
   const r = S.roteiro?.itens.includes(it) ? S.roteiro : (S.roteiros || []).find(x => x.itens?.includes(it));
@@ -359,9 +377,10 @@ function misteriosDoDia(d) {
 // ---------- Itens ----------
 
 // Os 7 itens do terço (abertura, 5 mistérios, encerramento), com as escolhas comuns repetidas em cada um
-function itensDoTerco(d = new Date()) {
+function itensDoTerco(d = new Date(), versaoId = '') {
   const jac = Oracoes.lista.find(o => o.titulo === 'Jaculatória de Fátima');
-  const comum = { grupo: misteriosDoDia(d), comBiblia: false, jaculatoria: jac ? jac.id : '', ladainha: false };
+  const v = TercoVersoes.lista.find(x => x.id === versaoId);
+  const comum = { grupo: v?.grupo || misteriosDoDia(d), comBiblia: false, jaculatoria: jac ? jac.id : '', ladainha: false, versao: v ? v.id : '' };
   return [
     { id: uid(), tipo: 'terco', parte: 'abertura', ...comum },
     ...[1, 2, 3, 4, 5].map(n => ({ id: uid(), tipo: 'terco', parte: 'misterio', n, ref: '', ...comum })),
@@ -370,9 +389,11 @@ function itensDoTerco(d = new Date()) {
 }
 
 // Escolhas que valem para o terço inteiro: mudar num item muda nos outros itens do terço do roteiro
-const CAMPOS_TERCO_COMUNS = ['grupo', 'comBiblia', 'jaculatoria', 'ladainha'];
+const CAMPOS_TERCO_COMUNS = ['grupo', 'comBiblia', 'jaculatoria', 'ladainha', 'versao'];
 function aoMudarTerco(it, campo) {
   if (!CAMPOS_TERCO_COMUNS.includes(campo) || !S.roteiro?.itens.includes(it)) return;
+  // trocou a versão: os mistérios passam a ser os dela (ou os do dia, se ela não fixa)
+  if (campo === 'versao') { const v = versaoTerco(it); it.grupo = v?.grupo || misteriosDoDia(dataDoItemTerco(it)); aoMudarTerco(it, 'grupo'); }
   for (const x of S.roteiro.itens) if (x.tipo === 'terco' && x !== it) x[campo] = it[campo];
   if (campo === 'grupo') for (const x of S.roteiro.itens) if (x.tipo === 'terco') x.ref = '';   // referência própria era de outro mistério
 }
@@ -384,9 +405,10 @@ const misterioDe = it => {
 };
 
 function resumoTerco(it) {
-  const g = MISTERIOS[it.grupo] || MISTERIOS.gozosos;
-  if (it.parte === 'abertura') return { rot: 'Terço', tit: `Abertura · Mistérios ${g.nome}`, vazio: false };
-  if (it.parte === 'final') return { rot: 'Terço', tit: `Encerramento · Salve-Rainha${it.ladainha ? ' e Ladainha' : ''}`, vazio: false };
+  const g = MISTERIOS[it.grupo] || MISTERIOS.gozosos, v = versaoTerco(it);
+  if (it.parte === 'abertura') return { rot: 'Terço', tit: `Abertura${v ? ' · ' + v.nome : ''}${comDezenas(v) ? '' : ' · Mistérios ' + g.nome}`, vazio: false };
+  if (it.parte === 'final') return { rot: 'Terço', tit: v && preenchido(v.final) ? 'Encerramento' : `Encerramento · Salve-Rainha${it.ladainha ? ' e Ladainha' : ''}`, vazio: false };
+  if (comDezenas(v)) return { rot: 'Terço', tit: `${it.n}ª Dezena${tituloDezena(v, it.n) ? ' — ' + tituloDezena(v, it.n) : ''}`, vazio: false };
   const m = misterioDe(it);
   return { rot: 'Terço', tit: `${it.n}º Mistério ${g.um}: ${m.nome}`, vazio: false };
 }
@@ -425,19 +447,30 @@ const largoTerco = s => s.versos || s.titulo ? s : { ...s, texto: corridoTerco(s
 const contaDoPaiNosso = n => 5 + 11 * (n - 1);
 const marcarTerco = (slides, feitas, atual = -1) => slides.map(s => ({ ...s, terco: { feitas, atual } }));
 
+// Conta menor de uma versão ("Deus, mantenha meus filhos de pé!"): como a Ave-Maria — num slide, com a dezena embaixo
+function slideContaMenor(texto, k, total, rodape) {
+  const t = corridoTerco(String(texto).replace(/\(\s*\d+\s*x\s*\)/gi, '').trim());
+  return { texto: t, rodape: `${rodape} · ${k}/${total}`, contas: { total, atual: k }, largo: true };
+}
+
 function slidesTerco(it) {
-  const g = MISTERIOS[it.grupo] || MISTERIOS.gozosos;
+  const g = MISTERIOS[it.grupo] || MISTERIOS.gozosos, v = versaoTerco(it);
+  const pronto = l => l.map(largoTerco);
+  const doTexto = (t, rodape) => dividir(t).map(x => ({ texto: x, rodape }));
   const fim = () => {
     const out = [];
+    if (v && !v.gloria) return out;                 // versão sem o Glória: nem a oração de depois do Glória
     const jac = it.jaculatoria && Oracoes.lista.find(o => o.id === it.jaculatoria);
     if (jac) out.push(...dividir(jac.texto).map(t => ({ texto: t, rodape: jac.titulo })));
     return out;
   };
-  const pronto = l => l.map(largoTerco);
+  // capa e anúncio do mistério/dezena: as linhas ficam como estão (o automático não junta: "1ª Dezena" / "Nazaré…")
+  const capa = { linhas: true, texto: !v ? `Santo Terço\nMistérios ${g.nome}` : comDezenas(v) ? `Santo Terço\n${v.nome}` : `Santo Terço\n${v.nome}\nMistérios ${g.nome}`, rodape: '' };
   if (it.parte === 'abertura') {
+    if (v && preenchido(v.abertura)) return [...marcarTerco([capa], 0), ...marcarTerco(pronto(doTexto(v.abertura, v.nome)), 0)];
     const creio = Ordinario.parte('creio-apostolico');
     return [
-      ...marcarTerco([{ texto: `Santo Terço\nMistérios ${g.nome}`, rodape: '' }], 0),
+      ...marcarTerco([capa], 0),
       ...marcarTerco(pronto([{ texto: SINAL_DA_CRUZ, rodape: 'Sinal da cruz' },
         ...(creio ? continuarFalas(creio.slides).map(t => ({ texto: t, rodape: 'Creio' })) : [])]), 0, 0),
       ...marcarTerco(pronto(slidesOracao('Pai-Nosso')), 1, 1),
@@ -446,22 +479,31 @@ function slidesTerco(it) {
     ];
   }
   if (it.parte === 'final') {
+    if (v && preenchido(v.final)) return marcarTerco(pronto(doTexto(v.final, v.nome)), 60);
     return marcarTerco(pronto([
       ...slidesOracao('Salve-Rainha'),
       ...(it.ladainha ? slidesOracao('Ladainha de Nossa Senhora') : []),
       { texto: SINAL_DA_CRUZ, rodape: 'Sinal da cruz' },
     ]), 60);
   }
-  const m = misterioDe(it), b = contaDoPaiNosso(it.n || 1);
-  const titulo = `${it.n}º Mistério ${g.um}`;
-  const out = marcarTerco([{ texto: `${titulo}\n${m.nome}`, rodape: `Mistérios ${g.nome} · ${m.ref}` }], b);
-  if (it.comBiblia && S.biblia) {
+  const m = misterioDe(it), b = contaDoPaiNosso(it.n || 1), dezenas = comDezenas(v);
+  // versão com títulos próprios: "1ª Dezena / Nazaré: Escola da vocação" no lugar do mistério (e sem o trecho da Bíblia dele)
+  const titulo = dezenas ? `${it.n}ª Dezena` : `${it.n}º Mistério ${g.um}`;
+  const out = marcarTerco([dezenas ? { linhas: true, texto: [titulo, tituloDezena(v, it.n)].filter(Boolean).join('\n'), rodape: v.nome }
+    : { linhas: true, texto: `${titulo}\n${m.nome}`, rodape: `Mistérios ${g.nome} · ${m.ref}` }], b);
+  if (it.comBiblia && S.biblia && !dezenas) {
     const r = Biblia.resolver(S.biblia, m.ref);
     if (!r.erro) out.push(...marcarTerco(versosEmSlides(r), b));
   }
-  out.push(...marcarTerco(pronto(slidesOracao('Pai-Nosso')), b, b));
-  for (let k = 1; k <= 10; k++) out.push({ ...slideAveMaria(k, 10, titulo), terco: { feitas: b + k, atual: b + k } });
-  out.push(...marcarTerco(pronto([...slidesOracao('Glória ao Pai'), ...fim()]), b + 11));
+  const med = v?.meditacoes?.[(it.n || 1) - 1];
+  if (preenchido(med)) out.push(...marcarTerco(pronto(doTexto(med, titulo)), b));
+  out.push(...marcarTerco(pronto(v && preenchido(v.contaMaior) ? doTexto(v.contaMaior, `${titulo} · conta maior`) : slidesOracao('Pai-Nosso')), b, b));
+  for (let k = 1; k <= 10; k++) {
+    const s = v && preenchido(v.contasMenores) ? slideContaMenor(v.contasMenores, k, 10, titulo) : slideAveMaria(k, 10, titulo);
+    out.push({ ...s, terco: { feitas: b + k, atual: b + k } });
+  }
+  const depois = [...(!v || v.gloria ? slidesOracao('Glória ao Pai') : []), ...(v && preenchido(v.depois) ? doTexto(v.depois, titulo) : []), ...fim()];
+  if (depois.length) out.push(...marcarTerco(pronto(depois), b + 11));
   return out;
 }
 function slidesAngelus(it) {
@@ -480,17 +522,21 @@ function htmlCabTerco(it) {
   const opcoesGrupo = Object.entries(MISTERIOS).map(([k, g]) => `<option value="${k}" ${k === it.grupo ? 'selected' : ''}>Mistérios ${g.nome}</option>`).join('');
   const jac = `<option value="">— nenhuma —</option>` + Oracoes.lista.slice().sort((a, b) => a.titulo.localeCompare(b.titulo, 'pt-BR'))
     .map(o => `<option value="${o.id}" ${o.id === it.jaculatoria ? 'selected' : ''}>${esc(o.titulo)}</option>`).join('');
-  const dia = misteriosDoDia(dataDoItemTerco(it));
-  const linha2 = it.parte === 'misterio'
+  const dia = misteriosDoDia(dataDoItemTerco(it)), v = versaoTerco(it);
+  const versoes = `<option value="">Tradicional</option>` + TercoVersoes.lista.slice().sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'))
+    .map(x => `<option value="${x.id}" ${x.id === it.versao ? 'selected' : ''}>${esc(x.nome)}</option>`).join('');
+  const dezenas = comDezenas(v);           // versão com dezenas de tema próprio: sem mistérios nem trecho da Bíblia
+  const linha2 = it.parte === 'misterio' && !dezenas
     ? `<label class="check" title="Lê o trecho da Bíblia do programa depois do anúncio do mistério"><input type="checkbox" data-campo="comBiblia" ${it.comBiblia ? 'checked' : ''}> Trecho da Bíblia</label>
        ${it.comBiblia ? `<input data-campo="ref" class="estreito" value="${esc(it.ref || '')}" placeholder="${esc(misterioDe({ ...it, ref: '' }).ref)}" title="Vazio: o trecho de costume">` : ''}`
-    : it.parte === 'final'
+    : it.parte === 'final' && !(v && preenchido(v.final))
       ? `<label class="check"><input type="checkbox" data-campo="ladainha" ${it.ladainha ? 'checked' : ''}> Ladainha de Nossa Senhora</label>`
       : '';
   return `<div class="cab-linha"><span class="tag t-terco">Terço</span>
-      <select data-campo="grupo" class="estreito">${opcoesGrupo}</select>
-      ${it.grupo !== dia ? `<span class="sutil pequeno">(o do dia: ${MISTERIOS[dia].nome})</span>` : ''}
-      <label class="check" title="Oração depois do Glória, em cada mistério (cadastre outras em Orações)">Depois do Glória <select data-campo="jaculatoria" class="estreito">${jac}</select></label>
+      <label class="check" title="Versões do terço com outros textos (Ajustes → 📿 Terço → Versões do terço)">Versão <select data-campo="versao" class="estreito">${versoes}</select></label>
+      ${dezenas ? '' : `<select data-campo="grupo" class="estreito">${opcoesGrupo}</select>`}
+      ${!dezenas && it.grupo !== dia ? `<span class="sutil pequeno">(o do dia: ${MISTERIOS[dia].nome})</span>` : ''}
+      ${v && !v.gloria ? '' : `<label class="check" title="Oração depois do Glória, em cada mistério (cadastre outras em Orações)">Depois do Glória <select data-campo="jaculatoria" class="estreito">${jac}</select></label>`}
       ${linha2}</div>
     ${it.comBiblia && !S.biblia ? '<p class="sutil pequeno" style="margin:0">Sem Bíblia no programa: o trecho não entra.</p>' : ''}
     <p class="sutil pequeno" style="margin:0">Cada <b>Próximo</b> avança uma Ave-Maria; o telão mostra a dezena com a conta da vez acesa. As escolhas acima valem para o terço inteiro.</p>
@@ -502,11 +548,17 @@ function htmlCabTerco(it) {
 // Texto para imprimir (sem repetir as 10 Ave-Marias)
 function textoTercoParaPapel(it) {
   const g = MISTERIOS[it.grupo] || MISTERIOS.gozosos;
-  const jac = it.jaculatoria && Oracoes.lista.find(o => o.id === it.jaculatoria);
-  if (it.parte === 'abertura') return `Mistérios ${g.nome}\nSinal da cruz · Creio · Pai-Nosso · 3 Ave-Marias · Glória`;
-  if (it.parte === 'final') return `Salve-Rainha${it.ladainha ? ' · Ladainha de Nossa Senhora' : ''} · Sinal da cruz`;
+  const jac = it.jaculatoria && Oracoes.lista.find(o => o.id === it.jaculatoria), v = versaoTerco(it);
+  const primeira = t => String(t || '').trim().split('\n')[0].replace(/^\s*([PTLCD]\.|—)\s*/, '');
+  const sub = v && comDezenas(v) ? v.nome : `${v ? v.nome + ' · ' : ''}Mistérios ${g.nome}`;
+  if (it.parte === 'abertura') return v && preenchido(v.abertura) ? `${sub}\n${v.abertura.trim()}` : `${v ? v.nome + ' · ' : ''}Mistérios ${g.nome}\nSinal da cruz · Creio · Pai-Nosso · 3 Ave-Marias · Glória`;
+  if (it.parte === 'final') return v && preenchido(v.final) ? v.final.trim() : `Salve-Rainha${it.ladainha ? ' · Ladainha de Nossa Senhora' : ''} · Sinal da cruz`;
   const m = misterioDe(it);
-  return `${m.nome} (${m.ref})\nPai-Nosso · 10 Ave-Marias · Glória${jac ? ' · ' + jac.titulo : ''}`;
+  if (!v) return `${m.nome} (${m.ref})\nPai-Nosso · 10 Ave-Marias · Glória${jac ? ' · ' + jac.titulo : ''}`;
+  const med = v.meditacoes?.[(it.n || 1) - 1];
+  return [comDezenas(v) ? `${it.n}ª Dezena${tituloDezena(v, it.n) ? ' — ' + tituloDezena(v, it.n) : ''}` : `${m.nome} (${m.ref})`, preenchido(med) ? med.trim() : '',
+    `${preenchido(v.contaMaior) ? primeira(v.contaMaior) : 'Pai-Nosso'} · 10× ${preenchido(v.contasMenores) ? primeira(v.contasMenores).replace(/\(\s*\d+\s*x\s*\)/i, '').trim() : 'Ave-Maria'}` +
+      `${v.gloria ? ' · Glória' + (jac ? ' · ' + jac.titulo : '') : ''}${preenchido(v.depois) ? ' · ' + primeira(v.depois) : ''}`].filter(Boolean).join('\n');
 }
 
 function adicionarTercoAoRoteiro() {
@@ -517,17 +569,17 @@ function adicionarTercoAoRoteiro() {
   abrirItem(novos[0], pos);
 }
 
-function novoRoteiroTerco() {
-  const hoje = new Date();
-  const r = novoRoteiro(`Terço ${hoje.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}`);
+function novoRoteiroTerco(versaoId = '') {
+  const hoje = new Date(), v = TercoVersoes.lista.find(x => x.id === versaoId);
+  const r = novoRoteiro(`Terço${v ? ' — ' + v.nome : ''} ${hoje.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}`);
   r.data = isoData(hoje);
-  r.itens = itensDoTerco(hoje);
+  r.itens = itensDoTerco(hoje, versaoId);
   S.roteiros.push(r);
   DB.salvar('roteiros', r);
   trocarRoteiro(r);
   mostrarAba('roteiros');
   abrirItem(r.itens[0], 0);
-  toast(`Terço montado com os Mistérios ${MISTERIOS[r.itens[0].grupo].nome}. Dá para trocar no item.`);
+  toast(comDezenas(v) ? `Terço ${v.nome} montado.` : `Terço montado com os Mistérios ${MISTERIOS[r.itens[0].grupo].nome}. Dá para trocar no item.`);
 }
 
 // Ajustes → 📿 Terço (as mesmas opções do cabeçalho do item, com a prévia da imagem)
@@ -535,7 +587,19 @@ function renderTercoAjustes() {
   const el = $('#tercoAjustes');
   if (!el) return;
   const img = S.config.tercoImagem || 'img/nossa-senhora-terco.svg';
+  const versoes = TercoVersoes.lista.slice().sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
   el.innerHTML = `
+    <h4 style="margin:4px 0">Versões do terço</h4>
+    <p class="sutil pequeno">Terços com outros textos — pelos Filhos, da Misericórdia… Cada parte pode trocar o texto; o que ficar vazio é o
+      tradicional. No roteiro, escolha a versão no cabeçalho de qualquer item do terço. Vão para os outros computadores pela nuvem.</p>
+    <div class="tv-lista">${versoes.length ? versoes.map(x => `<div class="linha tv-item"><b>📿 ${esc(x.nome)}</b>
+        <span class="sutil pequeno">${x.grupo ? 'Mistérios ' + MISTERIOS[x.grupo].nome : 'mistérios do dia'}</span><span class="espaco"></span>
+        <button type="button" data-tv-roteiro="${x.id}" title="Cria um roteiro novo com o terço nesta versão">Novo roteiro</button>
+        <button type="button" data-tv-editar="${x.id}">✎ Editar</button></div>`).join('')
+      : '<p class="sutil pequeno">Nenhuma versão ainda: só o terço tradicional.</p>'}</div>
+    <div class="linha"><button type="button" data-tv-nova>＋ Nova versão</button>
+      <button type="button" data-tv-importar title="Arquivo .json de versão do terço (como os de canto)">📥 Importar de arquivo…</button></div>
+    <hr style="margin:12px 0;border:0;border-top:1px solid var(--borda)">
     <label class="check"><input type="checkbox" data-tercocantos ${S.config.tercoCantos !== false ? 'checked' : ''}> Imagens nos cantos de baixo durante o terço</label>
     <p class="sutil pequeno">À esquerda, Nossa Senhora; à direita, o desenho do terço que vai se preenchendo conforme se reza (contas rezadas
       em dourado, a da vez acesa). O texto desvia das imagens; as imagens de baixo da comunidade dão lugar às do terço só durante o terço.</p>
@@ -551,6 +615,90 @@ function renderTercoAjustes() {
       a 🎨 Aparência do telão.</p>`;
 }
 const atualizarTercoTelas = () => { renderTercoAjustes(); if (S.atual?.item?.tipo === 'terco') renderCabecalho(); };
+
+// Editor de uma versão do terço
+let tvEditando = null;
+function abrirEditorVersaoTerco(id) {
+  const v = TercoVersoes.lista.find(x => x.id === id);
+  tvEditando = v ? structuredClone(v) : VERSAO_VAZIA();
+  const f = $('#formTercoVersao'), x = tvEditando;
+  for (const k of ['nome', 'grupo', 'abertura', 'contaMaior', 'contasMenores', 'depois', 'final']) f[k].value = x[k] || '';
+  for (let n = 1; n <= 5; n++) { f['med' + n].value = x.meditacoes?.[n - 1] || ''; f['tit' + n].value = x.titulos?.[n - 1] || ''; }
+  f.gloria.checked = x.gloria !== false;
+  f.querySelector('.tv-med').open = [...(x.meditacoes || []), ...(x.titulos || [])].some(preenchido);
+  $('#btnTercoVersaoExcluir').hidden = !v;
+  const dlg = $('#dlgTercoVersao');
+  dlg.returnValue = '';
+  dlg.showModal();
+  f.nome.focus();
+}
+// Depois de mudar as versões: o roteiro aberto mostra os textos novos
+function aposMudarVersoesTerco() {
+  salvarTercoVersoes();
+  atualizarTercoTelas();
+  if (S.atual?.item?.tipo === 'terco') atualizarSlides();
+  if (typeof renderRoteiroLista === 'function') renderRoteiroLista();
+}
+function ligarVersoesTerco() {
+  const f = $('#formTercoVersao');
+  f.addEventListener('submit', e => {
+    if (e.submitter?.value !== 'salvar') return;
+    const x = tvEditando;
+    for (const k of ['nome', 'grupo', 'abertura', 'contaMaior', 'contasMenores', 'depois', 'final']) x[k] = f[k].value.replace(/\r/g, '').trim();
+    x.meditacoes = [1, 2, 3, 4, 5].map(n => f['med' + n].value.replace(/\r/g, '').trim());
+    x.titulos = [1, 2, 3, 4, 5].map(n => f['tit' + n].value.trim());
+    x.gloria = f.gloria.checked;
+    const i = TercoVersoes.lista.findIndex(v => v.id === x.id);
+    if (i >= 0) TercoVersoes.lista[i] = x; else TercoVersoes.lista.push(x);
+    aposMudarVersoesTerco();
+    toast(`📿 Versão "${x.nome}" salva.`);
+  });
+  $('#btnTercoVersaoExcluir').addEventListener('click', () => {
+    const x = tvEditando;
+    if (!x || !confirm(`Excluir a versão do terço "${x.nome}"? (Nos outros computadores também.)\nOs roteiros que a usam voltam ao terço tradicional.`)) return;
+    TercoVersoes.lista = TercoVersoes.lista.filter(v => v.id !== x.id);
+    $('#dlgTercoVersao').close();
+    aposMudarVersoesTerco();
+  });
+  document.addEventListener('click', e => {
+    const b = e.target.closest('[data-tv-nova], [data-tv-editar], [data-tv-roteiro], [data-tv-importar]');
+    if (!b) return;
+    if (b.matches('[data-tv-nova]')) return abrirEditorVersaoTerco('');
+    if (b.matches('[data-tv-editar]')) return abrirEditorVersaoTerco(b.dataset.tvEditar);
+    if (b.matches('[data-tv-roteiro]')) { $('#dlgAjustes')?.close(); return novoRoteiroTerco(b.dataset.tvRoteiro); }
+    importarVersoesTerco();
+  });
+}
+// Arquivo .json { app: 'MiguelAngelus', tipo: 'terco-versoes', versoes: [...] } — a de mesmo nome é substituída (pergunta antes)
+function importarVersoesTerco() {
+  const inp = Object.assign(document.createElement('input'), { type: 'file', accept: '.json,application/json' });
+  inp.onchange = async () => {
+    const f = inp.files[0];
+    if (!f) return;
+    let d;
+    try { d = JSON.parse(await f.text()); } catch (_) { return toast('Esse arquivo não é de versão do terço.'); }
+    const lista = d?.tipo === 'terco-versoes' && Array.isArray(d.versoes) ? d.versoes : null;
+    if (!lista?.length) return toast('Esse arquivo não é de versão do terço.');
+    let n = 0;
+    for (const novo of lista) {
+      if (!preenchido(novo.nome)) continue;
+      const v = { ...VERSAO_VAZIA(), ...novo, id: uid() };
+      v.meditacoes = [0, 1, 2, 3, 4].map(i => String(novo.meditacoes?.[i] || ''));
+      v.titulos = [0, 1, 2, 3, 4].map(i => String(novo.titulos?.[i] || ''));
+      const igual = TercoVersoes.lista.findIndex(x => x.nome.toLowerCase() === v.nome.toLowerCase());
+      if (igual >= 0) {
+        if (!confirm(`Já existe a versão "${TercoVersoes.lista[igual].nome}". Substituir pelos textos do arquivo?`)) continue;
+        v.id = TercoVersoes.lista[igual].id;              // os roteiros que já usam continuam ligados a ela
+        TercoVersoes.lista[igual] = v;
+      } else TercoVersoes.lista.push(v);
+      n++;
+    }
+    if (!n) return;
+    aposMudarVersoesTerco();
+    toast(`📿 ${n === 1 ? 'Versão do terço importada' : n + ' versões do terço importadas'}.`);
+  };
+  inp.click();
+}
 
 // Imagens do terço no telão (1.6.15): liga/desliga e imagem própria de Nossa Senhora (ficam na config deste computador)
 document.addEventListener('change', e => {

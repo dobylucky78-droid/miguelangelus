@@ -21,7 +21,7 @@
     </div>
     <div class="splash-info">
       <div class="splash-gratis"><b>Gratuito · uso livre</b></div>
-      <div>Versão 1.7.2</div>
+      <div>Versão 1.7.3</div>
       <div>© 2026</div>
       <div><b>PASCOM</b></div>
       <div><b>São José Operário Ilha</b></div>
@@ -1035,7 +1035,7 @@
       <a href="https://pascom-sjo.github.io/" target="_blank" rel="noopener" class="site" title="Site do MiguelAngelus">
         <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M3 12h18M12 3c2.5 2.6 3.8 5.6 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.6-3.8-9S9.5 5.6 12 3z" fill="none" stroke="currentColor" stroke-width="2"/></svg>pascom-sjo.github.io</a>
     </div>
-    <p class="sutil pequeno" id="versaoApp">Versão 1.7.2</p>
+    <p class="sutil pequeno" id="versaoApp">Versão 1.7.3</p>
     <div class="linha"><span class="espaco"></span><button value="ok" class="primario">OK</button></div>
   </form>
 </dialog>
@@ -1141,6 +1141,49 @@
     </label>
     <div class="linha">
       <button type="button" id="btnExcluirOracao" class="perigo">Excluir</button>
+      <span class="espaco"></span>
+      <button value="cancelar" formnovalidate>Cancelar</button>
+      <button value="salvar" class="primario">Salvar</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- ============ Versão do terço (1.7.3) ============ -->
+<dialog id="dlgTercoVersao">
+  <form id="formTercoVersao" method="dialog" class="form terco-versao">
+    <h2>📿 Versão do terço</h2>
+    <p class="sutil pequeno">O que ficar <b>vazio</b> é o do terço tradicional. Linha em branco separa os slides; comece a linha com
+      <b>P.</b>, <b>T.</b>, <b>L.</b> ou <b>—</b> para quem fala.</p>
+    <div class="linha">
+      <label class="campo">Nome <input name="nome" required placeholder="Ex.: pelos Filhos, da Misericórdia"></label>
+      <label class="campo">Mistérios <select name="grupo">
+        <option value="">os do dia</option><option value="gozosos">sempre os Gozosos</option><option value="luminosos">sempre os Luminosos</option>
+        <option value="dolorosos">sempre os Dolorosos</option><option value="gloriosos">sempre os Gloriosos</option></select></label>
+    </div>
+    <label class="campo">Abertura <small class="sutil">— vazio: Sinal da cruz, Creio, Pai-Nosso, 3 Ave-Marias e Glória</small>
+      <textarea name="abertura" rows="5"></textarea></label>
+    <details class="tv-med"><summary>Cada mistério (ou dezena) <small class="sutil">— título próprio e meditação, opcionais</small></summary>
+      <p class="sutil pequeno">Com <b>título</b>, a parte vira uma dezena de tema próprio ("1ª Dezena — Nazaré: Escola da vocação"), no lugar do mistério do dia. A <b>meditação</b> vem depois do anúncio.</p>
+      <label class="campo">1º — título <small class="sutil">(opcional)</small><input name="tit1" placeholder="vazio: o 1º mistério do dia"></label>
+      <label class="campo">1º — meditação <textarea name="med1" rows="4"></textarea></label>
+      <label class="campo">2º — título <small class="sutil">(opcional)</small><input name="tit2" placeholder="vazio: o 2º mistério do dia"></label>
+      <label class="campo">2º — meditação <textarea name="med2" rows="4"></textarea></label>
+      <label class="campo">3º — título <small class="sutil">(opcional)</small><input name="tit3" placeholder="vazio: o 3º mistério do dia"></label>
+      <label class="campo">3º — meditação <textarea name="med3" rows="4"></textarea></label>
+      <label class="campo">4º — título <small class="sutil">(opcional)</small><input name="tit4" placeholder="vazio: o 4º mistério do dia"></label>
+      <label class="campo">4º — meditação <textarea name="med4" rows="4"></textarea></label>
+      <label class="campo">5º — título <small class="sutil">(opcional)</small><input name="tit5" placeholder="vazio: o 5º mistério do dia"></label>
+      <label class="campo">5º — meditação <textarea name="med5" rows="4"></textarea></label>
+    </details>
+    <div class="linha">
+      <label class="campo">Conta maior <small class="sutil">— vazio: Pai-Nosso</small><textarea name="contaMaior" rows="3"></textarea></label>
+      <label class="campo">Contas menores (10×) <small class="sutil">— vazio: Ave-Maria</small><textarea name="contasMenores" rows="3"></textarea></label>
+    </div>
+    <label class="check"><input type="checkbox" name="gloria"> Glória ao Pai depois da dezena (e a oração escolhida em "Depois do Glória")</label>
+    <label class="campo">Depois da dezena, também <small class="sutil">— opcional</small><textarea name="depois" rows="2"></textarea></label>
+    <label class="campo">Encerramento <small class="sutil">— vazio: Salve-Rainha (e Ladainha, se marcada) e Sinal da cruz</small><textarea name="final" rows="3"></textarea></label>
+    <div class="linha">
+      <button type="button" id="btnTercoVersaoExcluir" class="perigo">Excluir</button>
       <span class="espaco"></span>
       <button value="cancelar" formnovalidate>Cancelar</button>
       <button value="salvar" class="primario">Salvar</button>

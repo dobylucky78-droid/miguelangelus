@@ -468,7 +468,7 @@ function gerarSlides(item) {
   // "o Papa N., o nosso Bispo N." com os nomes (Ajustes → 🙏 Papa e Bispo)
   if (typeof trocarNomesN === 'function') slides = slides.map(s => s.texto && !s.versos && /\bN\./.test(s.texto) ? { ...s, texto: trocarNomesN(s.texto) } : s);
   if (S.config.slideAuto && !['homilia', 'avisos'].includes(item.tipo) && !(item.tipo === 'imagem' && item.layout === 'capa'))
-    slides = slides.map(s => s.versos || s.secao || s.contas || !s.texto ? s : { ...s, texto: corridoAuto(s.texto) });
+    slides = slides.map(s => s.versos || s.secao || s.contas || s.linhas || !s.texto ? s : { ...s, texto: corridoAuto(s.texto) });     // linhas: título do terço
   // a Homilia é sempre um slide só (a letra diminui para caber todas as leituras)
   // (e a "Capa do folheto" também: título, linha e edição juntos)
   // (automático: cada bloco separado por linha em branco é um slide; só divide o que não caberia com letra legível, cantos também)
@@ -821,6 +821,9 @@ const MONTAR_DLG = {
   dlgOracao: f => gerarSlides({ tipo: 'texto', titulo: f.titulo.value, texto: f.texto.value }),
   dlgOrdinario: () => gerarSlides({ tipo: 'texto', titulo: $('#ordTitulo').textContent, texto: $('#ordTexto').value, falas: true }),
   dlgTextoEuc: f => gerarSlides({ tipo: 'texto', titulo: $('#eucTitulo').textContent, texto: f.texto.value }),
+  // versão do terço: o texto da caixa do cursor, como no terço (largo); nas contas menores, o slide da conta
+  dlgTercoVersao: (f, c) => c.tagName !== 'TEXTAREA' ? [] : c.name === 'contasMenores' && c.value.trim() ? [slideContaMenor(c.value, 1, 10, f.nome.value || 'Terço')]
+    : gerarSlides({ tipo: 'texto', titulo: f.nome.value || 'Terço', texto: c.value }).map(largoTerco),
 };
 function caixaPreviaDlg() {
   if (PreviaDlg.box) return PreviaDlg.box;
@@ -831,7 +834,7 @@ function caixaPreviaDlg() {
 }
 function mostrarPreviaDlg(dlg, campo) {
   let slides;
-  try { slides = MONTAR_DLG[dlg.id](campo.form); } catch (e) { return; }
+  try { slides = MONTAR_DLG[dlg.id](campo.form, campo); } catch (e) { return; }
   const b = caixaPreviaDlg();
   if (!slides?.length) { b.hidden = true; return; }
   let k = slideDoCursor(campo, slides);
@@ -2794,6 +2797,7 @@ async function iniciar() {
   await separarCantaveisNosRoteiros();  // Ato Penitencial, Glória, Santo e Cordeiro viram itens "cantado ou rezado"
   await aberturasNoJeitoDaCapa();
 
+  await carregarTercoVersoes();          // 📿 versões do terço (terco.js)
   await carregarClassificacoes();         // 🏷 classificações dos cantos (ordem e as criadas aqui): preenche o filtro e o editor
   ligarClassificacoes();
 
@@ -2838,6 +2842,7 @@ async function iniciar() {
   ligarDivisoria();
   ligarEdicaoNaPrevia();
   ligarPreviaDlg();
+  ligarVersoesTerco();
   ligarZoomApp();
   lerPastaMidia('video'); lerPastaMidia('audio');     // pastas deste computador (os roteiros apontam para os arquivos delas)
   mostrarAba('roteiros', false);    // sempre abre nos Roteiros, com os cards das celebrações
@@ -2849,7 +2854,7 @@ async function iniciar() {
   renderBiblia();
   renderCabecalho();
   renderEstadoProj();
-  $('#versaoApp').textContent = NO_APP ? 'Versão 1.7.2 · aplicativo para Windows' : 'Versão 1.7.2 · no navegador';
+  $('#versaoApp').textContent = NO_APP ? 'Versão 1.7.3 · aplicativo para Windows' : 'Versão 1.7.3 · no navegador';
   // pede armazenamento permanente (o navegador não apaga os dados para liberar espaço)
   try { navigator.storage?.persist?.(); } catch (_) {}
   enviarConfigTelao(); renderTemasRapidos();
