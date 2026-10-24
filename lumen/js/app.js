@@ -119,7 +119,8 @@ function atualizarMini(w) {
   const ed = tipo === 'layout' ? Apresentacao.alvo : null;
   const cfg = ed ? configTelao(temaDoEditorLayout().id) : configTelao();
   const cantos = ed ? layoutEfetivo(ed.localId || '') : layoutEfetivo(localDoRoteiro(S.roteiro));
-  for (const msg of [{ tipo: 'config', config: cfg }, { tipo: 'layout', cantos }, { tipo: 'slide', slide: slideAmostra() }])
+  const slide = tipo === 'edicao' && PreviaDlg.slide ? PreviaDlg.slide : slideAmostra();     // janela de editar: o slide do cursor
+  for (const msg of [{ tipo: 'config', config: cfg }, { tipo: 'layout', cantos }, { tipo: 'slide', slide }])
     try { w.postMessage({ app: 'lumen', ...msg }, '*'); } catch (_) {}
 }
 function atualizarMinis() {
@@ -316,6 +317,38 @@ function continuarFalas(textos) {
       return !marcou && povo && l.trim() ? `<b>${l}</b>` : l;
     }).join('\n');
   });
+}
+
+// (1.7.2) Roteiros importados antes da 1.6.14: o folheto vinha sem as letras — a fala do povo com "—" e a do padre sem
+// nada. Botão "P./T." no roteiro aberto: "—" vira "T."; a fala que começa um bloco (ou vem depois da do povo) ganha "P.";
+// as linhas que continuam a mesma fala ficam sem letra (como na importação nova). Leitura: só a resposta ("T. Graças a Deus").
+const CAMPOS_FALAS = ['texto', 'convite', 'conclusao'];
+const falasSemLetra = t => !!t && /^\s*—/m.test(t) && !/^\s*([PTLCD]|R)\.\s/m.test(t);
+function porLetrasNasFalas(t) {
+  const leitura = /^\s*Leitura d/.test(t);
+  let antes = 'vazio';
+  return t.split('\n').map(l => {
+    if (!l.trim()) { antes = 'vazio'; return l; }
+    if (/^\s*—/.test(l)) { antes = 'T'; return l.replace(/^\s*—\s*/, 'T. '); }
+    const r = !leitura && (antes === 'vazio' || antes === 'T') ? 'P. ' + l.trimStart() : l;
+    antes = 'P';
+    return r;
+  }).join('\n');
+}
+// o convite da Oração dos Fiéis é sempre do padre: ganha "P." mesmo sem fala do povo
+const precisaLetra = (it, c) => c === 'convite' && it.tipo === 'preces' ? !!it[c]?.trim() && !/^\s*([PTLCD]|R)\.\s/m.test(it[c]) : falasSemLetra(it[c]);
+const itensSemLetras = r => (r?.itens || []).filter(it => !['canto', 'salmo'].includes(it.tipo) && CAMPOS_FALAS.some(c => precisaLetra(it, c)));
+function porLetrasNoRoteiro() {
+  const itens = itensSemLetras(S.roteiro);
+  if (!itens.length) return toast('Este roteiro já tem as letras P. e T.');
+  if (!confirm(`Pôr as letras P. (padre) e T. (todos) em ${itens.length} parte(s) deste roteiro?\n\n` +
+    itens.slice(0, 8).map(it => '• ' + (it.titulo || it.tipo)).join('\n') + (itens.length > 8 ? '\n• …' : '') +
+    '\n\nAs falas do povo ("—") viram "T." e as do padre ganham "P.", como nos folhetos importados agora.')) return;
+  for (const it of itens) for (const c of CAMPOS_FALAS) if (precisaLetra(it, c)) it[c] = porLetrasNasFalas(it[c]);
+  salvarRoteiro();
+  if (S.atual && itens.includes(S.atual.item)) { atualizarSlides(); renderCabecalho(); }
+  renderRoteiroLista();
+  toast(`Letras P. e T. em ${itens.length} parte(s) do roteiro.`);
 }
 
 // (1.7.0) Slides automáticos: quanto cabe num slide (em linhas e letras por linha), para limitarSlide dividir os blocos longos.
@@ -585,8 +618,10 @@ function gerarSlidesBase(item) {
       if (o) return dividir(o.texto || '').map(x => ({ texto: x, rodape: o.titulo }));
       return fala(item.textoRezado);
     }
-    case 'texto':
-      return dividir(item.texto).map(t => ({ texto: t, rodape: item.titulo || '' }));
+    case 'texto': {
+      const ts = dividir(item.texto);           // falas: prévia do editor das partes fixas (continua o negrito do povo)
+      return (item.falas ? continuarFalas(ts) : ts).map(t => ({ texto: t, rodape: item.titulo || '' }));
+    }
     case 'avisos':
       return slidesAvisos(item);          // avisosparoquiais.js
     case 'imagem': {
@@ -707,9 +742,9 @@ function projetar(i) {
 // (1.7.0) Editando o texto de um item: a prévia da direita mostra, enquanto se digita, o slide onde está o cursor — só
 // a prévia; o telão continua com o que está no ar. Ao sair da caixa de texto, a prévia volta a espelhar o telão.
 const normEd = s => tirarMarcas(String(s || '')).replace(/^\s*(—|R\.|[PTLCD]\.)\s*/gm, '').replace(/[^\p{L}\p{N}]+/gu, ' ').trim().toLowerCase();
-function slideDoCursor(campo) {
-  const a = S.atual, v = campo.value, pos = campo.selectionStart ?? v.length;
-  const textos = a.slides.map(s => ' ' + normEd(s.texto) + ' '), rods = a.slides.map(s => ' ' + normEd(s.rodape) + ' ');
+function slideDoCursor(campo, slides = S.atual.slides) {
+  const v = campo.value, pos = campo.selectionStart ?? v.length;
+  const textos = slides.map(s => ' ' + normEd(s.texto) + ' '), rods = slides.map(s => ' ' + normEd(s.rodape) + ' ');
   if (campo.tagName === 'INPUT') { const t = normEd(v); const k = t ? rods.findIndex(r => r.includes(' ' + t + ' ')) : -1; return k >= 0 ? k : textos.findIndex(x => t && x.includes(t)); }
   // as palavras antes do cursor (na mesma linha, ou as do fim da linha de cima) — e quantas vezes o trecho já
   // apareceu antes no campo (refrão repetido, mesma resposta…)
@@ -717,6 +752,8 @@ function slideDoCursor(campo) {
   const linha = normEd(v.slice(ini, fim));
   if (!linha) { const resto = normEd(v.slice(pos)); return resto ? slideComTrecho(textos, resto.split(' ').slice(0, 4).join(' '), 0) : -1; }
   const antes = normEd(v.slice(ini, pos)).split(' ').filter(Boolean), depois = normEd(v.slice(pos, fim)).split(' ').filter(Boolean);
+  // cursor no meio da palavra ("Par|a"): a palavra inteira, senão "par" acha "para" em outra estrofe
+  if (/[\p{L}\p{N}]/u.test(v[pos - 1] || '') && /[\p{L}\p{N}]/u.test(v[pos] || '') && antes.length && depois.length) antes.push(antes.pop() + depois.shift());
   for (const n of [6, 4, 3, 2, 1]) {
     const trecho = [...antes.slice(-Math.ceil(n / 2)), ...depois.slice(0, Math.floor(n / 2))].join(' ') || depois.slice(0, n).join(' ');
     if (!trecho) continue;
@@ -727,7 +764,9 @@ function slideDoCursor(campo) {
   return -1;
 }
 function slideComTrecho(textos, trecho, vezes) {
-  const achados = textos.map((x, k) => x.includes(' ' + trecho + ' ') || x.includes(trecho) ? k : -1).filter(k => k >= 0);
+  // palavras inteiras primeiro; pedaço de palavra só se não achar (a última palavra pode estar sendo digitada)
+  let achados = textos.map((x, k) => x.includes(' ' + trecho + ' ') ? k : -1).filter(k => k >= 0);
+  if (!achados.length) achados = textos.map((x, k) => x.includes(' ' + trecho) ? k : -1).filter(k => k >= 0);
   return achados.length ? achados[Math.min(vezes, achados.length - 1)] : -1;
 }
 function mostrarEdicao(campo) {
@@ -766,6 +805,61 @@ function ligarEdicaoNaPrevia() {
   cab.addEventListener('click', e => { if (campoTexto(e.target)) atualizar(); });
   // sair da caixa (a barrinha de formatação não conta: o foco volta para a caixa)
   cab.addEventListener('focusout', () => setTimeout(() => { if (!campoTexto(document.activeElement) && !document.activeElement?.closest('#barraFormato')) fimEdicao(); }, 150));
+}
+
+// (1.7.2) A mesma prévia nas janelas de editar (canto, oração, parte fixa da Missa, texto da Eucaristia): a janela cobre a
+// prévia da direita, então uma miniatura do telão aparece no lugar dela, por cima, com o slide onde está o cursor.
+// Os slides são montados como no roteiro (gerarSlides), com o texto que está na janela — antes de salvar.
+const PreviaDlg = { box: null, slide: null, pend: 0 };
+const MONTAR_DLG = {
+  dlgCanto: f => {
+    const c = { id: '__edicao', titulo: f.titulo.value, refrao: f.refrao.value, letra: f.letra.value, comecaPor: f.comecaPor.value };
+    S.cantos.push(c);
+    try { return gerarSlides({ tipo: 'canto', cantoId: c.id, momento: f.momento.value }); }
+    finally { S.cantos.splice(S.cantos.indexOf(c), 1); }
+  },
+  dlgOracao: f => gerarSlides({ tipo: 'texto', titulo: f.titulo.value, texto: f.texto.value }),
+  dlgOrdinario: () => gerarSlides({ tipo: 'texto', titulo: $('#ordTitulo').textContent, texto: $('#ordTexto').value, falas: true }),
+  dlgTextoEuc: f => gerarSlides({ tipo: 'texto', titulo: $('#eucTitulo').textContent, texto: f.texto.value }),
+};
+function caixaPreviaDlg() {
+  if (PreviaDlg.box) return PreviaDlg.box;
+  const b = document.createElement('div');
+  b.className = 'previa-dlg'; b.hidden = true;
+  b.innerHTML = '<div class="pd-rotulo">● PRÉVIA — <span></span> <small>(o telão não muda)</small></div><iframe src="projecao.html?preview&mini=edicao" title="Prévia do slide em edição" tabindex="-1"></iframe>';
+  return PreviaDlg.box = b;
+}
+function mostrarPreviaDlg(dlg, campo) {
+  let slides;
+  try { slides = MONTAR_DLG[dlg.id](campo.form); } catch (e) { return; }
+  const b = caixaPreviaDlg();
+  if (!slides?.length) { b.hidden = true; return; }
+  let k = slideDoCursor(campo, slides);
+  if (k < 0) k = Math.max(0, slides.findIndex(s => !s.secao));
+  PreviaDlg.slide = slides[k];
+  // no lugar da prévia da direita (se ela estiver escondida ou a janela for estreita: no canto de cima à direita)
+  if (b.parentNode !== dlg) dlg.appendChild(b);       // dentro da janela: fica por cima do fundo escurecido
+  const r = $('#preview').getBoundingClientRect(), w = r.width >= 160 ? r.width : 320;
+  Object.assign(b.style, { left: (r.width >= 160 ? r.left : innerWidth - w - 12) + 'px', top: (r.width >= 160 ? r.top : 12) + 'px', width: w + 'px' });
+  b.querySelector('span').textContent = `slide ${k + 1} de ${slides.length}`;
+  b.hidden = false;
+  // a miniatura, ao carregar, avisa "olá" e recebe o slide (PreviaDlg.slide); depois disso, manda direto
+  const mini = b.querySelector('iframe').contentWindow;
+  if (mini && Minis.has(mini)) atualizarMini(mini);
+}
+function ligarPreviaDlg() {
+  for (const id of Object.keys(MONTAR_DLG)) {
+    const dlg = $('#' + id);
+    if (!dlg) continue;
+    const campo = el => el instanceof Element && dlg.contains(el) && el.matches('textarea, input:not([type=checkbox]), select');
+    const atualizar = () => { clearTimeout(PreviaDlg.pend); PreviaDlg.pend = setTimeout(() => { if (dlg.open && campo(document.activeElement)) mostrarPreviaDlg(dlg, document.activeElement); }, 120); };
+    dlg.addEventListener('focusin', e => { if (campo(e.target)) atualizar(); });
+    dlg.addEventListener('input', e => { if (campo(e.target)) atualizar(); });
+    dlg.addEventListener('change', e => { if (campo(e.target)) atualizar(); });
+    dlg.addEventListener('click', e => { if (campo(e.target)) atualizar(); });
+    dlg.addEventListener('keyup', e => { if (campo(e.target) && /Arrow|Home|End|Page/.test(e.key)) atualizar(); });
+    dlg.addEventListener('close', () => { if (PreviaDlg.box) PreviaDlg.box.hidden = true; PreviaDlg.slide = null; });
+  }
 }
 
 // Passagem contínua entre as partes do roteiro (ideia do Hermínio): no último slide, Próximo já projeta o 1º slide da
@@ -1272,6 +1366,7 @@ function renderRoteiroCab() {
 function renderRoteiroLista() {
   const el = $('#roteiroItens');
   const itens = S.roteiro.itens;
+  const bl = $('#btnLetrasRoteiro'); if (bl) bl.hidden = !itensSemLetras(S.roteiro).length;    // roteiro antigo, sem P./T.
   if (!itens.length) {
     el.innerHTML = '<p class="vazio">Roteiro vazio. Use <b>Folheto PDF</b>, <b>Aplicar modelo</b> ou adicione itens abaixo.</p>';
     return;
@@ -2384,6 +2479,7 @@ function ligarEventos() {
     mostrarAba('roteiros');
     $('#nomeRoteiro').select();
   });
+  $('#btnLetrasRoteiro').addEventListener('click', porLetrasNoRoteiro);
   $('#btnDuplicarRoteiro').addEventListener('click', () => {
     const r = { ...structuredClone(S.roteiro), id: uid(), nome: S.roteiro.nome + ' (cópia)', atualizado: Date.now() };
     r.itens.forEach(i => { i.id = uid(); });
@@ -2741,6 +2837,7 @@ async function iniciar() {
   ligarPix();
   ligarDivisoria();
   ligarEdicaoNaPrevia();
+  ligarPreviaDlg();
   ligarZoomApp();
   lerPastaMidia('video'); lerPastaMidia('audio');     // pastas deste computador (os roteiros apontam para os arquivos delas)
   mostrarAba('roteiros', false);    // sempre abre nos Roteiros, com os cards das celebrações
@@ -2752,7 +2849,7 @@ async function iniciar() {
   renderBiblia();
   renderCabecalho();
   renderEstadoProj();
-  $('#versaoApp').textContent = NO_APP ? 'Versão 1.7.1 · aplicativo para Windows' : 'Versão 1.7.1 · no navegador';
+  $('#versaoApp').textContent = NO_APP ? 'Versão 1.7.2 · aplicativo para Windows' : 'Versão 1.7.2 · no navegador';
   // pede armazenamento permanente (o navegador não apaga os dados para liberar espaço)
   try { navigator.storage?.persist?.(); } catch (_) {}
   enviarConfigTelao(); renderTemasRapidos();

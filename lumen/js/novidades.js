@@ -5,6 +5,11 @@
  * A versão mais nova fica em cima. Ao gerar uma versão nova, acrescente a entrada dela aqui.
  */
 const NOVIDADES = [
+  { versao: '1.7.2', data: '2026-10-24', itens: [
+    '✨ Prévia também nas janelas de editar canto, oração, parte fixa da Missa e texto da Oração Eucarística: no lugar da prévia da direita aparece o slide onde está o cursor, como vai ficar no telão, e muda enquanto você digita — antes de salvar. O telão não muda.',
+    '🅿 Roteiros antigos (importados antes da 1.6.14) sem as letras P. e T.: abra o roteiro e clique em "🅿 Pôr P./T." (ao lado de Duplicar). As falas do povo ("—") viram "T." e as do padre ganham "P.", como nos folhetos importados agora. O botão só aparece nos roteiros que precisam.',
+    '🐞 Prévia na edição: com o cursor no meio de uma palavra, mostra o slide certo (antes podia mostrar outro slide com uma palavra parecida).',
+  ] },
   { versao: '1.7.1', data: '2026-10-18', itens: [
     '🙏 Nomes do Papa e do Bispo (Ajustes → 🙏 Papa e Bispo): no telão, "o vosso servo o Papa N., o nosso Bispo N." sai "o Papa Leão, o nosso Bispo Orani João" — nos folhetos importados, nas orações eucarísticas do catálogo e nas orações. Vale para todos os computadores; quando mudar o Papa ou o Bispo, é só trocar ali.',
     '🐞 Refrão em negrito (ou trecho com cor/tamanho) dividido em dois slides: os dois saem formatados e a lista de slides não fica mais com espaços vazios entre os cartões.',

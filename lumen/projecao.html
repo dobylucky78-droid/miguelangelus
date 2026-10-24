@@ -175,11 +175,13 @@ const PREVIEW = new URLSearchParams(location.search).has('preview');
 // Miniatura do telão nos Ajustes ('margens') e no editor de Apresentação ('layout'): o mesmo cálculo do telão, com o
 // limite das margens (pontilhado) e a área que o texto ocupou de fato (tracejado) por cima
 const MINI = new URLSearchParams(location.search).get('mini') || '';
+// (1.7.2) 'edicao': prévia das janelas de editar — igual ao telão, sem as linhas-guia das margens
+const GUIAS = !!MINI && MINI !== 'edicao';
 const alvo = PREVIEW ? window.parent : window.opener;
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 if (PREVIEW) document.body.classList.add('preview');
-if (MINI) {
+if (GUIAS) {
   document.body.classList.add('mini');
   const lim = document.createElement('div'); lim.id = 'limites'; document.body.appendChild(lim);
 }
@@ -395,7 +397,7 @@ const CAIXAS = {   // em fração da tela: [esquerda, topo, direita, base]
 };
 // Miniatura: os quadrados de cada imagem (o que o texto contorna), tracejados
 function desenharCaixasMini(base) {
-  if (!MINI) return;
+  if (!GUIAS) return;
   document.querySelectorAll('.ct-caixa').forEach(e => e.remove());
   if (!contorno || !base) return;
   for (const c of contorno.caixas) {
@@ -473,7 +475,7 @@ function harmonizar(lay) {
     [al, at, ar, ab] = opcoes.map((q, i) => [q, nota(q), i]).sort((x, y) => (y[1] - x[1]) || (x[2] - y[2]))[0][0];
   }
   Object.assign(area.style, { left: al + 'px', top: at + 'px', right: (W - ar) + 'px', bottom: (H - ab) + 'px' });
-  if (MINI) {
+  if (GUIAS) {
     const u = areaUtil(), lim = $('limites');
     if (lim) Object.assign(lim.style, { left: u[0] * 100 + '%', top: u[1] * 100 + '%', right: (1 - u[2]) * 100 + '%', bottom: (1 - u[3]) * 100 + '%' });
   }
@@ -522,7 +524,7 @@ function svgTerco(feitas, atual) {
 }
 
 function desenharTerco() {
-  const t = !!slide?.terco && cfg.tercoCantos !== false && !document.body.classList.contains('camera') && !MINI;
+  const t = !!slide?.terco && cfg.tercoCantos !== false && !document.body.classList.contains('camera') && !GUIAS;
   document.body.classList.toggle('terco', t);
   const e = $('terco-ie'), d = $('terco-id');
   e.classList.toggle('on', t); d.classList.toggle('on', t);
