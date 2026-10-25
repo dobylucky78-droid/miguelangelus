@@ -5,6 +5,11 @@
  * A versão mais nova fica em cima. Ao gerar uma versão nova, acrescente a entrada dela aqui.
  */
 const NOVIDADES = [
+  { versao: '1.7.4', data: '2026-10-25', itens: [
+    '🔎 Procurar canto no item do roteiro: digite um pedaço do título, do autor ou da letra (sem precisar de acento) e a lista mostra só os que combinam — nos favoritos (com "⭐ só favoritos", de qualquer momento) ou no acervo completo. No topo vêm os "🎯 Mais parecidos"; Enter escolhe o melhor.',
+    '🐞 Bíblia: "Eclo" (Eclesiástico, como vem nos folhetos — ex.: Eclo 3,2-6, na festa da Sagrada Família) não era encontrado na Bíblia Pereira de Figueiredo, onde o livro se chama "Eclesiástico (Sirácida)". Agora Eclo, Sir e Eclesiástico funcionam, nas leituras dos roteiros e na aba Bíblia.',
+    '🐞 Botão "Baixar folheto da Arquidiocese": a etiqueta "novo" some assim que os roteiros do dia são montados (antes, só ao fechar e abrir o programa).',
+  ] },
   { versao: '1.7.3', data: '2026-10-24', itens: [
     '📿 Versões do terço (Ajustes → 📿 Terço → Versões do terço): terços com outros textos — pelos Filhos, da Misericórdia… Cada parte pode trocar o texto: abertura, meditação de cada mistério, conta maior, contas menores (10×, com a conta da vez acesa no telão), depois da dezena (com ou sem o Glória) e encerramento; o que ficar vazio é o tradicional. Dá para fixar os mistérios (ex.: sempre os Luminosos). No roteiro, escolha a versão no cabeçalho de qualquer item do terço, ou use "Novo roteiro" na própria versão. Vão para os outros computadores pela nuvem; também dá para importar de arquivo.',
     '📿 Terço com dezenas de tema próprio (ex.: Terço Vocacional — "1ª Dezena: Nazaré, escola da vocação"): na versão, dê um título a cada parte e ela entra no lugar do mistério do dia.',

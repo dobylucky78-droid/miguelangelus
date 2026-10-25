@@ -99,7 +99,10 @@ const Biblia = (() => {
 
   function catalogoDe(l) {
     const kn = semAc(chave(l.nome)), ka = chave(l.abrev);
-    return (kn && CATALOGO.find(c => [c.nome, ...c.alias].some(n => semAc(chave(n)) === kn)))
+    // (1.7.4) nome com parêntese ("Eclesiástico (Sirácida)", na Pereira de Figueiredo): vale o nome de fora e o de dentro —
+    // senão o livro ficava sem as abreviações do catálogo e "Eclo 3,2-6" (como nos folhetos) não era encontrado
+    const nomes = [kn, ...String(l.nome || '').split(/[()]/).map(x => semAc(chave(x.trim())))].filter(Boolean);
+    return (kn && CATALOGO.find(c => [c.nome, ...c.alias].some(n => nomes.includes(semAc(chave(n))))))
       || (ka && CATALOGO.find(c => chave(c.abrev) === ka))
       || (!l.nome && l.num >= 1 && l.num <= 66 ? CATALOGO.find(c => c.abrev === PROT[l.num - 1]) : null);
   }

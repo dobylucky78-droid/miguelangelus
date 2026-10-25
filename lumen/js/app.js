@@ -1110,7 +1110,49 @@ function renderSlides() {
 const MOMENTOS_IRMAOS = { 'Ato Penitencial': ['Aspersão'] };
 const doMomento = (c, momento) => [momento, ...(MOMENTOS_IRMAOS[momento] || [])].includes(c.momento || 'Outros');
 
-function opcoesCantos(momento, sel, soFav = false, rezado = false) {
+// (1.7.4) 🔎 procurar canto no item do roteiro: título, autor e o começo da letra/refrão, sem acento; nos favoritos (de qualquer
+// momento) ou no acervo completo, conforme o "⭐ só favoritos"
+const BuscaCanto = { item: null, termo: '' };      // o que está digitado no 🔎 do item aberto (o cabeçalho é redesenhado)
+const casaCanto = (c, termo) => {
+  const t = semAcento(termo).trim();
+  if (!t) return true;
+  const alvo = semAcento(`${c.titulo} ${c.autor || ''} ${(c.refrao || '').slice(0, 160)} ${(c.letra || '').slice(0, 300)}`).replace(/<[^>]+>/g, ' ');
+  return t.split(/\s+/).every(p => alvo.includes(p));
+};
+// relevância: 0 = a frase no título · 1 = todas as palavras no título · 2 = no autor · 3 = na letra/refrão (menor = melhor)
+function notaCanto(c, termo) {
+  const t = semAcento(termo).trim(), tit = semAcento(c.titulo), palavras = t.split(/\s+/);
+  if (tit.includes(t)) return tit.startsWith(t) ? -1 : 0;
+  if (palavras.every(p => tit.includes(p))) return 1;
+  if (palavras.every(p => semAcento(c.titulo + ' ' + (c.autor || '')).includes(p))) return 2;
+  return 3;
+}
+const porRelevancia = termo => (a, b) => notaCanto(a, termo) - notaCanto(b, termo) || porTitulo(a, b);
+// o mais relevante (Enter na busca); empate: o do momento do item
+function melhorCanto(momento, soFav, termo) {
+  const l = S.cantos.filter(c => (!soFav || c.favorito) && casaCanto(c, termo));
+  return l.sort((a, b) => notaCanto(a, termo) - notaCanto(b, termo) || ((a.momento || 'Outros') === momento ? -1 : 0) - ((b.momento || 'Outros') === momento ? -1 : 0) || porTitulo(a, b))[0] || null;
+}
+function opcoesCantosBusca(momento, sel, soFav, rezado, termo) {
+  let h = rezado ? '<option value="">— rezado (texto do folheto) —</option>' : '<option value="">— escolher canto —</option>';
+  const ficha = c => fichaCanto(c) ? ` — ${esc(fichaCanto(c))}` : '';
+  const achados = S.cantos.filter(c => (!soFav || c.favorito) && casaCanto(c, termo));
+  h = h.replace('</option>', ` (${achados.length ? achados.length + ' encontrado' + (achados.length > 1 ? 's' : '') : 'nenhum'} com “${esc(termo.trim())}”${soFav ? ' nos favoritos' : ''})</option>`);
+  // no topo, os mais parecidos (a busca no título), de qualquer momento; depois, todos os achados por momento
+  const op = c => `<option value="${c.id}" ${c.id === sel ? 'selected' : ''}>${c.favorito ? '⭐ ' : ''}${esc(c.titulo)}${ficha(c)}${c.cifra ? ' 🎸' : ''}</option>`;
+  const topo = achados.filter(c => notaCanto(c, termo) <= 1).sort(porRelevancia(termo)).slice(0, 5);
+  if (topo.length && achados.length > topo.length) h += `<optgroup label="🎯 Mais parecidos">${topo.map(c => op(c).replace(' selected', '')).join('')}</optgroup>`;
+  for (const m of [momento, ...momentosCantos().filter(x => x !== momento)]) {
+    const lista = achados.filter(c => (c.momento || 'Outros') === m).sort(porRelevancia(termo));
+    if (lista.length) h += `<optgroup label="${soFav ? '⭐ ' : ''}${esc(m)}">${lista.map(c => `<option value="${c.id}" ${c.id === sel ? 'selected' : ''}>${c.favorito ? '⭐ ' : ''}${esc(c.titulo)}${ficha(c)}${c.cifra ? ' 🎸' : ''}</option>`).join('')}</optgroup>`;
+  }
+  const atual = S.cantos.find(c => c.id === sel);
+  if (atual && !achados.includes(atual)) h += `<optgroup label="Escolhido"><option value="${atual.id}" selected>${esc(atual.titulo)}</option></optgroup>`;
+  return h;
+}
+
+function opcoesCantos(momento, sel, soFav = false, rezado = false, termo = '') {
+  if (String(termo).trim()) return opcoesCantosBusca(momento, sel, soFav, rezado, termo);
   let h = rezado ? '<option value="">— rezado (texto do folheto) —</option>' : '<option value="">— escolher canto —</option>';
   const ficha = c => fichaCanto(c) ? ` — ${esc(fichaCanto(c))}` : '';
   const opFav = c => `<option value="${c.id}" ${c.id === sel ? 'selected' : ''}>⭐ ${esc(c.titulo)}${ficha(c)}${c.cifra ? ' 🎸' : ''}</option>`;
@@ -1160,7 +1202,8 @@ function renderCabecalho() {
       h = noRoteiro
         ? `<div class="cab-linha"><span class="tag t-canto">Canto</span>
              <select data-campo="momento" class="estreito">${momentosCantos().map(m => `<option ${m === it.momento ? 'selected' : ''}>${esc(m)}</option>`).join('')}</select>
-             <select data-campo="cantoId" title="${it.textoRezado || MOMENTOS_COM_ORACAO[it.momento] ? 'Deixe “rezado” para usar o texto, ou escolha um canto' : ''}">${opcoesCantos(it.momento, it.cantoId, soFavoritosNoRoteiro(), !!(it.textoRezado || MOMENTOS_COM_ORACAO[it.momento]))}</select>
+             <input type="search" data-buscacanto class="busca-canto" value="${esc(BuscaCanto.item === it ? BuscaCanto.termo : '')}" placeholder="🔎 procurar canto…" title="Procura pelo título, autor ou um pedaço da letra — nos favoritos (com “⭐ só favoritos”) ou no acervo completo. Enter escolhe o primeiro.">
+             <select data-campo="cantoId" title="${it.textoRezado || MOMENTOS_COM_ORACAO[it.momento] ? 'Deixe “rezado” para usar o texto, ou escolha um canto' : ''}">${opcoesCantos(it.momento, it.cantoId, soFavoritosNoRoteiro(), !!(it.textoRezado || MOMENTOS_COM_ORACAO[it.momento]), BuscaCanto.item === it ? BuscaCanto.termo : '')}</select>
              ${MOMENTOS_COM_ORACAO[it.momento] && !c ? `<select data-campo="oracaoId" title="Texto rezado (Orações → ${MOMENTOS_COM_ORACAO[it.momento]})">
                <option value="">— qual ${it.momento === 'Ladainha' ? 'ladainha' : 'sequência'}? —</option>${oracoesDoMomento(it.momento).map(o => `<option value="${o.id}" ${o.id === it.oracaoId ? 'selected' : ''}>${esc(o.titulo)}</option>`).join('')}</select>` : ''}
              ${temFavoritos() ? `<label class="check" title="A lista mostra só os cantos favoritos, separados por momento"><input type="checkbox" data-sofav ${soFavoritosNoRoteiro() ? 'checked' : ''}> ⭐ só favoritos</label>` : ''}
@@ -2149,6 +2192,7 @@ function concluirFolheto(pacote, msg) {
   const c = pacote.cantos;
   const msgCantos = c.novos || c.existentes ? ` Cantos: ${c.novos} novo(s) no banco${c.existentes ? `, ${c.existentes} já existia(m)` : ''}.` : '';
   toast(msg + msgCantos + (pacote.msgEuc || ''));
+  if (typeof atualizarEtiquetaFolheto === 'function') atualizarEtiquetaFolheto();     // o "novo" do botão Baixar folheto some
   if (pacote.aviso) alert(pacote.aviso);
   if (c.cantosNovos.length) abrirNomeacao(c.cantosNovos);
 }
@@ -2412,11 +2456,29 @@ function ligarEventos() {
   });
 
   // Cabeçalho do item (edição)
+  // 🔎 procurar canto (item de canto do roteiro): refaz só a lista, sem redesenhar o cabeçalho (o cursor fica na busca)
+  $('#itemCab').addEventListener('input', e => {
+    if (!e.target.matches('[data-buscacanto]') || !S.atual) return;
+    const it = S.atual.item;
+    BuscaCanto.item = it; BuscaCanto.termo = e.target.value;
+    const s = $('#itemCab [data-campo=cantoId]');
+    if (s) s.innerHTML = opcoesCantos(it.momento, it.cantoId, soFavoritosNoRoteiro(), !!(it.textoRezado || MOMENTOS_COM_ORACAO[it.momento]), e.target.value);
+  });
+  // Enter na busca: escolhe o primeiro canto encontrado
+  $('#itemCab').addEventListener('keydown', e => {
+    if (e.key !== 'Enter' || !e.target.matches('[data-buscacanto]')) return;
+    e.preventDefault();
+    const it = S.atual?.item, s = $('#itemCab [data-campo=cantoId]'), melhor = it && melhorCanto(it.momento, soFavoritosNoRoteiro(), e.target.value);
+    if (!s || !melhor) return;
+    BuscaCanto.item = null; BuscaCanto.termo = '';
+    s.value = melhor.id; s.dispatchEvent(new Event('input', { bubbles: true }));
+  });
   $('#itemCab').addEventListener('input', e => {
     const campo = e.target.dataset.campo;
     if (!campo || !S.atual) return;
     const it = S.atual.item;
     it[campo] = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
+    if (campo === 'cantoId' || campo === 'momento') { BuscaCanto.item = null; BuscaCanto.termo = ''; }      // escolheu: a busca limpa
     if (it.tipo === 'terco') aoMudarTerco(it, campo);
     if (campo === 'usarFundo' || campo === 'fundoEscurecer') { if (campo === 'fundoEscurecer') it[campo] = +it[campo]; return aposMudarFundoItem(); }
     if (S.atual.rIdx >= 0) { salvarRoteiro(); renderRoteiroLista(); }
@@ -2854,7 +2916,7 @@ async function iniciar() {
   renderBiblia();
   renderCabecalho();
   renderEstadoProj();
-  $('#versaoApp').textContent = NO_APP ? 'Versão 1.7.3 · aplicativo para Windows' : 'Versão 1.7.3 · no navegador';
+  $('#versaoApp').textContent = NO_APP ? 'Versão 1.7.4 · aplicativo para Windows' : 'Versão 1.7.4 · no navegador';
   // pede armazenamento permanente (o navegador não apaga os dados para liberar espaço)
   try { navigator.storage?.persist?.(); } catch (_) {}
   enviarConfigTelao(); renderTemasRapidos();

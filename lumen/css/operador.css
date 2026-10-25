@@ -1040,3 +1040,6 @@ html[data-tema-app="claro"] .tema-amostra { border-color: #aab1ba; }
 .terco-versao textarea { width: 100%; }
 .terco-versao .linha > .campo { flex: 1; }
 .tv-med summary { cursor: pointer; margin: 6px 0; }
+
+/* (1.7.4) 🔎 procurar canto no item do roteiro */
+.item-cab .busca-canto { width: 170px; min-width: 120px; }

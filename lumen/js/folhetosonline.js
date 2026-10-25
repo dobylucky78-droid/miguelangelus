@@ -191,13 +191,19 @@ async function baixarFolhetoOnline(f, botao) {
 async function verificarFolhetoNovo() {
   if (!NO_APP) return;
   try {
-    const lista = await listarFolhetosOnline();
-    const hoje = isoData(new Date());
-    const novo = lista.find(f => f.iso >= hoje && !temRoteiroNoDia(f.iso));
-    const b = $('#btnFolhetoOnline');
-    b.classList.toggle('tem-novo', !!novo);
-    if (novo) { const d = deIso(novo.iso); b.title = `Saiu o folheto de ${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}: ${novo.nome}`; }
+    await listarFolhetosOnline();
+    atualizarEtiquetaFolheto();
   } catch (_) { /* sem internet: fica quieto */ }
+}
+// A etiqueta "novo" do botão (com a lista já baixada): some assim que o roteiro do dia é montado (1.7.4; antes, só ao reabrir)
+function atualizarEtiquetaFolheto() {
+  const hoje = isoData(new Date());
+  const novo = FolOnline.lista.find(f => f.iso >= hoje && !temRoteiroNoDia(f.iso));
+  const b = $('#btnFolhetoOnline');
+  if (!b) return;
+  b.classList.toggle('tem-novo', !!novo);
+  if (novo) { const d = deIso(novo.iso); b.title = `Saiu o folheto de ${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}: ${novo.nome}`; }
+  else b.title = '';
 }
 
 function ligarFolhetosOnline() {
