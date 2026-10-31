@@ -169,6 +169,7 @@
 <div id="aviso"><span class="ic"></span><span class="txt"></span></div>
 <div id="dica">Arraste esta janela para o telão e <b>clique duas vezes</b> para tela cheia.<br>As setas do teclado também funcionam aqui.</div>
 
+<script src="js/tercodesenho.js"></script>
 <script>
 'use strict';
 const PREVIEW = new URLSearchParams(location.search).has('preview');
@@ -496,32 +497,7 @@ function aplicarFundo() {
 }
 
 // ---------- Terço nos cantos (1.6.15) ----------
-// Desenho do terço (SVG): a cruz, o Pai-Nosso e as 3 Ave-Marias no pingente, a medalha, e as 5 dezenas em volta.
-// Contas já rezadas cheias (dourado), a da vez acesa (cor da letra de quem fala), as que faltam vazias.
-function svgTerco(feitas, atual) {
-  const ouro = '#e2b84a', vez = cfg.corRotulo || '#ff5a4f', linha = cfg.corTexto || '#ffffff';
-  const conta = (i, x, y, r) => i < feitas && i !== atual
-    ? `<circle cx="${x}" cy="${y}" r="${r}" fill="${ouro}" stroke="${ouro}" stroke-width="1"/>`
-    : i === atual
-      ? `<circle cx="${x}" cy="${y}" r="${r + 5}" fill="${vez}" opacity=".35"/><circle cx="${x}" cy="${y}" r="${r + 1.5}" fill="${vez}"/>`
-      : `<circle cx="${x}" cy="${y}" r="${r}" fill="none" stroke="${linha}" stroke-opacity=".6" stroke-width="1.6"/>`;
-  const cx = 100, cy = 92, R = 72, sm = 4.6, gr = 7;
-  let h = `<circle cx="${cx}" cy="${cy}" r="${R}" fill="none" stroke="${linha}" stroke-opacity=".3" stroke-width="1.2"/>
-    <line x1="${cx}" y1="${cy + R}" x2="${cx}" y2="262" stroke="${linha}" stroke-opacity=".3" stroke-width="1.2"/>`;
-  // pingente: 0 cruz (embaixo), 1 Pai-Nosso, 2–4 Ave-Marias, 5 Pai-Nosso do 1º mistério; a medalha no encontro
-  const cor0 = 0 < feitas && atual !== 0 ? ouro : atual === 0 ? vez : 'none';
-  h += `<g transform="translate(${cx} 276)"><path d="M-3 -18 h6 v8 h8 v6 h-8 v20 h-6 v-20 h-8 v-6 h8 z" fill="${cor0}" stroke="${atual === 0 ? vez : cor0 === 'none' ? linha : ouro}" stroke-opacity="${cor0 === 'none' ? .7 : 1}" stroke-width="1.6"/></g>`;
-  h += conta(1, cx, 240, gr) + conta(2, cx, 225, sm) + conta(3, cx, 213, sm) + conta(4, cx, 201, sm) + conta(5, cx, 184, gr);
-  h += `<ellipse cx="${cx}" cy="${cy + R}" rx="8" ry="10" fill="${feitas >= 6 ? ouro : 'none'}" stroke="${feitas >= 6 ? ouro : linha}" stroke-opacity=".8" stroke-width="1.6"/>`;
-  // em volta: 54 lugares (5 dezenas + 4 Pai-Nossos entre elas), deixando o vão da medalha
-  const passo = 360 / 57;
-  for (let j = 0; j < 54; j++) {
-    const i = 6 + j, ang = (90 - (j + 1.5) * passo) * Math.PI / 180;
-    const grande = (j + 1) % 11 === 0;                           // 16, 27, 38, 49: Pai-Nosso entre as dezenas
-    h += conta(i, (cx + R * Math.cos(ang)).toFixed(1), (cy + R * Math.sin(ang)).toFixed(1), grande ? gr : sm);
-  }
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="200" height="300" viewBox="0 0 200 300">${h}</svg>`;
-}
+// O desenho do terço (svgTerco, com os modelos e as contas) fica em js/tercodesenho.js
 
 function desenharTerco() {
   const t = !!slide?.terco && cfg.tercoCantos !== false && !document.body.classList.contains('camera') && !GUIAS;
@@ -531,7 +507,8 @@ function desenharTerco() {
   if (!t) { e.removeAttribute('src'); d.removeAttribute('src'); return; }
   const img = /^data:image\//.test(cfg.tercoImagem || '') ? cfg.tercoImagem : 'img/nossa-senhora-terco.svg';
   if (e.getAttribute('src') !== img) e.src = img;
-  const url = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svgTerco(+slide.terco.feitas || 0, slide.terco.atual ?? -1));
+  const url = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svgTerco(+slide.terco.feitas || 0, slide.terco.atual ?? -1,
+    { modelo: cfg.tercoModelo, contas: cfg.tercoContas, vez: cfg.corRotulo, linha: cfg.corTexto }));
   if (d.getAttribute('src') !== url) d.src = url;
 }
 

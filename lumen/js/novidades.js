@@ -5,6 +5,10 @@
  * A versão mais nova fica em cima. Ao gerar uma versão nova, acrescente a entrada dela aqui.
  */
 const NOVIDADES = [
+  { versao: '1.7.5', data: '2026-10-31', itens: [
+    '📿 Novos desenhos do terço no telão (Ferramentas → Ajustes → 📿 Terço): além do Redondo, o Pendurado (como o terço na mão), o Coração e as Dezenas em fileiras (as cinco dezenas uma embaixo da outra, com o número do mistério da vez aceso). E as contas podem ser Lisas, Pérolas ou Rosas. Cada opção mostra a prévia; clique para escolher, e o telão muda na hora.',
+    '📘 Manual atualizado (Ajuda → Manual do MiguelAngelus, tecla F1): slides automáticos, prévia enquanto edita, 🔎 procurar canto, 🅿 Pôr P./T. nos roteiros antigos, versões do terço e o terço desenhado no telão, nomes do Papa e do Bispo, do Pai-Nosso ao Cordeiro, abreviações da Bíblia — e como tudo começou.',
+  ] },
   { versao: '1.7.4', data: '2026-10-25', itens: [
     '🔎 Procurar canto no item do roteiro: digite um pedaço do título, do autor ou da letra (sem precisar de acento) e a lista mostra só os que combinam — nos favoritos (com "⭐ só favoritos", de qualquer momento) ou no acervo completo. No topo vêm os "🎯 Mais parecidos"; Enter escolhe o melhor.',
     '🐞 Bíblia: "Eclo" (Eclesiástico, como vem nos folhetos — ex.: Eclo 3,2-6, na festa da Sagrada Família) não era encontrado na Bíblia Pereira de Figueiredo, onde o livro se chama "Eclesiástico (Sirácida)". Agora Eclo, Sir e Eclesiástico funcionam, nas leituras dos roteiros e na aba Bíblia.',

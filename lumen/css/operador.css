@@ -1035,6 +1035,12 @@ html[data-tema-app="claro"] .tema-amostra { border-color: #aab1ba; }
 .previa-dlg iframe { display: block; width: 100%; aspect-ratio: 16 / 9; border: 0; border-radius: 3px; background: #000; }
 
 /* (1.7.3) versões do terço (Ajustes → 📿 Terço) */
+.terco-modelos { display: flex; flex-wrap: wrap; gap: 8px; }
+.terco-modelo { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 6px; border: 2px solid var(--borda); border-radius: 8px; background: var(--painel); cursor: pointer; }
+.terco-modelo img { height: 120px; width: 80px; background: #4a1016; border-radius: 6px; padding: 4px; }
+.terco-modelo span { font-size: 12px; }
+.terco-modelo.escolhido { border-color: var(--destaque, #e2b84a); box-shadow: 0 0 0 2px rgba(226,184,74,.35); }
+.terco-modelo.escolhido span { font-weight: 700; }
 .tv-lista { display: flex; flex-direction: column; gap: 4px; margin: 6px 0; }
 .tv-item { align-items: center; gap: 8px; padding: 5px 8px; border: 1px solid var(--borda); border-radius: 6px; background: var(--painel); }
 .terco-versao textarea { width: 100%; }

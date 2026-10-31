@@ -588,6 +588,7 @@ function renderTercoAjustes() {
   if (!el) return;
   const img = S.config.tercoImagem || 'img/nossa-senhora-terco.svg';
   const versoes = TercoVersoes.lista.slice().sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+  const modelo = S.config.tercoModelo || 'redondo', contas = S.config.tercoContas || 'lisas';
   el.innerHTML = `
     <h4 style="margin:4px 0">Versões do terço</h4>
     <p class="sutil pequeno">Terços com outros textos — pelos Filhos, da Misericórdia… Cada parte pode trocar o texto; o que ficar vazio é o
@@ -603,7 +604,11 @@ function renderTercoAjustes() {
     <label class="check"><input type="checkbox" data-tercocantos ${S.config.tercoCantos !== false ? 'checked' : ''}> Imagens nos cantos de baixo durante o terço</label>
     <p class="sutil pequeno">À esquerda, Nossa Senhora; à direita, o desenho do terço que vai se preenchendo conforme se reza (contas rezadas
       em dourado, a da vez acesa). O texto desvia das imagens; as imagens de baixo da comunidade dão lugar às do terço só durante o terço.</p>
-    <div class="linha" style="align-items:flex-end;gap:14px">
+    <h4 style="margin:8px 0 4px">Desenho do terço</h4>
+    <div class="terco-modelos">${TERCO_MODELOS.map(m => cartaoTerco('modelo', m, modelo === m.id, { modelo: m.id, contas })).join('')}</div>
+    <h4 style="margin:8px 0 4px">Contas</h4>
+    <div class="terco-modelos">${TERCO_CONTAS.map(c => cartaoTerco('contas', c, contas === c.id, { modelo, contas: c.id })).join('')}</div>
+    <div class="linha" style="align-items:flex-end;gap:14px;margin-top:10px">
       <img src="${esc(img)}" alt="" style="height:150px;background:#4a1016;border-radius:8px;padding:6px">
       <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-start">
         <button type="button" data-tercoimg>🖼 ${S.config.tercoImagem ? 'Trocar' : 'Escolher'} a imagem de Nossa Senhora…</button>
@@ -613,6 +618,12 @@ function renderTercoAjustes() {
     </div>
     <p class="sutil pequeno">Também dá para mudar no cabeçalho de qualquer item do terço no roteiro. A letra, as cores e as margens seguem
       a 🎨 Aparência do telão.</p>`;
+}
+// Cartão de escolha com o desenho de exemplo (no meio da 3ª dezena: 1ª e 2ª rezadas, a da vez acesa)
+function cartaoTerco(campo, op, escolhido, opc) {
+  const svg = svgTerco(31, 31, { ...opc, vez: S.config.corRotulo, linha: '#ffffff' });
+  return `<button type="button" class="terco-modelo${escolhido ? ' escolhido' : ''}" data-terco-${campo}="${op.id}" aria-pressed="${escolhido}">
+    <img alt="" src="data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}"><span>${esc(op.nome)}</span></button>`;
 }
 const atualizarTercoTelas = () => { renderTercoAjustes(); if (S.atual?.item?.tipo === 'terco') renderCabecalho(); };
 
@@ -706,6 +717,12 @@ document.addEventListener('change', e => {
   S.config.tercoCantos = e.target.checked; salvarConfig(); enviarConfigTelao(); atualizarTercoTelas();
 });
 document.addEventListener('click', e => {
+  const m = e.target.closest('[data-terco-modelo], [data-terco-contas]');
+  if (m) {
+    if (m.dataset.tercoModelo) S.config.tercoModelo = m.dataset.tercoModelo; else S.config.tercoContas = m.dataset.tercoContas;
+    salvarConfig(); enviarConfigTelao(); atualizarTercoTelas();
+    return;
+  }
   if (e.target.closest('[data-tercoimg-padrao]')) { S.config.tercoImagem = ''; salvarConfig(); enviarConfigTelao(); atualizarTercoTelas(); return; }
   if (!e.target.closest('[data-tercoimg]')) return;
   const inp = Object.assign(document.createElement('input'), { type: 'file', accept: 'image/*' });
