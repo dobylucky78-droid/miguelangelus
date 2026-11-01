@@ -1,4 +1,4 @@
-// Transmissão da faixa de letras por NDI (com transparência), para o OBS (plugin DistroAV) ou outro programa NDI.
+﻿// Transmissão da faixa de letras por NDI (com transparência), para o OBS (plugin DistroAV) ou outro programa NDI.
 // Usa o NDI Runtime já instalado no computador (NDI Tools / NDI Runtime): nada do NDI vai junto com o MiguelAngelus.
 // NDI® é marca registrada da Vizrt NDI AB.
 using System;
@@ -85,6 +85,7 @@ namespace MiguelAngelus
         public double Tamanho = 4.6;      // % da altura do vídeo
         public double Opacidade = 0.6;    // da faixa escura
         public string CorTexto = "#ffffff";
+        public int Transicao = 380;       // ms de cada metade (some / aparece); 0 = troca direto (1.7.6)
     }
 
     sealed class EnvioNdi : IDisposable
@@ -179,9 +180,45 @@ namespace MiguelAngelus
                 var png = Environment.GetEnvironmentVariable("MIGUELANGELUS_NDI_PNG");
                 if (!string.IsNullOrEmpty(png)) try { bmp.Save(png, ImageFormat.Png); } catch { }
                 var d = bmp.LockBits(new Rectangle(0, 0, L, A), ImageLockMode.ReadOnly, PixelFormat.Format32bppArgb);
-                lock (trava) Marshal.Copy(d.Scan0, quadro, 0, quadro.Length);   // memória BGRA, alfa direto
+                var novo = new byte[quadro.Length];
+                Marshal.Copy(d.Scan0, novo, 0, novo.Length);   // memória BGRA, alfa direto
                 bmp.UnlockBits(d);
+                Trocar(novo, f.Transicao);
             }
+        }
+
+        // (1.7.6) Transição suave, como no telão: a faixa que está no ar some devagar e a nova aparece devagar (só o alfa
+        // muda, as cores ficam). Uma troca nova no meio cancela a anterior e começa do que está na tela.
+        int vezTroca;
+        void Trocar(byte[] novo, int ms)
+        {
+            int vez = Interlocked.Increment(ref vezTroca);
+            byte[] antigo;
+            lock (trava) antigo = (byte[])quadro.Clone();
+            if (ms <= 0 || Iguais(antigo, novo)) { lock (trava) Buffer.BlockCopy(novo, 0, quadro, 0, quadro.Length); return; }
+            new Thread(() =>
+            {
+                const int passo = 40;                       // 25 quadros por segundo durante a troca
+                int n = Math.Max(1, ms / passo);
+                for (int k = n - 1; k >= 0; k--) { if (Volatile.Read(ref vezTroca) != vez) return; Escalar(antigo, k / (float)n); Thread.Sleep(passo); }
+                for (int k = 1; k <= n; k++) { if (Volatile.Read(ref vezTroca) != vez) return; Escalar(novo, k / (float)n); if (k < n) Thread.Sleep(passo); }
+            }) { IsBackground = true, Name = "NDI troca" }.Start();
+        }
+
+        void Escalar(byte[] origem, float f)
+        {
+            lock (trava)
+            {
+                Buffer.BlockCopy(origem, 0, quadro, 0, quadro.Length);
+                if (f >= 1) return;
+                for (int i = 3; i < quadro.Length; i += 4) if (quadro[i] != 0) quadro[i] = (byte)(quadro[i] * f);
+            }
+        }
+
+        static bool Iguais(byte[] a, byte[] b)
+        {
+            for (int i = 0; i < a.Length; i++) if (a[i] != b[i]) return false;
+            return true;
         }
 
         static void DesenharFaixa(Graphics g, Faixa f)

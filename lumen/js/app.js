@@ -35,6 +35,9 @@ const CONFIG_PADRAO = {
   // ideias do Hermínio (1.6.5): 1º slide de cada parte do roteiro com o nome dela; área útil do slide (margens, % da tela)
   slideSecao: true, numerarSecoes: false, margemLados: 5, margemTopo: 5,
   contornarCantos: true,                         // (1.6.6) o texto contorna o quadrado de cada imagem dos cantos
+  // ideias do Thiago (1.7.6): transição suave; o nome da parte junto do texto, colorido; o texto continua centralizado
+  // ao desviar das imagens dos cantos
+  transicao: 'suave', secaoJunto: false, corSecao: '#5aa9ff', centralizarCantos: true,
   // transmissão (NDI): faixa de letras para o OBS
   ndiLigado: false, ndiNome: 'MiguelAngelus Letras', faixaTamanho: 4.6, faixaOpacidade: 0.6,
   faixaCantos: true, faixaRespostas: true, faixaLeituras: true, faixaAvisos: true, faixaPix: true,
@@ -476,9 +479,11 @@ function gerarSlides(item) {
     (item.tipo === 'canto' && !S.config.quebraCantos && !S.config.slideAuto)))
     // Ave-Maria do terço (com as contas) fica inteira num slide: cada Próximo é uma conta
     slides = slides.flatMap(s => s.contas ? [s] : limitarSlide(s));
-  // 1º slide da parte com o nome dela (ideia do Hermínio)
+  // 1º slide da parte com o nome dela (ideia do Hermínio) — ou o nome em cima do texto, colorido (ideia do Thiago, 1.7.6)
   const secao = slides.length ? slideDaSecao(item) : null;
-  if (secao) slides = [secao, ...slides];
+  if (secao && S.config.secaoJunto && slides[0].texto && !slides[0].versos && !slides[0].img && !slides[0].linhas)
+    slides = [{ ...slides[0], secaoTit: secao.secaoNome }, ...slides.slice(1)];
+  else if (secao) slides = [secao, ...slides];
   // A+ / A− de cada slide (ideia do Hermínio): guardado no item do roteiro, pela posição do slide
   const tam = item.tamSlides || {};
   // fundo próprio do item (1.6.6): no lugar do fundo do tema, com a opção de usar ou não
@@ -556,7 +561,7 @@ function slideDaSecao(item) {
     const n = S.roteiro.itens.slice(0, S.roteiro.itens.indexOf(item) + 1).filter(i => nomeDaSecao(i) && !continuaAnterior(i, S.roteiro.itens)).length;
     titulo = `${n}. ${titulo}`;
   }
-  return { texto: `<gg>${titulo}</gg>` + (nome[1] ? `\n${tirarMarcas(nome[1])}` : ''), rodape: '', secao: true };
+  return { texto: `<gg>${titulo}</gg>` + (nome[1] ? `\n${tirarMarcas(nome[1])}` : ''), rodape: '', secao: true, secaoNome: titulo };
 }
 
 // Refrão no início e depois de cada estrofe (sem refrão: só as estrofes).
@@ -777,7 +782,7 @@ function mostrarEdicao(campo) {
   const nova = Edicao.i < 0;
   Edicao.i = k;
   if (nova) { enviar({ tipo: 'preto', on: false }, [pv]); enviar({ tipo: 'mudo', on: false }, [pv]); }
-  enviar({ tipo: 'slide', slide: a.slides[k] }, [pv]);
+  enviar({ tipo: 'slide', slide: a.slides[k], direto: true }, [pv]);     // sem a transição: muda a cada letra
   $('.rotulo-vivo').classList.add('editando');
   $('#rotuloVivo').textContent = `EDITANDO — slide ${k + 1} de ${a.slides.length} (o telão não muda)`;
   for (const s of document.querySelectorAll('#slides .slide.em-edicao')) s.classList.remove('em-edicao');
@@ -1242,7 +1247,7 @@ function renderCabecalho() {
     case 'texto':
       h = `<div class="cab-linha"><span class="tag t-texto">Texto</span>
              <input data-campo="titulo" value="${esc(it.titulo)}" placeholder="Título (aparece no rodapé)"></div>
-           <textarea data-campo="texto" rows="5" placeholder="Digite o texto. Deixe uma linha em branco para separar os slides.">${esc(it.texto)}</textarea>`;
+           <textarea data-campo="texto" rows="5" placeholder="${it.antifona ? 'Cole aqui a antífona do Missal (ou do folheto), com a referência no fim, ex.: (Sl 104,3s).' : 'Digite o texto. Deixe uma linha em branco para separar os slides.'}">${esc(it.texto)}</textarea>`;
       break;
     case 'homilia': {
       const temCapa = (S.roteiro?.itens || []).some(i => i.tipo === 'imagem' && i.abertura && i.imagem);
@@ -1485,6 +1490,8 @@ function novoItem(tipo) {
     case 'leitura': return { ...base, titulo: 'Leitura', ref: '', evangelho: false };
     case 'salmo': return { ...base, titulo: 'Salmo Responsorial', ref: '', refrao: '', texto: '' };
     case 'texto': return { ...base, titulo: '', texto: '' };
+    // (1.7.6, ideia do Thiago) Antífona do Missal: de Entrada ou da Comunhão, pelo lugar onde entra no roteiro
+    case 'antifona': return { ...base, tipo: 'texto', antifona: true, titulo: tipoAntifona() === 'comunhao' ? 'Antífona da Comunhão' : 'Antífona de Entrada', texto: '' };
     case 'imagem': return { ...base, titulo: '', imagem: '', layout: 'esquerda', escurecer: 45, texto: '' };
     case 'homilia': return { ...base, titulo: 'Homilia', texto: '', usarCapa: true, mostrarRef: true };
     case 'ordinario': return { ...base, parte: 'saudacao' };
@@ -1495,6 +1502,15 @@ function novoItem(tipo) {
     case 'preces': return { ...base, titulo: 'Oração dos Fiéis', resposta: 'Senhor, escutai a nossa prece.', convite: '', texto: '', conclusao: '' };
     case 'avisos': return { ...base, titulo: '', extras: '', programados: true };
   }
+}
+
+// Onde a antífona vai entrar (depois do item aberto): da Liturgia Eucarística em diante é a da Comunhão
+function tipoAntifona() {
+  const itens = S.roteiro?.itens || [];
+  const ate = S.atual && S.atual.rIdx >= 0 ? S.atual.rIdx : itens.length - 1;
+  const eucaristica = i => ['eucaristica', 'prefacio'].includes(i.tipo) || ['Ofertório', 'Santo', 'Cordeiro', 'Comunhão'].includes(i.momento) ||
+    (i.tipo === 'ordinario' && /pai-nosso|cordeiro|rito-comunhao|eis-cordeiro/.test(i.parte || ''));
+  return itens.slice(0, ate + 1).some(eucaristica) ? 'comunhao' : 'entrada';
 }
 
 // Item avulso (aberto pelas abas) → item de roteiro
@@ -2357,7 +2373,7 @@ function ligarAjustes() {
       if (k === 'textoAltar') return atualizarAltarNoAr();
       enviarConfigTelao(); renderTemasRapidos(); desenharPreviaMargens();
       if (['versosPorSlide', 'numerarVersos', 'quebraAuto', 'linhasPorSlide', 'caracteresPorLinha', 'quebraCantos', 'salmoCorrido', 'slideSecao', 'numerarSecoes',
-        'slideAuto', 'margemLados', 'margemTopo', 'maiusculas'].includes(k)) atualizarSlides();
+        'secaoJunto', 'slideAuto', 'margemLados', 'margemTopo', 'maiusculas'].includes(k)) atualizarSlides();
     });
   }
   // slides automáticos ligados: os ajustes manuais (tamanho máximo, alinhamento, linhas/caracteres) ficam apagados
@@ -2916,7 +2932,7 @@ async function iniciar() {
   renderBiblia();
   renderCabecalho();
   renderEstadoProj();
-  $('#versaoApp').textContent = NO_APP ? 'Versão 1.7.5 · aplicativo para Windows' : 'Versão 1.7.5 · no navegador';
+  $('#versaoApp').textContent = NO_APP ? 'Versão 1.7.6 · aplicativo para Windows' : 'Versão 1.7.6 · no navegador';
   // pede armazenamento permanente (o navegador não apaga os dados para liberar espaço)
   try { navigator.storage?.persist?.(); } catch (_) {}
   enviarConfigTelao(); renderTemasRapidos();

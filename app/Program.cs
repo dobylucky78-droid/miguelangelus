@@ -817,6 +817,7 @@ namespace MiguelAngelus
             if (m.TryGetValue("tamanho", out var ta)) f.Tamanho = Convert.ToDouble(ta, System.Globalization.CultureInfo.InvariantCulture);
             if (m.TryGetValue("opacidade", out var op)) f.Opacidade = Convert.ToDouble(op, System.Globalization.CultureInfo.InvariantCulture);
             if (m.TryGetValue("corTexto", out var co) && co is string cs) f.CorTexto = cs;
+            if (m.TryGetValue("transicao", out var tr)) f.Transicao = Math.Max(0, Math.Min(2000, Convert.ToInt32(tr, System.Globalization.CultureInfo.InvariantCulture)));
             return f;
         }
     }

@@ -5,6 +5,13 @@
  * A versão mais nova fica em cima. Ao gerar uma versão nova, acrescente a entrada dela aqui.
  */
 const NOVIDADES = [
+  { versao: '1.7.6', data: '2026-11-01', itens: [
+    '🌫 Transição suave (ideia do Thiago): o texto some e aparece devagar a cada Próximo; a câmera e os vídeos também entram e saem devagar, e a faixa de letras do OBS faz o mesmo. Ajustes → 🎨 Aparência do telão → Transição entre os slides: Suave (padrão), Lenta ou Rápida (como era antes).',
+    '🔵 Nome da parte junto do texto (ideia do Thiago): em vez de um slide só com o nome, o nome vai em cima do 1º slide da parte, colorido como no folheto e, com "com número", numerado na ordem do roteiro ("6. Primeira Leitura"). Ajustes → 🎨 Aparência do telão → "Nome da parte junto do texto, colorido" (e a cor ao lado).',
+    '↔ Texto centralizado ao desviar das imagens dos cantos (ideia do Thiago): o texto desvia só da parte que aparece da imagem (a borda transparente do PNG não conta mais) e deixa o mesmo espaço dos dois lados, para não ficar puxado para a esquerda por causa do padroeiro. Ajustes → 📏 Tamanho dos slides → "Texto sempre centralizado".',
+    '📖 Antífonas (ideia do Thiago): botão "Antífona" no Adicionar. Com o canto de Entrada aberto, entra a Antífona de Entrada logo depois; da Liturgia Eucarística em diante, a Antífona da Comunhão. É só colar o texto do Missal.',
+    '📘 Manual (Ajuda → Manual do MiguelAngelus, tecla F1): as ideias do Thiago estão no capítulo 5, Revisando o roteiro.',
+  ] },
   { versao: '1.7.5', data: '2026-10-31', itens: [
     '📿 Novos desenhos do terço no telão (Ferramentas → Ajustes → 📿 Terço): além do Redondo, o Pendurado (como o terço na mão), o Coração e as Dezenas em fileiras (as cinco dezenas uma embaixo da outra, com o número do mistério da vez aceso). E as contas podem ser Lisas, Pérolas ou Rosas. Cada opção mostra a prévia; clique para escolher, e o telão muda na hora.',
     '📘 Manual atualizado (Ajuda → Manual do MiguelAngelus, tecla F1): slides automáticos, prévia enquanto edita, 🔎 procurar canto, 🅿 Pôr P./T. nos roteiros antigos, versões do terço e o terço desenhado no telão, nomes do Papa e do Bispo, do Pai-Nosso ao Cordeiro, abreviações da Bíblia — e como tudo começou.',

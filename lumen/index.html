@@ -21,7 +21,7 @@
     </div>
     <div class="splash-info">
       <div class="splash-gratis"><b>Gratuito · uso livre</b></div>
-      <div>Versão 1.7.5</div>
+      <div>Versão 1.7.6</div>
       <div>© 2026</div>
       <div><b>PASCOM</b></div>
       <div><b>São José Operário Ilha</b></div>
@@ -349,6 +349,7 @@
         <button data-add="canto">Canto</button>
         <button data-add="leitura">Leitura</button>
         <button data-add="salmo">Salmo</button>
+        <button data-add="antifona" title="Antífona de Entrada ou da Comunhão (do Missal): entra depois do item aberto — aberto o canto de Entrada, vira a de Entrada; o de Comunhão, a da Comunhão">Antífona</button>
         <button data-add="oracao">Oração</button>
         <button data-add="angelus" title="Ângelus (no Tempo Pascal, a Regina Caeli entra sozinha)">Ângelus</button>
         <button data-add="terco" title="Terço inteiro: abertura, os 5 mistérios do dia e o encerramento">📿 Terço</button>
@@ -482,6 +483,17 @@
             <label class="check" title="Ex.: 3. Ato Penitencial — na ordem do roteiro"><input type="checkbox" data-cfg="numerarSecoes"> com número</label>
           </div>
           <div class="linha">
+            <label class="check" title="Em vez de um slide só com o nome, o nome da parte vai em cima do texto, no 1º slide dela, colorido como no folheto — ideia do Thiago"><input type="checkbox" data-cfg="secaoJunto"> Nome da parte <b>junto do texto</b>, colorido</label>
+            <label class="campo">Cor <input type="color" data-cfg="corSecao"></label>
+          </div>
+          <label class="campo">Transição entre os slides
+            <select data-cfg="transicao" title="Como o texto, a câmera e os vídeos trocam no telão (e a faixa de letras do OBS) — ideia do Thiago">
+              <option value="suave">Suave: some e aparece devagar (padrão)</option>
+              <option value="lenta">Lenta: bem devagar</option>
+              <option value="rapida">Rápida: quase direto (como era antes)</option>
+            </select>
+          </label>
+          <div class="linha">
             <label class="check" title="P. (presidente), T. (todos), L. (leitor), C. (comentarista), D. (diácono) — vêm do folheto"><input type="checkbox" data-cfg="mostrarRotulos"> Mostrar quem fala (P., T., L.…)</label>
             <label class="campo">Cor <input type="color" data-cfg="corRotulo"></label>
           </div>
@@ -504,6 +516,7 @@
             <label class="campo">Margem em cima e embaixo (%) <input type="range" min="0" max="25" step="1" data-cfg="margemTopo"></label>
           </div>
           <label class="check" title="Cada imagem dos cantos (brasão, PASCOM, padroeiro) vira um quadrado; o texto ocupa a área toda e contorna os quadrados, usando os espaços entre eles. Desligado: a área do texto inteira desvia das imagens."><input type="checkbox" data-cfg="contornarCantos"> Texto contorna as imagens dos cantos (ocupa os espaços entre elas)</label>
+          <label class="check" title="Ao desviar de uma imagem de um lado só (ex.: o padroeiro embaixo à direita), deixa o mesmo espaço do outro lado: o texto não fica puxado para um lado — ideia do Thiago"><input type="checkbox" data-cfg="centralizarCantos"> Texto sempre centralizado (desvia igual dos dois lados)</label>
           <div id="previaMargens" class="previa-margens" title="O telão em miniatura: pontilhado = limite das margens; tracejado = onde o texto ficou (desviando das imagens dos cantos)">
             <iframe src="projecao.html?preview&amp;mini=margens" title="Miniatura do telão" tabindex="-1"></iframe>
             <span class="pm-medidas"></span>
@@ -1035,7 +1048,7 @@
       <a href="https://pascom-sjo.github.io/" target="_blank" rel="noopener" class="site" title="Site do MiguelAngelus">
         <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M3 12h18M12 3c2.5 2.6 3.8 5.6 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.6-3.8-9S9.5 5.6 12 3z" fill="none" stroke="currentColor" stroke-width="2"/></svg>pascom-sjo.github.io</a>
     </div>
-    <p class="sutil pequeno" id="versaoApp">Versão 1.7.5</p>
+    <p class="sutil pequeno" id="versaoApp">Versão 1.7.6</p>
     <div class="linha"><span class="espaco"></span><button value="ok" class="primario">OK</button></div>
   </form>
 </dialog>

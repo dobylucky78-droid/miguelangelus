@@ -67,7 +67,8 @@ function atualizarFaixa(forcar = false) {
   Transmissao.timer = setTimeout(() => {
     const c = conteudoFaixa();
     const msg = { tipo: 'faixa', ...c, fonte: primeiraFonte(S.config.fonte), tamanho: +S.config.faixaTamanho || 4.6,
-      opacidade: +(S.config.faixaOpacidade ?? 0.6), corTexto: S.config.corTexto || '#ffffff' };
+      opacidade: +(S.config.faixaOpacidade ?? 0.6), corTexto: S.config.corTexto || '#ffffff',
+      transicao: { rapida: 0, suave: 380, lenta: 650 }[S.config.transicao] ?? 380 };       // (1.7.6) como no telão
     const chave = JSON.stringify(msg);
     if (!forcar && chave === Transmissao.ultimo) return;
     Transmissao.ultimo = chave;

@@ -25,6 +25,10 @@
   /* Câmera ao vivo (NDI Webcam / webcam): tela cheia; as imagens dos cantos continuam por cima */
   #cam { position: fixed; inset: 0; width: 100%; height: 100%; object-fit: cover; background: #000; display: none; }
   body.camera #cam { display: block; }
+  /* (1.7.6) transição suave: a câmera e o vídeo aparecem e somem devagar (Ajustes → Aparência do telão → Transição) */
+  body.camera #cam, #video.on { animation: aparecer var(--trans, .14s) ease both; }
+  #cam.saindo, #video.saindo { animation: none; opacity: 0; transition: opacity var(--trans, .14s) ease; }
+  @keyframes aparecer { from { opacity: 0; } }
   /* com a câmera no ar, as imagens dos cantos de baixo (padroeiro, logos) saem para não cobrir a imagem; as de cima ficam */
   body.camera #canto-ie, body.camera #canto-id { display: none; }
   body.camera.sem-letra #area, body.camera.sem-letra #rodape { visibility: hidden; }
@@ -32,7 +36,7 @@
   body.camera.com-letra #area { inset: auto 0 3vh 0; height: 27vh; padding: 1.2vh 5vw; background: rgba(0, 0, 0, .55); box-sizing: border-box; }
   body.camera.com-letra #area:has(#texto:empty) { background: transparent; }
   body.camera.com-letra #rodape { display: none; }
-  #imgSlide { position: fixed; display: none; object-fit: contain; transition: opacity .14s ease; }
+  #imgSlide { position: fixed; display: none; object-fit: contain; transition: opacity var(--trans, .14s) ease; }
   #veu { position: fixed; inset: 0; display: none; background: #000; pointer-events: none; }
   body.lay-esquerda #imgSlide, body.lay-direita #imgSlide { display: block; top: 5vh; bottom: 12vh; width: 44vw; height: 83vh; }
   body.lay-esquerda #imgSlide { left: 4vw; }
@@ -82,11 +86,13 @@
   body.pix-on.camera #pixCaixa img { background: #fff; border-radius: 1.2vh; box-shadow: 0 .6vh 2.4vh rgba(0,0,0,.45); box-sizing: border-box; }
   body.pix-on.camera #pixCaixa .pix-faixa { height: var(--pix-faixa-cam); max-width: 62vw; padding: .8vh; }
   body.pix-on.camera #pixCaixa .pix-qr { flex: none; height: var(--pix-qr-cam); width: var(--pix-qr-cam); padding: 1.2vh; }
-  #texto { max-width: 100%; line-height: 1.22; color: #fff; text-align: center; transition: opacity .14s ease; overflow-wrap: break-word; }
+  #texto { max-width: 100%; line-height: 1.22; color: #fff; text-align: center; transition: opacity var(--trans, .14s) ease; overflow-wrap: break-word; }
   #texto sup { font-size: .5em; opacity: .75; margin-right: .15em; vertical-align: .6em; }
   #texto .resp { font-weight: 700; }
   #texto .entre { display: block; height: .45em; }
   #texto .quem { font-weight: 700; color: var(--cor-quem, #ff5a4f); }
+  #texto .tit-sec { display: block; color: var(--cor-secao, #5aa9ff); font-weight: 700; font-size: .62em; margin-bottom: .35em;
+    text-align: center; text-align-last: center; }
   font.m-vermelho { color: #c8102e; } font.m-dourado { color: #f2c14e; } font.m-azul { color: #5aa9ff; } font.m-verde { color: #5cc46a; }
   font.m-roxo { color: #b57cf0; } font.m-branco { color: #fff; } font.m-preto { color: #111; }
   big.m-g { font-size: 1.3em; } small.m-pq { font-size: .75em; }
@@ -98,7 +104,7 @@
   #texto .conta.feita { background: currentColor; opacity: .7; }
   #texto .conta.agora { width: 1.35em; height: 1.35em; border: 0; opacity: 1; background: var(--cor-quem, #ff5a4f);
     box-shadow: 0 0 .5em var(--cor-quem, #ff5a4f); }
-  #rodape { position: fixed; left: 5vw; right: 5vw; bottom: 3.5vh; text-align: center; font-size: 3.3vh; color: #fff; opacity: .8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: opacity .14s ease; }
+  #rodape { position: fixed; left: 5vw; right: 5vw; bottom: 3.5vh; text-align: center; font-size: 3.3vh; color: #fff; opacity: .8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; transition: opacity var(--trans, .14s) ease; }
   #video { position: fixed; inset: 0; width: 100%; height: 100%; object-fit: contain; background: #000; display: none; }
   #video.on { display: block; }
   #aviso-som { position: fixed; bottom: 2vh; left: 50%; transform: translateX(-50%); background: rgba(160,30,30,.92); color: #fff; font: 15px "Segoe UI", sans-serif; padding: 8px 14px; border-radius: 8px; display: none; z-index: 6; }
@@ -118,7 +124,7 @@
   /* Tela de Avisos paroquiais (item "Avisos"): título numa faixa colorida e cada aviso num cartão */
   .canto { z-index: 2; }
   #avisosTela { position: fixed; inset: 0; z-index: 1; display: none; flex-direction: column; align-items: center;
-    gap: 3.5vh; padding: 4.5vh 5vw 6vh; box-sizing: border-box; transition: opacity .14s ease; }
+    gap: 3.5vh; padding: 4.5vh 5vw 6vh; box-sizing: border-box; transition: opacity var(--trans, .14s) ease; }
   body.avisos-on #avisosTela { display: flex; }
   body.avisos-on #area, body.avisos-on #rodape, body.avisos-on #imgSlide, body.avisos-on #papel { display: none !important; }
   body.camera.avisos-on #avisosTela.sem-fundo { background: rgba(0, 0, 0, .6) !important; }
@@ -239,7 +245,9 @@ function htmlSlide(s) {
   const html = acabamento(linhas.map((l, i) => i === 0 ? l : (separar && trocas[i] ? '<span class="entre"></span>' : '<br>') + l).join(''));
   const contas = s.contas ? `<span class="contas">${Array.from({ length: +s.contas.total || 0 }, (_, k) =>
     `<span class="conta ${k + 1 < s.contas.atual ? 'feita' : k + 1 === +s.contas.atual ? 'agora' : ''}"></span>`).join('')}</span>` : '';
-  return (s.refrao ? `<span class="resp">${html}</span>` : html) + contas;
+  // (1.7.6) nome da parte em cima do 1º slide dela, colorido como no folheto ("6. Primeira Leitura")
+  const tit = s.secaoTit ? `<span class="tit-sec">${acabamento(esc(s.secaoTit))}</span>` : '';
+  return tit + (s.refrao ? `<span class="resp">${html}</span>` : html) + contas;
 }
 
 // Negrito/itálico/sublinhado digitados como <b> <i> <u> (botões N I S na edição) e referências bíblicas sem quebrar:
@@ -408,6 +416,51 @@ function desenharCaixasMini(base) {
   }
 }
 
+// (1.7.6) Onde a imagem do canto aparece de fato: sem a sobra do object-fit e sem a borda transparente do PNG (o padroeiro
+// recortado com muita margem empurrava o texto para longe — ideia do Thiago). O recorte de cada imagem é medido uma vez.
+const recortes = new Map();
+function recorteOpaco(img) {
+  const src = img.currentSrc || img.src;
+  if (recortes.has(src)) return recortes.get(src);
+  if (recortes.size > 40) recortes.clear();        // o terço muda de desenho a cada conta
+  let r = [0, 0, 1, 1];
+  try {
+    const k = Math.min(1, 240 / Math.max(img.naturalWidth, img.naturalHeight));
+    const w = Math.max(1, Math.round(img.naturalWidth * k)), h = Math.max(1, Math.round(img.naturalHeight * k));
+    const c = document.createElement('canvas'); c.width = w; c.height = h;
+    const g = c.getContext('2d', { willReadFrequently: true }); g.drawImage(img, 0, 0, w, h);
+    const d = g.getImageData(0, 0, w, h).data;
+    let x0 = w, y0 = h, x1 = -1, y1 = -1;
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (d[(y * w + x) * 4 + 3] > 24) {
+      if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y;
+    }
+    if (x1 >= 0) r = [x0 / w, y0 / h, (x1 + 1) / w, (y1 + 1) / h];
+  } catch (_) {}                                   // imagem de outro endereço: fica a caixa inteira
+  recortes.set(src, r);
+  return r;
+}
+function rectVisivel(img) {
+  const b = img.getBoundingClientRect(), nw = img.naturalWidth, nh = img.naturalHeight;
+  if (!nw || !nh || !b.width || !b.height) return b;
+  const k = Math.min(b.width / nw, b.height / nh), cw = nw * k, ch = nh * k;
+  const pos = getComputedStyle(img).objectPosition.split(' ').map(v => /%$/.test(v) ? parseFloat(v) / 100 : null);
+  const ox = b.left + (b.width - cw) * (pos[0] ?? .5), oy = b.top + (b.height - ch) * (pos[1] ?? .5);
+  const [fx0, fy0, fx1, fy1] = recorteOpaco(img);
+  const left = ox + cw * fx0, top = oy + ch * fy0, right = ox + cw * fx1, bottom = oy + ch * fy1;
+  return { left, top, right, bottom, width: right - left, height: bottom - top };
+}
+
+// (1.7.6) Texto sempre centralizado: cada quadrado ganha o seu espelho do outro lado (na mesma altura), juntando com o
+// que já houver naquele canto — as linhas encolhem igual dos dois lados e continuam no meio da tela
+function centralizarCaixas(caixas, Wb) {
+  for (const c of caixas.slice()) {
+    const outro = c.lado === 'e' ? 'd' : 'e', l = Wb - c.r, r = Wb - c.l;
+    const ja = caixas.find(x => x.lado === outro && x.alto === c.alto);
+    if (ja) { ja.l = Math.min(ja.l, l); ja.r = Math.max(ja.r, r); ja.t = Math.min(ja.t, c.t); ja.b = Math.max(ja.b, c.b); }
+    else caixas.push({ lado: outro, alto: c.alto, l, t: c.t, r, b: c.b });
+  }
+}
+
 function harmonizar(lay) {
   const img = $('imgSlide'), area = $('area');
   contorno = null; desenharCaixasMini(null);
@@ -419,7 +472,7 @@ function harmonizar(lay) {
   const cx = pixOn ? { area: [.04, topoTexto, .96, .975] }
     : CAIXAS[lay] || { area: areaUtil() };     // texto comum (e imagem de fundo): também desvia dos cantos
   const W = innerWidth, H = innerHeight, folga = H * .02;
-  const cantos = [...document.querySelectorAll('.canto.on')].filter(c => c.naturalWidth).map(c => c.getBoundingClientRect());
+  const cantos = [...document.querySelectorAll('.canto.on')].filter(c => c.naturalWidth).map(rectVisivel);
   const encaixar = (fr, encolher) => {
     let [l, t, r, b] = [fr[0] * W, fr[1] * H, fr[2] * W, fr[3] * H];
     if (encolher) { const dx = (r - l) * encolher, dy = (b - t) * encolher; l += dx; r -= dx; t += dy; b -= dy; }
@@ -451,6 +504,7 @@ function harmonizar(lay) {
         lado: c.left + c.width / 2 < W / 2 ? 'e' : 'd', alto: c.top + c.height / 2 < H / 2,
         l: Math.max(0, c.left - folga - base[0]), t: Math.max(0, c.top - folga - base[1]),
         r: Math.min(base[2] - base[0], c.right + folga - base[0]), b: Math.min(base[3] - base[1], c.bottom + folga - base[1]) })) };
+      if (cfg.centralizarCantos !== false) centralizarCaixas(contorno.caixas, base[2] - base[0]);
       Object.assign(area.style, { left: base[0] + 'px', top: base[1] + 'px', right: (W - base[2]) + 'px', bottom: (H - base[3]) + 'px' });
       desenharCaixasMini(base);
       if (MINI) { const u = areaUtil(), lim = $('limites'); if (lim) Object.assign(lim.style, { left: u[0] * 100 + '%', top: u[1] * 100 + '%', right: (1 - u[2]) * 100 + '%', bottom: (1 - u[3]) * 100 + '%' }); }
@@ -469,7 +523,7 @@ function harmonizar(lay) {
       // até a margem de baixo do lado livre, em vez de parar todo na altura da imagem
       const esq = pelosLados.filter(c => c.left < W / 2).reduce((l, c) => Math.max(l, c.right + folga), base[0]);
       const dir = pelosLados.filter(c => c.left >= W / 2).reduce((r, c) => Math.min(r, c.left - folga), base[2]);
-      if (esq !== m || dir !== W - m) opcoes.push([esq, topo, dir, fundo]);
+      if ((esq !== m || dir !== W - m) && cfg.centralizarCantos === false) opcoes.push([esq, topo, dir, fundo]);
     }
     const nota = q => (q[2] - q[0]) < W * .3 || (q[3] - q[1]) < H * .2 ? 0 : tamanhoLetra(q[2] - q[0], q[3] - q[1], true);
     // a de letra maior; empate fica com a centralizada (vem antes na lista)
@@ -565,23 +619,41 @@ function ajustarAvisos() {
   while ((lista.scrollHeight > lista.clientHeight + 1 || lista.scrollWidth > lista.clientWidth + 1) && f > 8) { f *= .95; lista.style.fontSize = f + 'px'; }
 }
 
-function mostrar(s) {
+function mostrar(s, direto) {
   const chave = JSON.stringify(s);
   if (chave === chaveAtual) return;
   chaveAtual = chave;
   slide = s;
-  if (PREVIEW) return desenhar();
   clearTimeout(timer);
+  const aparecer = () => { desenhar(); $('texto').style.opacity = 1; $('rodape').style.opacity = .8; $('imgSlide').style.opacity = 1; $('avisosTela').style.opacity = 1; };
+  if (MINI || direto || !tempoTransicao()) return aparecer();      // direto: a prévia enquanto edita (cada letra digitada)
   // a imagem só pisca quando muda (entre slides do mesmo item ela fica parada)
   const trocaImg = (s?.img || '') !== ($('imgSlide').getAttribute('src') || '');
   $('texto').style.opacity = 0; $('rodape').style.opacity = 0; $('avisosTela').style.opacity = 0;
   if (trocaImg) $('imgSlide').style.opacity = 0;
-  timer = setTimeout(() => { desenhar(); $('texto').style.opacity = 1; $('rodape').style.opacity = .8; $('imgSlide').style.opacity = 1; $('avisosTela').style.opacity = 1; }, 140);
+  // some devagar, troca e aparece devagar (o tempo de cada metade vem de Ajustes → Transição)
+  timer = setTimeout(aparecer, tempoTransicao());
 }
+
+// (1.7.6) Transição entre slides, câmera e vídeo: rápida (como era até a 1.7.5), suave (padrão) ou lenta — ideia do Thiago
+const TRANSICOES = { rapida: 140, suave: 380, lenta: 650 };
+// (a prévia AO VIVO da tela de controle faz igual ao telão; as miniaturas dos Ajustes e a prévia de edição, não)
+const tempoTransicao = () => MINI ? 0 : TRANSICOES[cfg.transicao] ?? TRANSICOES.suave;
+// some devagar e depois faz o que falta (tirar a câmera, parar o vídeo)
+function sumirDevagar(el, depois) {
+  const t = tempoTransicao();
+  if (!t || getComputedStyle(el).display === 'none') return depois();
+  const vez = el._saida = {};
+  el.classList.add('saindo');
+  setTimeout(() => { if (el._saida !== vez) return; el._saida = null; el.classList.remove('saindo'); depois(); }, t);
+}
+// voltou antes de terminar de sumir (outro vídeo, a câmera de novo): cancela a saída
+const cancelarSaida = el => { el._saida = null; el.classList.remove('saindo'); };
 
 function aplicarConfig(c) {
   cfg = c || {};
   const raiz = document.documentElement.style, entre = (v, a, b, p) => Math.min(b, Math.max(a, +v || p));
+  raiz.setProperty('--trans', tempoTransicao() + 'ms');
   raiz.setProperty('--pix-cartao', entre(cfg.pixCartao, 40, 80, 64) + 'vh');
   raiz.setProperty('--pix-qr-cam', entre(cfg.pixQrCamera, 20, 55, 36) + 'vh');
   raiz.setProperty('--pix-faixa-cam', entre(cfg.pixFaixaCamera, 6, 20, 11) + 'vh');
@@ -597,6 +669,7 @@ function aplicarConfig(c) {
   t.style.textTransform = cfg.maiusculas ? 'uppercase' : 'none';
   t.style.fontWeight = cfg.negrito ? 700 : 400;     // temas claros: letra preta em negrito
   t.style.setProperty('--cor-quem', cfg.corRotulo || '#ff5a4f');
+  t.style.setProperty('--cor-secao', cfg.corSecao || '#5aa9ff');
   t.style.textShadow = cfg.sombra ? '0 .3vh .9vh rgba(0,0,0,.85), 0 0 .3vh rgba(0,0,0,.6)' : 'none';
   $('fundo').style.backgroundColor = cfg.corFundo || '#000';
   $('fundo').style.backgroundImage = cfg.fundoImagem ? `url("${cfg.fundoImagem}")` : 'none';
@@ -618,7 +691,7 @@ function status(forcar) {
   } catch (_) {}
 }
 ['timeupdate', 'play', 'pause', 'loadedmetadata', 'seeked'].forEach(ev => video.addEventListener(ev, () => status(ev !== 'timeupdate')));
-video.addEventListener('ended', () => { if (!video.loop) { video.classList.remove('on'); status(true); } });
+video.addEventListener('ended', () => { if (!video.loop) sumirDevagar(video, () => { video.classList.remove('on'); status(true); }); });
 // Formato de imagem que o motor não decodifica (ex.: MPEG-4 Parte 2/"mp4v", Xvid): toca só o som. Avisa o operador.
 video.addEventListener('loadedmetadata', () => {
   if (video.videoWidth || PREVIEW || !alvo || alvo === window) return;
@@ -639,6 +712,7 @@ document.addEventListener('click', () => {
 });
 
 function midia(m) {
+  if (m.acao === 'carregar' || m.acao === 'play') cancelarSaida(video);
   if (m.acao === 'carregar') {
     pararCam();                                   // vídeo no telão tira a câmera
     if (m.id !== videoId) {
@@ -657,7 +731,7 @@ function midia(m) {
   else if (m.acao === 'seek') video.currentTime = m.t;
   else if (m.acao === 'volume') { if (!PREVIEW) video.volume = m.v; }
   else if (m.acao === 'loop') video.loop = !!m.on;
-  else if (m.acao === 'parar') { video.pause(); video.classList.remove('on'); status(true); }
+  else if (m.acao === 'parar') sumirDevagar(video, () => { video.pause(); video.classList.remove('on'); status(true); });
 }
 
 // ---------- Câmera ao vivo ----------
@@ -665,8 +739,9 @@ let camStream = null;
 async function camera(m) {
   const b = document.body;
   if (m.acao === 'letra') { b.classList.toggle('com-letra', !!m.on); b.classList.toggle('sem-letra', !m.on); ajustar(); return; }
+  if (m.acao !== 'mostrar') return camStream ? sumirDevagar($('cam'), pararCam) : pararCam();     // tirar a câmera: some devagar
+  cancelarSaida($('cam'));
   pararCam();
-  if (m.acao !== 'mostrar') return;
   try {
     let lista = (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === 'videoinput');
     if (lista.length && !lista[0].label) {
@@ -728,8 +803,8 @@ window.addEventListener('message', e => {
   else if (m.tipo === 'midia') midia(m);
   else if (m.tipo === 'slide') {
     // projetar texto tira o vídeo da tela
-    if (video.classList.contains('on')) { video.pause(); video.classList.remove('on'); status(true); }
-    mostrar(m.slide);
+    if (video.classList.contains('on')) sumirDevagar(video, () => { video.pause(); video.classList.remove('on'); status(true); });
+    mostrar(m.slide, m.direto);
   }
   else if (m.tipo === 'preto') $('preto').classList.toggle('on', !!m.on);
   else if (m.tipo === 'aviso') aviso(m.aviso);
