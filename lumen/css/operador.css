@@ -165,6 +165,7 @@ code { background: var(--painel2); padding: 1px 4px; border-radius: 4px; }
 .slide:hover .tam-slide, .slide.com-tam .tam-slide { display: flex; }
 .slide.com-tam:not(:hover) .tam-slide button { display: none; }
 .slide .tam-slide button { padding: 1px 6px; font-size: 11px; border-radius: 5px; line-height: 1.4; }
+.slide .tam-slide [data-ed] { margin-left: 6px; }
 .slide .tam-n { font-size: 10.5px; color: var(--destaque, #d4a93a); font-weight: 700; padding: 0 3px; }
 /* slide com o nome da parte do roteiro */
 .slide.secao .corpo { text-align: center; display: flex; flex-direction: column; justify-content: center; flex: 1; }

@@ -5,6 +5,15 @@
  * A versão mais nova fica em cima. Ao gerar uma versão nova, acrescente a entrada dela aqui.
  */
 const NOVIDADES = [
+  { versao: '1.7.7', data: '2026-11-02', itens: [
+    '✎ Editar um slide sem projetar (ideia do Thiago, na Missa de Finados): passando o mouse num slide do roteiro aparecem ✎ e ✕. O ✎ leva o cursor ao texto daquele slide e a prévia mostra como fica — o telão continua com o que está no ar. Se o slide editado é o que está no ar, ao sair da caixa de texto o telão recebe a correção na hora, sem apagar.',
+    '✕ Excluir um slide: tira aquele trecho do texto deste roteiro (pergunta antes; Ctrl+Z traz de volta). Na letra dos cantos, que é a mesma em todos os roteiros, o ✎ abre o editor do canto.',
+    '🕯 Intenções da Missa: botão "Intenções" no Adicionar — uma intenção por linha (falecidos, ação de graças, aniversários…), cada uma na sua linha do slide; muitas viram vários slides sozinhas.',
+    '🙏 Oração dos Fiéis com "Outras intenções da comunidade…" e a resposta do povo, depois da última prece (desmarque "Outras intenções" no item para tirar). E a 1ª prece que aparecia também no convite (folheto de Finados) não repete mais.',
+    '✝ "Que o Corpo e o Sangue de Cristo nos guarde para a vida eterna. Amém." agora entra também quando o folheto já traz o "Senhor, eu não sou digno" (como em Finados) — nos roteiros novos e nos que já estão no programa.',
+    '🔤 Palavras com til separadas ("escravid ão"), que vinham assim do PDF do folheto, aparecem juntas no telão.',
+    '📘 Manual (tecla F1): tudo isso no capítulo 5, Revisando o roteiro.',
+  ] },
   { versao: '1.7.6', data: '2026-11-01', itens: [
     '🌫 Transição suave (ideia do Thiago): o texto some e aparece devagar a cada Próximo; a câmera e os vídeos também entram e saem devagar, e a faixa de letras do OBS faz o mesmo. Ajustes → 🎨 Aparência do telão → Transição entre os slides: Suave (padrão), Lenta ou Rápida (como era antes).',
     '🔵 Nome da parte junto do texto (ideia do Thiago): em vez de um slide só com o nome, o nome vai em cima do 1º slide da parte, colorido como no folheto e, com "com número", numerado na ordem do roteiro ("6. Primeira Leitura"). Ajustes → 🎨 Aparência do telão → "Nome da parte junto do texto, colorido" (e a cor ao lado).',

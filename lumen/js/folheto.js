@@ -112,7 +112,7 @@ const Folheto = (() => {
   const limparItem = it => {
 
     const out = { ...it };
-    for (const k of ['texto', 'refrao', 'convite', 'conclusao', 'resposta']) if (typeof out[k] === 'string') out[k] = limparHifens(out[k]);
+    for (const k of ['texto', 'refrao', 'convite', 'conclusao', 'resposta']) if (typeof out[k] === 'string') out[k] = juntarTil(limparHifens(out[k]));
     return out;
   };
 
@@ -469,7 +469,7 @@ const Folheto = (() => {
         if (iResp >= 0 && numeradas.length) {
           const iUltima = pt.pars.indexOf(numeradas[numeradas.length - 1]);
           return { tipo: 'preces', titulo: nome, resposta: pt.pars[iResp].texto.trim(),
-            convite: textoCorrido(pt.pars.slice(0, iResp)), texto: numeradas.map(p => p.texto.trim()).join('\n\n'),
+            convite: textoCorrido(pt.pars.slice(0, iResp).filter(p => p.rotulo !== 'N')), texto: numeradas.map(p => p.texto.trim()).join('\n\n'),
             conclusao: textoCorrido(pt.pars.slice(iUltima + 1)) };
         }
       }

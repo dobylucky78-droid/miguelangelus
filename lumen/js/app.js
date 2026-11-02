@@ -6,6 +6,8 @@ const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 const dividir = t => (t || '').replace(/\r/g, '').split(/\n\s*\n/).map(s => s.trim()).filter(Boolean);
+// (1.7.7, Thiago) "escravid ão": alguns PDFs separam o "ão"/"õe" do resto da palavra. Nenhuma palavra começa com ã/õ: junta.
+const juntarTil = t => String(t).replace(/(\p{Ll}) ([ãõ])/gu, '$1$2').replace(/(\p{Lu}) ([ÃÕ])/gu, '$1$2');
 const porTitulo = (a, b) => a.titulo.localeCompare(b.titulo, 'pt-BR');
 // Rodando dentro do aplicativo MiguelAngelus.exe (WebView2) em vez do Chrome
 const NO_APP = !!(window.chrome && window.chrome.webview);
@@ -470,8 +472,9 @@ function gerarSlides(item) {
   let slides = gerarSlidesBase(item);
   // "o Papa N., o nosso Bispo N." com os nomes (Ajustes → 🙏 Papa e Bispo)
   if (typeof trocarNomesN === 'function') slides = slides.map(s => s.texto && !s.versos && /\bN\./.test(s.texto) ? { ...s, texto: trocarNomesN(s.texto) } : s);
+  slides = slides.map(s => s.texto && / [ãõÃÕ]/.test(s.texto) ? { ...s, texto: juntarTil(s.texto) } : s);
   if (S.config.slideAuto && !['homilia', 'avisos'].includes(item.tipo) && !(item.tipo === 'imagem' && item.layout === 'capa'))
-    slides = slides.map(s => s.versos || s.secao || s.contas || s.linhas || !s.texto ? s : { ...s, texto: corridoAuto(s.texto) });     // linhas: título do terço
+    slides = slides.map(s => s.versos || s.secao || s.contas || s.linhas || s.semCorrido || !s.texto ? s : { ...s, texto: corridoAuto(s.texto) });     // linhas: título do terço; semCorrido: uma intenção por linha
   // a Homilia é sempre um slide só (a letra diminui para caber todas as leituras)
   // (e a "Capa do folheto" também: título, linha e edição juntos)
   // (automático: cada bloco separado por linha em branco é um slide; só divide o que não caberia com letra legível, cantos também)
@@ -609,6 +612,8 @@ function comHomilia(itens) {
   return novo;
 }
 
+const TEXTO_OUTRAS_INTENCOES = 'Outras intenções da comunidade…';
+
 function gerarSlidesBase(item) {
   switch (item.tipo) {
     case 'canto': {
@@ -624,6 +629,8 @@ function gerarSlidesBase(item) {
       return fala(item.textoRezado);
     }
     case 'texto': {
+      // (1.7.7, Thiago) Intenções da Missa: uma por linha, cada uma na sua linha do slide
+      if (item.intencoes) return dividir(item.texto).map(t => ({ texto: t, rodape: item.titulo || '', semCorrido: true }));
       const ts = dividir(item.texto);           // falas: prévia do editor das partes fixas (continua o negrito do povo)
       return (item.falas ? continuarFalas(ts) : ts).map(t => ({ texto: t, rodape: item.titulo || '' }));
     }
@@ -666,9 +673,15 @@ function gerarSlidesBase(item) {
       const resp = (item.resposta || '').trim().replace(/^—\s*/, '');
       // como no folheto: número da prece em vermelho e "T." (povo) em vermelho na resposta
       const comResposta = t => resp ? `${t}\nT. ${resp}` : t;
-      const out = [];
-      if ((item.convite || '').trim()) out.push({ texto: comResposta(item.convite.trim()), rodape });
-      dividir(item.texto).forEach((p, i) => out.push({ texto: comResposta(`${i + 1}. ${p.replace(/^\s*\d+\s*[.)–-]\s*/, '')}`), rodape, numerado: true }));
+      const out = [], preces = dividir(item.texto);
+      // (1.7.7) folheto que trazia a 1ª prece também no fim do convite (Finados 2026): no convite ela não repete
+      const semNumero = p => normEd(p.replace(/^\s*\d+\s*[.)–-]\s*/, ''));
+      const convite = dividir(item.convite).filter(b => !preces.some(p => semNumero(p) === semNumero(b))).join('\n\n');
+      if (convite) out.push({ texto: comResposta(convite), rodape });
+      preces.forEach((p, i) => out.push({ texto: comResposta(`${i + 1}. ${p.replace(/^\s*\d+\s*[.)–-]\s*/, '')}`), rodape, numerado: true }));
+      // (1.7.7, Thiago) "Outras intenções", com a resposta, antes da conclusão do padre (dá para desligar no item)
+      if (item.outrasIntencoes !== false && preces.length && !preces.some(p => /outras inten/i.test(p)))
+        out.push({ texto: comResposta(TEXTO_OUTRAS_INTENCOES), rodape });
       for (const c of dividir(item.conclusao)) out.push({ texto: c, rodape });
       return out;
     }
@@ -777,7 +790,8 @@ function slideComTrecho(textos, trecho, vezes) {
 function mostrarEdicao(campo) {
   const a = S.atual, pv = $('#preview').contentWindow;
   if (!a || !pv || !a.slides.length || ehPlayer(a.item) || ehCamera(a.item)) return fimEdicao();
-  let k = slideDoCursor(campo);
+  let k = Edicao.doBotao ?? slideDoCursor(campo);     // ✎ no slide: aquele slide (o cursor fica no começo dele)
+  Edicao.doBotao = undefined;
   if (k < 0) k = Edicao.i >= 0 && Edicao.i < a.slides.length ? Edicao.i : Math.max(0, a.slides.findIndex(s => !s.secao));
   const nova = Edicao.i < 0;
   Edicao.i = k;
@@ -790,13 +804,130 @@ function mostrarEdicao(campo) {
   if (c) { c.classList.add('em-edicao'); c.scrollIntoView({ block: 'nearest' }); }
 }
 function fimEdicao() {
-  if (Edicao.i < 0) return;
+  if (Edicao.i < 0) return corrigirNoAr();
   Edicao.i = -1;
   $('.rotulo-vivo').classList.remove('editando');
   for (const s of document.querySelectorAll('#slides .slide.em-edicao')) s.classList.remove('em-edicao');
+  corrigirNoAr();
   const pv = $('#preview').contentWindow;
   if (pv) enviarEstado(pv);
   renderControles();      // devolve o rótulo "AO VIVO"
+}
+// (1.7.7, Thiago) Editou o item que está no ar: ao sair da caixa de texto, o telão recebe a correção na hora, sem apagar
+// (sem a transição). O slide novo é o mais parecido com o que estava no ar (a correção pode mudar onde os slides quebram);
+// se nenhum se parece (o trecho foi apagado ou reescrito), o telão fica como está.
+const palavrasDe = t => new Set(normEd(t).split(' ').filter(w => w.length > 2));
+function corrigirNoAr() {
+  const a = S.atual;
+  if (!a || S.live.item !== a.item || S.live.idx < 0 || S.live.preto || !S.live.slide) return;
+  if (a.slides.some(s => JSON.stringify(s) === JSON.stringify(S.live.slide))) return;     // o slide no ar não mudou
+  const velho = palavrasDe(S.live.slide.texto);
+  let melhor = -1, nota = 0;
+  a.slides.forEach((s, i) => {
+    if (s.secao) return;
+    const novo = palavrasDe(s.texto);
+    let comuns = 0; for (const w of novo) if (velho.has(w)) comuns++;
+    const n = comuns / Math.max(1, velho.size, novo.size);
+    if (n > nota || (n === nota && Math.abs(i - S.live.idx) < Math.abs(melhor - S.live.idx))) { nota = n; melhor = i; }
+  });
+  if (melhor < 0 || nota < 0.5) return;
+  S.live = { ...S.live, slide: a.slides[melhor], idx: melhor };
+  a.idx = melhor;
+  enviar({ tipo: 'slide', slide: S.live.slide, direto: true });
+  if (Minis.size) atualizarMinis();
+  renderSlides();
+}
+
+// (1.7.7, ideias do Thiago) ✎ e ✕ no canto de cada slide do roteiro. O trecho do texto do item que fez o slide é achado
+// pelas letras e números, sem espaços, acentos e marcas — assim o número da prece, a resposta repetida, o "ão" separado
+// e a quebra em vários slides não atrapalham.
+function letrasCom(v) {
+  const limpo = String(v || '').replace(/<[^>]*>/g, m => ' '.repeat(m.length));
+  let s = ''; const pos = [];
+  for (let i = 0; i < limpo.length; i++) {
+    const c = semAcento(limpo[i]);
+    if (/^[a-z0-9]$/.test(c)) { s += c; pos.push(i); }
+  }
+  return { s, pos };
+}
+function trechoDoSlide(valor, slide) {
+  const R = letrasCom(valor), S1 = letrasCom(slide.texto || '').s;
+  if (!S1 || !R.s) return null;
+  for (const alvo of [S1, S1.replace(/^\d+/, '')]) {
+    if (alvo.length < 3) continue;
+    let ini = R.s.indexOf(alvo), fim = ini + alvo.length;
+    if (ini < 0) {
+      // o começo do slide; o fim: as últimas letras dele (ou o fim do bloco, se o slide tem algo que não está no texto)
+      ini = R.s.indexOf(alvo.slice(0, 40));
+      if (ini < 0) continue;
+      const cauda = alvo.slice(-25), f = R.s.indexOf(cauda, ini);
+      fim = f >= 0 && f - ini < alvo.length + 40 ? f + cauda.length : -1;
+    }
+    let a = R.pos[ini], b;
+    if (fim > 0) b = R.pos[fim - 1] + 1;
+    else { const k = valor.slice(a).search(/\n\s*\n/); b = k < 0 ? valor.length : a + k; }
+    // o "P." / "T." / "1." do começo da linha e a pontuação em volta (aspas, colchete, ponto final) vão junto; um parágrafo
+    // longo que o automático partiu em vários slides fica com o pedaço do slide
+    const v = valor.replace(/<[^>]*>/g, m => ' '.repeat(m.length));     // as marcas (<b>…) não contam
+    const iniLinha = v.lastIndexOf('\n', a - 1) + 1, fimLinha = (n => n < 0 ? v.length : n)(v.indexOf('\n', b));
+    if (/^\s*(?:[PTLCD]\.|R\.|—|\d+\.)?\s*[“"‘'(\[«]*$/.test(v.slice(iniLinha, a))) a = iniLinha;
+    else while (a > iniLinha && /[“"‘'(\[«]/.test(v[a - 1])) a--;
+    if (/^[^\p{L}\p{N}]*$/u.test(v.slice(b, fimLinha))) b = fimLinha;
+    else { b += v.slice(b).match(/^[^\p{L}\p{N}\s]*/u)[0].length; if (v[b] === ' ') b++; }
+    return { ini: a, fim: b };
+  }
+  return null;
+}
+// as caixas de texto do item aberto, na ordem (convite, preces, conclusão…)
+const caixasDoItem = () => [...document.querySelectorAll('#itemCab textarea[data-campo]')];
+function editarSlide(i) {
+  const a = S.atual, s = a?.slides[i];
+  if (!s) return;
+  for (const ta of caixasDoItem()) {
+    const t = trechoDoSlide(ta.value, s);
+    if (!t) continue;
+    Edicao.doBotao = i;
+    ta.focus();
+    ta.setSelectionRange(t.ini, t.fim);
+    ta.scrollTop = Math.max(0, ta.scrollHeight * t.ini / Math.max(1, ta.value.length) - ta.clientHeight / 3);
+    ta.dispatchEvent(new KeyboardEvent('keyup', { key: 'End' }));     // a prévia mostra este slide
+    return;
+  }
+  // texto que fica fora do roteiro (letra do canto, oração, parte fixa…): o editor dele
+  const cmd = document.querySelector('#itemCab [data-cmd=editarCanto], #itemCab [data-cmd=editarOracao], #itemCab [data-cmd=editarOrdinario], #itemCab [data-cmd=editarEuc]');
+  if (cmd) return cmd.click();
+  toast('O texto deste slide não se edita por aqui.');
+}
+function excluirSlide(i) {
+  const a = S.atual, s = a?.slides[i];
+  if (!s || a.rIdx < 0) return;
+  const it = a.item;
+  if (it.tipo === 'preces' && (s.texto || '').includes(TEXTO_OUTRAS_INTENCOES)) return toast('Para tirar este slide, desmarque "Outras intenções" no alto do item.');
+  if (s.refrao && it.tipo !== 'canto') return toast('O refrão se repete depois de cada estrofe: para mudar, edite o campo do refrão.');
+  for (const ta of caixasDoItem()) {
+    const campo = ta.dataset.campo, valor = String(it[campo] || '');
+    const t = trechoDoSlide(valor, s);
+    if (!t) continue;
+    const trecho = tirarMarcas(valor.slice(t.ini, t.fim).trim());
+    if (!confirm(`Excluir este slide do roteiro?\n\n${trecho.length > 300 ? trecho.slice(0, 300) + '…' : trecho}\n\n(Editar → Desfazer, ou Ctrl+Z, traz de volta.)`)) return;
+    const antes = a.slides.length;
+    it[campo] = (valor.slice(0, t.ini) + valor.slice(t.fim)).replace(/\n[ \t]*\n(?:[ \t]*\n)+/g, '\n\n').trim();
+    // A+ / A− guardados pela posição: os dos slides de depois acompanham
+    a.slides = gerarSlides(it);
+    const menos = antes - a.slides.length;
+    if (menos > 0 && it.tamSlides) {
+      const tam = {};
+      for (const [k, v] of Object.entries(it.tamSlides)) if (+k < i) tam[k] = v; else if (+k >= i + menos) tam[+k - menos] = v;
+      it.tamSlides = tam;
+    }
+    salvarRoteiro();
+    atualizarSlides();
+    renderCabecalho();
+    renderRoteiroLista();
+    return toast('Slide excluído. Ctrl+Z traz de volta.');
+  }
+  if (it.tipo === 'canto') return toast('A letra do canto é a mesma em todos os roteiros: para tirar uma estrofe, use ✎ (edita o canto).');
+  toast('Este slide vem de um texto fora do roteiro (oração, parte fixa…): use ✎ para editar.');
 }
 function ligarEdicaoNaPrevia() {
   const cab = $('#itemCab');
@@ -1100,7 +1231,8 @@ function renderSlides() {
   // A+ / A− no canto do slide (aparece ao passar o mouse), só nos itens do roteiro
   const botoesTam = (s, i) => a.rIdx < 0 || editAp ? '' : `<span class="tam-slide" title="Tamanho da letra deste slide">
       ${s.escala ? `<span class="tam-n">${s.escala > 0 ? '+' : ''}${s.escala}</span>` : ''}
-      <button type="button" data-tam="-1" title="Diminuir a letra deste slide">A−</button><button type="button" data-tam="1" title="Aumentar a letra deste slide">A+</button></span>`;
+      <button type="button" data-tam="-1" title="Diminuir a letra deste slide">A−</button><button type="button" data-tam="1" title="Aumentar a letra deste slide">A+</button>${s.secao ? '' : `
+      <button type="button" data-ed title="Editar o texto deste slide — não projeta: o telão continua com o que está no ar">✎</button><button type="button" data-del class="perigo" title="Excluir este slide do roteiro (Ctrl+Z desfaz)">✕</button>`}</span>`;
   el.innerHTML = a.slides.map((s, i) => `
     <div class="slide ${vivoAqui && S.live.idx === i ? 'vivo' : ''} ${a.idx === i ? 'foco' : ''} ${editAp && Apres.sel === i ? 'editando' : ''} ${s.img ? 'com-img lay-' + s.layout : ''} ${s.secao ? 'secao' : ''} ${s.escala ? 'com-tam' : ''}" data-i="${i}">
       <span class="num">${i + 1}</span>${botoesTam(s, i)}
@@ -1247,7 +1379,9 @@ function renderCabecalho() {
     case 'texto':
       h = `<div class="cab-linha"><span class="tag t-texto">Texto</span>
              <input data-campo="titulo" value="${esc(it.titulo)}" placeholder="Título (aparece no rodapé)"></div>
-           <textarea data-campo="texto" rows="5" placeholder="${it.antifona ? 'Cole aqui a antífona do Missal (ou do folheto), com a referência no fim, ex.: (Sl 104,3s).' : 'Digite o texto. Deixe uma linha em branco para separar os slides.'}">${esc(it.texto)}</textarea>`;
+           <textarea data-campo="texto" rows="5" placeholder="${it.antifona ? 'Cole aqui a antífona do Missal (ou do folheto), com a referência no fim, ex.: (Sl 104,3s).'
+             : it.intencoes ? 'Uma intenção por linha, ex.:&#10;Pelas almas de João da Silva e Maria de Souza&#10;Em ação de graças pelos 50 anos de casamento de José e Ana&#10;(linha em branco: começa outro slide)'
+             : 'Digite o texto. Deixe uma linha em branco para separar os slides.'}">${esc(it.texto)}</textarea>`;
       break;
     case 'homilia': {
       const temCapa = (S.roteiro?.itens || []).some(i => i.tipo === 'imagem' && i.abertura && i.imagem);
@@ -1308,7 +1442,8 @@ function renderCabecalho() {
     case 'preces':
       h = `<div class="cab-linha"><span class="tag t-texto">Preces</span>
              <input data-campo="titulo" class="estreito" value="${esc(it.titulo)}" placeholder="Oração dos Fiéis">
-             <input data-campo="resposta" value="${esc(it.resposta)}" placeholder="Resposta do povo — ex.: Senhor, escutai a nossa prece."></div>
+             <input data-campo="resposta" value="${esc(it.resposta)}" placeholder="Resposta do povo — ex.: Senhor, escutai a nossa prece.">
+             <label class="check" title="Depois da última prece, um slide &quot;${TEXTO_OUTRAS_INTENCOES}&quot; com a resposta do povo, para as intenções faladas na hora"><input type="checkbox" data-campo="outrasIntencoes" ${it.outrasIntencoes !== false ? 'checked' : ''}> Outras intenções</label></div>
            <div class="cab-grade cab-preces">
              <label class="campo">Convite (padre)<textarea data-campo="convite" rows="3" placeholder="Irmãos e irmãs, elevemos nossas preces, dizendo:">${esc(it.convite)}</textarea></label>
              <label class="campo">Preces (linha em branco entre elas — a resposta entra sozinha no fim)<textarea data-campo="texto" rows="3">${esc(it.texto)}</textarea></label>
@@ -1492,6 +1627,8 @@ function novoItem(tipo) {
     case 'texto': return { ...base, titulo: '', texto: '' };
     // (1.7.6, ideia do Thiago) Antífona do Missal: de Entrada ou da Comunhão, pelo lugar onde entra no roteiro
     case 'antifona': return { ...base, tipo: 'texto', antifona: true, titulo: tipoAntifona() === 'comunhao' ? 'Antífona da Comunhão' : 'Antífona de Entrada', texto: '' };
+    // (1.7.7, ideia do Thiago) Intenções da Missa (nomes dos falecidos, ação de graças…), lidas no começo
+    case 'intencoes': return { ...base, tipo: 'texto', intencoes: true, titulo: 'Intenções da Missa', texto: '' };
     case 'imagem': return { ...base, titulo: '', imagem: '', layout: 'esquerda', escurecer: 45, texto: '' };
     case 'homilia': return { ...base, titulo: 'Homilia', texto: '', usarCapa: true, mostrarRef: true };
     case 'ordinario': return { ...base, parte: 'saudacao' };
@@ -2063,6 +2200,17 @@ function separarEisCordeiro(itens) {
   if (k < 0) return null;
   return [...itens.slice(0, k + 1), { id: uid(), tipo: 'ordinario', parte: 'eis-cordeiro', semSecao: true }, ...itens.slice(k + 1)];
 }
+// (1.7.7, Thiago) Folheto que já traz o "não sou digno" mas não o "Que o Corpo e o Sangue de Cristo nos guarde para a vida
+// eterna" (Finados 2026): a fala do padre entra no fim do mesmo item, como o último slide das partes fixas
+function completarEisCordeiro(itens) {
+  if (itens.some(i => i.tipo === 'ordinario' && i.parte === 'eis-cordeiro')) return null;
+  if (itens.some(i => /nos guarde para a vida eterna/i.test([i.texto, i.textoRezado, i.textoDepois].join(' ')))) return null;
+  const k = itens.findIndex(i => i.tipo === 'texto' && /n[aã]o sou digno/i.test(i.texto || ''));
+  if (k < 0) return null;
+  let fim = 'P. Que o Corpo e o Sangue de Cristo\nnos guarde para a vida eterna.\nT. Amém.';
+  try { const p = Ordinario.parte('eis-cordeiro'); if (p && /nos guarde/i.test(p.slides.at(-1))) fim = p.slides.at(-1); } catch (_) {}
+  return [...itens.slice(0, k), { ...itens[k], texto: itens[k].texto.trimEnd() + '\n\n' + fim }, ...itens.slice(k + 1)];
+}
 // A aclamação do folheto (refrão + versículo) vira item de canto "rezado" com o mesmo refrão e versículo:
 // assim dá para trocar por um canto de aclamação, como no Santo
 function aclamacaoRezada(it) {
@@ -2079,7 +2227,7 @@ function separarAclamacao(itens) {
 
 function separarCantaveis(itens) {
   let r = itens, mudou = false;
-  for (const f of [separarPenitencial, separarGloria, separarAclamacao, separarSanto, separarPaiNosso, separarCordeiro, separarEisCordeiro]) {
+  for (const f of [separarPenitencial, separarGloria, separarAclamacao, separarSanto, separarPaiNosso, separarCordeiro, separarEisCordeiro, completarEisCordeiro]) {
     const n = f(r);
     if (n) { r = n; mudou = true; }
   }
@@ -2466,6 +2614,8 @@ function ligarEventos() {
     if (!s) return;
     const bt = e.target.closest('[data-tam]');
     if (bt) return mudarTamanhoSlide(+s.dataset.i, +bt.dataset.tam);
+    if (e.target.closest('[data-ed]')) return editarSlide(+s.dataset.i);
+    if (e.target.closest('[data-del]')) return excluirSlide(+s.dataset.i);
     // apresentação em edição: o clique escolhe o slide para editar (não projeta)
     if (ehApresentacao(S.atual?.item) && Apres.editando) { Apres.sel = +s.dataset.i; renderCabecalho(); renderSlides(); return; }
     projetar(+s.dataset.i);
@@ -2649,7 +2799,7 @@ function ligarEventos() {
     const it = novoItem(b.dataset.add);
     const pos = adicionarAoRoteiro(it);
     abrirItem(it, pos);
-    $('#itemCab input:not([type=checkbox]), #itemCab select, #itemCab textarea')?.focus();
+    $(it.intencoes || it.antifona ? '#itemCab textarea' : '#itemCab input:not([type=checkbox]), #itemCab select, #itemCab textarea')?.focus();
   });
 
   // Cantos
@@ -2932,7 +3082,7 @@ async function iniciar() {
   renderBiblia();
   renderCabecalho();
   renderEstadoProj();
-  $('#versaoApp').textContent = NO_APP ? 'Versão 1.7.6 · aplicativo para Windows' : 'Versão 1.7.6 · no navegador';
+  $('#versaoApp').textContent = NO_APP ? 'Versão 1.7.7 · aplicativo para Windows' : 'Versão 1.7.7 · no navegador';
   // pede armazenamento permanente (o navegador não apaga os dados para liberar espaço)
   try { navigator.storage?.persist?.(); } catch (_) {}
   enviarConfigTelao(); renderTemasRapidos();
