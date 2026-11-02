@@ -40,6 +40,7 @@ const CONFIG_PADRAO = {
   // ideias do Thiago (1.7.6): transição suave; o nome da parte junto do texto, colorido; o texto continua centralizado
   // ao desviar das imagens dos cantos
   transicao: 'suave', secaoJunto: false, corSecao: '#5aa9ff', centralizarCantos: true,
+  cruz: true, corCruz: '#c8102e', versosFolheto: true,
   // transmissão (NDI): faixa de letras para o OBS
   ndiLigado: false, ndiNome: 'MiguelAngelus Letras', faixaTamanho: 4.6, faixaOpacidade: 0.6,
   faixaCantos: true, faixaRespostas: true, faixaLeituras: true, faixaAvisos: true, faixaPix: true,
@@ -473,6 +474,9 @@ function gerarSlides(item) {
   // "o Papa N., o nosso Bispo N." com os nomes (Ajustes → 🙏 Papa e Bispo)
   if (typeof trocarNomesN === 'function') slides = slides.map(s => s.texto && !s.versos && /\bN\./.test(s.texto) ? { ...s, texto: trocarNomesN(s.texto) } : s);
   slides = slides.map(s => s.texto && / [ãõÃÕ]/.test(s.texto) ? { ...s, texto: juntarTil(s.texto) } : s);
+  // (1.7.8) nº dos versículos guardado do folheto (<v>23</v>): pequeno em cima, como no folheto, ou escondido
+  slides = slides.map(s => s.texto && s.texto.includes('<v>') ? { ...s, texto: versosDoFolheto(s.texto) } : s);
+  slides = comCruzes(slides);
   if (S.config.slideAuto && !['homilia', 'avisos'].includes(item.tipo) && !(item.tipo === 'imagem' && item.layout === 'capa'))
     slides = slides.map(s => s.versos || s.secao || s.contas || s.linhas || s.semCorrido || !s.texto ? s : { ...s, texto: corridoAuto(s.texto) });     // linhas: título do terço; semCorrido: uma intenção por linha
   // a Homilia é sempre um slide só (a letra diminui para caber todas as leituras)
@@ -492,6 +496,37 @@ function gerarSlides(item) {
   // fundo próprio do item (1.6.6): no lugar do fundo do tema, com a opção de usar ou não
   const fundo = item.usarFundo && item.fundoImg ? { fundo: item.fundoImg, fundoEscurecer: +(item.fundoEscurecer ?? 35) } : null;
   return slides.map((s, i) => (tam[i] || fundo) ? { ...s, ...(tam[i] ? { escala: tam[i] } : {}), ...(fundo || {}) } : s);
+}
+
+// (1.7.8, Thiago) Números dos versículos das leituras, como no folheto: a importação guarda <v>23</v> antes do versículo;
+// no slide viram números sobrescritos (²³ — o telão os pinta), ou somem (Ajustes → Aparência do telão)
+const SOBRE_LETRA = { a: 'ᵃ', b: 'ᵇ', c: 'ᶜ', d: 'ᵈ', e: 'ᵉ' };
+const versosDoFolheto = t => t.replace(/<v>\s*(\d{1,3})([a-e]?)\s*<\/v>\s*/gi, (m, n, l) =>
+  S.config.versosFolheto === false ? '' : sobrescrito(n) + (SOBRE_LETRA[l.toLowerCase()] || '') + ' ');
+
+// (1.7.8, Thiago) A cruz ✠ do Missal, como no folheto: no "✠ Proclamação do Evangelho", na epiclese da Oração Eucarística
+// ("…se tornem para nós o Corpo e ✠ o Sangue…", o "Santificai", logo antes da consagração — quando os coroinhas tocam o
+// carrilhão) e na bênção ("Pai e Filho ✠ e Espírito Santo"). Vale em qualquer roteiro e Oração Eucarística, sem mudar o
+// texto guardado (Ajustes → Aparência do telão → Cruz). A da epiclese só antes do "Tomai": o relato da Ceia não ganha.
+const RX_TOMAI = /TOMAI,? TODOS|Tomai,? todos/;
+function comCruzes(slides) {
+  if (S.config.cruz === false) return slides;
+  const temCeia = slides.some(s => RX_TOMAI.test(s.texto || ''));
+  let depoisDoTomai = false, epiclese = false;
+  return slides.map(s => {
+    if (!s.texto || s.secao) return s;
+    let t = s.texto;
+    if (!t.includes('✠')) {
+      t = t.replace(/^((?:[PD]\.\s*)?)(Proclama[çc][ãa]o do Evangelho)/m, '$1✠ $2')
+        .replace(/(Pai,? e Filho)\s+(e Esp[íi]rito Santo)/g, '$1 ✠ $2');
+      if (temCeia && !depoisDoTomai && !epiclese) {
+        const ceia = t.search(RX_TOMAI), m = /(Corpo e)(\s+)((?:o )?Sangue)/.exec(t);
+        if (m && (ceia < 0 || m.index < ceia)) { t = t.slice(0, m.index) + `${m[1]} ✠${m[2]}${m[3]}` + t.slice(m.index + m[0].length); epiclese = true; }
+      }
+    }
+    if (RX_TOMAI.test(t)) depoisDoTomai = true;
+    return t === s.texto ? s : { ...s, texto: t };
+  });
 }
 
 // Linha "🖼 Fundo próprio" no cabeçalho dos itens do roteiro
@@ -555,14 +590,24 @@ function continuaAnterior(item, itens) {
   return false;
 }
 
+// partes que o folheto não numera: comentários, antífonas e as intenções
+const semNumero = i => i.intencoes || i.antifona || (i.tipo === 'texto' && /^(coment[aá]rio|ant[ií]fona)/i.test(i.titulo || ''));
 function slideDaSecao(item) {
   if (!S.config.slideSecao || !S.roteiro?.itens.includes(item) || continuaAnterior(item, S.roteiro.itens)) return null;
   const nome = nomeDaSecao(item);
   if (!nome || !nome[0]) return null;
   let titulo = tirarMarcas(nome[0]);
   if (S.config.numerarSecoes) {
-    const n = S.roteiro.itens.slice(0, S.roteiro.itens.indexOf(item) + 1).filter(i => nomeDaSecao(i) && !continuaAnterior(i, S.roteiro.itens)).length;
-    titulo = `${n}. ${titulo}`;
+    const itens = S.roteiro.itens;
+    // (1.7.8, Thiago) roteiro do folheto: o número que a parte tem no folheto, só onde ele tem (comentários, antífonas e o
+    // que foi acrescentado ficam sem); a parte que o programa dividiu em duas (Oração Eucarística, Rito da Comunhão) leva
+    // o número só na primeira. Sem folheto (Missa de semana): conta as partes, sem comentários, antífonas e intenções.
+    if (itens.some(i => i.numFolheto)) {
+      if (item.numFolheto && itens.find(i => i.numFolheto === item.numFolheto) === item) titulo = `${item.numFolheto}. ${titulo}`;
+    } else if (!semNumero(item)) {
+      const n = itens.slice(0, itens.indexOf(item) + 1).filter(i => nomeDaSecao(i) && !continuaAnterior(i, itens) && !semNumero(i)).length;
+      titulo = `${n}. ${titulo}`;
+    }
   }
   return { texto: `<gg>${titulo}</gg>` + (nome[1] ? `\n${tirarMarcas(nome[1])}` : ''), rodape: '', secao: true, secaoNome: titulo };
 }
@@ -608,7 +653,10 @@ function comHomilia(itens) {
   const k = itens.findIndex(i => (i.tipo === 'leitura' && i.evangelho) || (i.tipo === 'texto' && /^evangelho/i.test(i.titulo || '')));
   if (k < 0) return itens;
   const novo = itens.slice();
-  novo.splice(k + 1, 0, { tipo: 'homilia', titulo: 'Homilia', texto: '', usarCapa: true, mostrarRef: true });
+  // (1.7.8) o folheto numera a Homilia ("10. Homilia"), mas sem texto ela não vira item: fica com o número que falta entre
+  // o Evangelho e a parte numerada seguinte
+  const antes = +itens[k].numFolheto, depois = +(itens.slice(k + 1).find(i => i.numFolheto)?.numFolheto || 0);
+  novo.splice(k + 1, 0, { tipo: 'homilia', titulo: 'Homilia', texto: '', usarCapa: true, mostrarRef: true, ...(antes && depois === antes + 2 ? { numFolheto: String(antes + 1) } : {}) });
   return novo;
 }
 
@@ -2090,7 +2138,7 @@ async function salvarCantosDoFolheto(itens, creditos) {
       cantosNovos.push(c);
       novos++;
     }
-    saida.push({ tipo: 'canto', momento, cantoId: c.id });
+    saida.push({ tipo: 'canto', momento, cantoId: c.id, ...(it.numFolheto ? { numFolheto: it.numFolheto } : {}) });
   }
   return { itens: separarCantaveis(saida) || saida, novos, existentes, cantosNovos };
 }
@@ -2127,7 +2175,8 @@ function desfazerHifens(t) {
 // Ato Penitencial, Glória e Cordeiro também podem ser cantados ou rezados: como o Santo, viram item de canto
 // "rezado" (o texto do folheto) até alguém escolher um canto.
 const temMomento = (itens, momento, parte) => itens.some(i => (i.tipo === 'canto' && i.momento === momento) || (i.tipo === 'ordinario' && i.parte === parte));
-const itemRezado = (it, momento, texto, extra = {}) => ({ id: it?.id || uid(), tipo: 'canto', momento, cantoId: '', textoRezado: desfazerHifens(texto.trim()), ...extra });
+const itemRezado = (it, momento, texto, extra = {}) => ({ id: it?.id || uid(), tipo: 'canto', momento, cantoId: '', textoRezado: desfazerHifens(texto.trim()),
+  ...(it?.numFolheto ? { numFolheto: it.numFolheto } : {}), ...extra });
 
 function separarGloria(itens) {
   if (temMomento(itens, 'Glória', 'gloria')) return null;
@@ -2216,7 +2265,7 @@ function completarEisCordeiro(itens) {
 function aclamacaoRezada(it) {
   const refrao = (it.refrao || '').trim(), texto = (it.texto || '').trim();
   return { id: it.id || uid(), tipo: 'canto', momento: 'Aclamação ao Evangelho', cantoId: '',
-    refraoRezado: texto ? refrao : '', textoRezado: texto || refrao };
+    refraoRezado: texto ? refrao : '', textoRezado: texto || refrao, ...(it.numFolheto ? { numFolheto: it.numFolheto } : {}) };
 }
 function separarAclamacao(itens) {
   if (itens.some(i => i.tipo === 'canto' && i.momento === 'Aclamação ao Evangelho')) return null;
@@ -2521,7 +2570,7 @@ function ligarAjustes() {
       if (k === 'textoAltar') return atualizarAltarNoAr();
       enviarConfigTelao(); renderTemasRapidos(); desenharPreviaMargens();
       if (['versosPorSlide', 'numerarVersos', 'quebraAuto', 'linhasPorSlide', 'caracteresPorLinha', 'quebraCantos', 'salmoCorrido', 'slideSecao', 'numerarSecoes',
-        'secaoJunto', 'slideAuto', 'margemLados', 'margemTopo', 'maiusculas'].includes(k)) atualizarSlides();
+        'secaoJunto', 'cruz', 'versosFolheto', 'slideAuto', 'margemLados', 'margemTopo', 'maiusculas'].includes(k)) atualizarSlides();
     });
   }
   // slides automáticos ligados: os ajustes manuais (tamanho máximo, alinhamento, linhas/caracteres) ficam apagados
@@ -3082,7 +3131,7 @@ async function iniciar() {
   renderBiblia();
   renderCabecalho();
   renderEstadoProj();
-  $('#versaoApp').textContent = NO_APP ? 'Versão 1.7.7 · aplicativo para Windows' : 'Versão 1.7.7 · no navegador';
+  $('#versaoApp').textContent = NO_APP ? 'Versão 1.7.8 · aplicativo para Windows' : 'Versão 1.7.8 · no navegador';
   // pede armazenamento permanente (o navegador não apaga os dados para liberar espaço)
   try { navigator.storage?.persist?.(); } catch (_) {}
   enviarConfigTelao(); renderTemasRapidos();

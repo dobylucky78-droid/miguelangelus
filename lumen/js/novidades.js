@@ -5,6 +5,11 @@
  * A versão mais nova fica em cima. Ao gerar uma versão nova, acrescente a entrada dela aqui.
  */
 const NOVIDADES = [
+  { versao: '1.7.8', data: '2026-11-02', itens: [
+    '🔢 Nome da parte "com número": nos roteiros do folheto, o número é o do folheto (5. Primeira Leitura), só nas partes que o folheto numera — comentários, antífonas e o que foi acrescentado ficam sem número. Nas Missas sem folheto, o programa conta as partes como antes, sem os comentários, antífonas e intenções. Para um roteiro importado antes desta versão ganhar os números do folheto, importe o folheto de novo.',
+    '✠ A cruz do Missal no telão, como no folheto (ideia do Thiago): "✠ Proclamação do Evangelho", na Oração Eucarística no "Santificai" — "…o Corpo e ✠ o Sangue…", logo antes da consagração, a hora do carrilhão dos coroinhas — e na bênção final ("Pai e Filho ✠ e Espírito Santo"). Vale para qualquer roteiro e Oração Eucarística, até os que já estão no programa. Ajustes → 🎨 Aparência do telão → Cruz ✠ (liga/desliga e a cor; vermelha é o padrão).',
+    '¹² Números dos versículos nas leituras, como no folheto (ideia do Thiago): pequenos em cima, na cor do P./T. Valem para os folhetos importados a partir desta versão (para uma Missa já montada, importe o folheto de novo). Ajustes → 🎨 Aparência do telão → "Números dos versículos nas leituras".',
+  ] },
   { versao: '1.7.7', data: '2026-11-02', itens: [
     '✎ Editar um slide sem projetar (ideia do Thiago, na Missa de Finados): passando o mouse num slide do roteiro aparecem ✎ e ✕. O ✎ leva o cursor ao texto daquele slide e a prévia mostra como fica — o telão continua com o que está no ar. Se o slide editado é o que está no ar, ao sair da caixa de texto o telão recebe a correção na hora, sem apagar.',
     '✕ Excluir um slide: tira aquele trecho do texto deste roteiro (pergunta antes; Ctrl+Z traz de volta). Na letra dos cantos, que é a mesma em todos os roteiros, o ✎ abre o editor do canto.',

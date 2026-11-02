@@ -15,7 +15,8 @@ const CORES_TEXTO = [['vermelho', '#c8102e'], ['dourado', '#f2c14e'], ['azul', '
   ['roxo', '#b57cf0'], ['branco', '#ffffff'], ['preto', '#111111']];
 const TAMANHOS_TEXTO = ['pq', '', 'g', 'gg'];
 const RX_MARCAS = /<\/?(?:b|i|u|gg|g|pq|vermelho|dourado|azul|verde|roxo|branco|preto)>/gi;
-const tirarMarcas = t => String(t || '').replace(RX_MARCAS, '');
+// (<v>23</v>: nº do versículo guardado do folheto — sem as marcas, sai junto)
+const tirarMarcas = t => String(t || '').replace(/<v>[^<]*<\/v>\s*/gi, '').replace(RX_MARCAS, '');
 // texto JÁ escapado (esc) → HTML com as marcas
 function marcasEmHtml(h) {
   return String(h)

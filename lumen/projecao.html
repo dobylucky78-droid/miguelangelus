@@ -91,6 +91,8 @@
   #texto .resp { font-weight: 700; }
   #texto .entre { display: block; height: .45em; }
   #texto .quem { font-weight: 700; color: var(--cor-quem, #ff5a4f); }
+  #texto .cruz { color: var(--cor-cruz, #c8102e); font-weight: 400; font-family: "Segoe UI Symbol", "Segoe UI", sans-serif; }
+  #texto .vn { color: var(--cor-quem, #ff5a4f); font-weight: 700; margin-right: .08em; }
   #texto .tit-sec { display: block; color: var(--cor-secao, #5aa9ff); font-weight: 700; font-size: .62em; margin-bottom: .35em;
     text-align: center; text-align-last: center; }
   font.m-vermelho { color: #c8102e; } font.m-dourado { color: #f2c14e; } font.m-azul { color: #5aa9ff; } font.m-verde { color: #5cc46a; }
@@ -260,6 +262,9 @@ function acabamento(html) {
     .replace(/&lt;\/(vermelho|dourado|azul|verde|roxo|branco|preto)&gt;/gi, '</font>')
     .replace(/&lt;(gg|g)&gt;/gi, (_, t) => `<big class="m-${t.toLowerCase()}">`).replace(/&lt;\/(gg|g)&gt;/gi, '</big>')
     .replace(/&lt;pq&gt;/gi, '<small class="m-pq">').replace(/&lt;\/pq&gt;/gi, '</small>')
+    // (1.7.8) a cruz ✠ do Missal na cor escolhida e o nº do versículo (sobrescrito) colorido, como no folheto
+    .replace(/✠/g, '<span class="cruz">✠</span>')
+    .replace(/[⁰¹²³⁴⁵⁶⁷⁸⁹]+[ᵃᵇᶜᵈᵉ]?/g, n => `<span class="vn">${n}</span>`)
     .replace(/\(([^()<>]{0,40}\d[^()<>]{0,40})\)/g, (_, r) => '(' + r.replace(/ /g, ' ').replace(/-/g, '‑') + ')');
 }
 
@@ -670,6 +675,7 @@ function aplicarConfig(c) {
   t.style.fontWeight = cfg.negrito ? 700 : 400;     // temas claros: letra preta em negrito
   t.style.setProperty('--cor-quem', cfg.corRotulo || '#ff5a4f');
   t.style.setProperty('--cor-secao', cfg.corSecao || '#5aa9ff');
+  t.style.setProperty('--cor-cruz', cfg.corCruz || '#c8102e');
   t.style.textShadow = cfg.sombra ? '0 .3vh .9vh rgba(0,0,0,.85), 0 0 .3vh rgba(0,0,0,.6)' : 'none';
   $('fundo').style.backgroundColor = cfg.corFundo || '#000';
   $('fundo').style.backgroundImage = cfg.fundoImagem ? `url("${cfg.fundoImagem}")` : 'none';

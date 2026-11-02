@@ -112,7 +112,11 @@ const Folheto = (() => {
   const limparItem = it => {
 
     const out = { ...it };
-    for (const k of ['texto', 'refrao', 'convite', 'conclusao', 'resposta']) if (typeof out[k] === 'string') out[k] = juntarTil(limparHifens(out[k]));
+    const leitura = out.tipo === 'texto' && /leitura|evangelho/i.test(out.titulo || '');
+    for (const k of ['texto', 'refrao', 'convite', 'conclusao', 'resposta']) if (typeof out[k] === 'string') {
+      out[k] = juntarTil(limparHifens(out[k]));
+      if (!leitura) out[k] = out[k].replace(/<v>[^<]*<\/v>\s*/g, '');
+    }
     return out;
   };
 
@@ -313,6 +317,9 @@ const Folheto = (() => {
     for (let r of runs) {
       if (r.s.trim() === '=' || paginasDaFonte[r.fonte].size < 3 || RUBRICA.test(r.s)) continue;
       if (falaGrande.size && falaGrande.has(r.fonte + '|' + Math.round(r.h))) r = { ...r, h: corpo, estilo: 'regular' };
+      // (1.7.8) nº do versículo nas leituras: algarismos em letra menor (~metade da letra) no meio do texto → <v>23</v>
+      // (só fica nas leituras e no Evangelho: limparItem; número sozinho na linha, como o da página, sai)
+      if (/^\s*\d{1,3}[a-e]?\s*$/.test(r.s) && r.h >= corpo * 0.45 && r.h < corpo * 0.72) { uteis.push({ ...r, s: `<v>${r.s.trim()}</v>`, verso: true, y: r.y - corpo * 0.33 }); continue; }   // sobrescrito: 1/3 acima da linha
       if (r.h >= corpo * 0.75) { uteis.push(r); continue; }
       const refs = r.s.match(/\([^()]*\d[^()]*\)/g);
       if (refs && r.h >= corpo * 0.4) uteis.push({ ...r, s: refs[0], ref: true });
@@ -334,6 +341,7 @@ const Folheto = (() => {
       l.runs.push(r);
     }
     linhas.sort((a, b) => a.p - b.p || a.col - b.col || b.y - a.y);
+    for (let i = linhas.length - 1; i >= 0; i--) if (linhas[i].runs.every(r => r.verso)) linhas.splice(i, 1);
     for (const l of linhas) {
       // letra menor no meio de uma linha comum não é subtítulo de prefácio: descarta
       if (l.runs.some(r => r.sub) && l.runs.some(r => !r.sub && !r.ref)) l.runs = l.runs.filter(r => !r.sub || /pref[aá]cio/i.test(r.s));
@@ -386,7 +394,8 @@ const Folheto = (() => {
         // títulos da capa ficam de fora; a 1ª parte é numerada ("1. Canto de Entrada") ou tem nome de parte da Missa (folheto
         // feito no Word, sem números: "Canto de Entrada")
         if (!temParteReal && !/^\d+\.|^ant[ií]fona/i.test(t) && !NOME_PARTE.test(t)) continue;
-        parte = { titulo: semCaixaAlta(t.replace(/^\d+\.\s*/, '')), pars: [] };
+        // (1.7.8) o número da parte no folheto ("5. Primeira Leitura") fica guardado: o telão numera como o folheto
+        parte = { titulo: semCaixaAlta(t.replace(/^\d+\.\s*/, '')), pars: [], num: t.match(/^(\d+)\./)?.[1] || '' };
         partes.push(parte);
         continue;
       }
@@ -474,7 +483,7 @@ const Folheto = (() => {
         }
       }
       return { tipo: 'texto', titulo: nome + (ref ? ` (${ref})` : ''), texto: textoCorrido(pt.pars) };
-    }).map(limparItem);
+    }).map((it, i) => limparItem(partes[i].num ? { ...it, numFolheto: partes[i].num } : it));
   }
 
   // Texto corrido; as falas do povo viram "— ..." (negrito) e ficam no mesmo slide da fala anterior
