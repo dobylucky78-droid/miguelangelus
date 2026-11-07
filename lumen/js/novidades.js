@@ -5,6 +5,9 @@
  * A versão mais nova fica em cima. Ao gerar uma versão nova, acrescente a entrada dela aqui.
  */
 const NOVIDADES = [
+  { versao: '1.7.9', data: '2026-11-07', itens: [
+    '✉ O MiguelAngelus tem e-mail: contato.miguelangelus@gmail.com — para dúvidas, sugestões e outras paróquias que queiram usar. Está em Ajuda → Sobre o MiguelAngelus, no Manual e no site.',
+  ] },
   { versao: '1.7.8', data: '2026-11-02', itens: [
     '🔢 Nome da parte "com número": nos roteiros do folheto, o número é o do folheto (5. Primeira Leitura), só nas partes que o folheto numera — comentários, antífonas e o que foi acrescentado ficam sem número. Nas Missas sem folheto, o programa conta as partes como antes, sem os comentários, antífonas e intenções. Para um roteiro importado antes desta versão ganhar os números do folheto, importe o folheto de novo.',
     '✠ A cruz do Missal no telão, como no folheto (ideia do Thiago): "✠ Proclamação do Evangelho", na Oração Eucarística no "Santificai" — "…o Corpo e ✠ o Sangue…", logo antes da consagração, a hora do carrilhão dos coroinhas — e na bênção final ("Pai e Filho ✠ e Espírito Santo"). Vale para qualquer roteiro e Oração Eucarística, até os que já estão no programa. Ajustes → 🎨 Aparência do telão → Cruz ✠ (liga/desliga e a cor; vermelha é o padrão).',

@@ -4,6 +4,7 @@
 para projetar as celebrações no telão.
 
 Site: https://pascom-sjo.github.io/
+Contato: contato.miguelangelus@gmail.com (dúvidas, sugestões ou para usar na sua paróquia)
 
 - Criado por **Miguel**, que idealizou o projeto.
 - Desenvolvido por **Marcio Aurelio Rios Martins**.
