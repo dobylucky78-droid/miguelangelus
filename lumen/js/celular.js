@@ -99,6 +99,29 @@ function estadoCelular() {
 
 // (1.8.1) Agenda para o MiguelAngelus Cast: as celebrações das próximas 2 semanas (data, hora, tipo, capela e se já
 // tem roteiro). Só o que a paróquia divulga: sem intenções nem textos. O Cast lê em GET /api/cast/agenda.
+// Ilustrações do folheto para o Cast: id = resumo do conteúdo; vão convertidas para JPEG (o Cast desenha a capa com
+// o GDI+, que não lê WebP). Ficam só na memória do MiguelAngelus e na rede local; nunca vão para a nuvem pública.
+const CapaCast = { pendentes: new Map(), enviadas: new Set() };
+function idCapaCast(s) {
+  let h = 5381;
+  for (let i = 0; i < s.length; i += 7) h = ((h * 33) ^ s.charCodeAt(i)) >>> 0;
+  return h.toString(36) + s.length.toString(36);
+}
+async function jpegCast(dataUrl) {
+  const img = new Image(); img.src = dataUrl; await img.decode();
+  const k = Math.min(1, 1600 / Math.max(img.naturalWidth, img.naturalHeight));
+  const c = document.createElement('canvas'); c.width = Math.round(img.naturalWidth * k); c.height = Math.round(img.naturalHeight * k);
+  const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); g.drawImage(img, 0, 0, c.width, c.height);
+  return c.toDataURL('image/jpeg', 0.9);
+}
+async function enviarCapasCast() {
+  for (const [id, url] of CapaCast.pendentes) {
+    if (CapaCast.enviadas.has(id)) continue;
+    try { postarApp({ tipo: 'celular', acao: 'capaCast', id, jpeg: await jpegCast(url) }); CapaCast.enviadas.add(id); }
+    catch (err) { console.warn('capa para o Cast', err); }
+  }
+  CapaCast.pendentes.clear();
+}
 function agendaCast() {
   if (typeof ocorrencias !== 'function' || !Agenda?.dados) return null;
   const h = new Date(), lista = [];
@@ -106,9 +129,14 @@ function agendaCast() {
     for (const o of ocorrencias(new Date(h.getFullYear(), h.getMonth(), h.getDate() + i))) {
       if (o.cancelada || !o.hora) continue;
       const l = localDe(o.localId);
-      const temRoteiro = !!(S.roteiros || []).find(x => x.id === Agenda.dados.vinculos?.[o.chave] || x.celebracao === o.chave);
+      const r = (S.roteiros || []).find(x => x.id === Agenda.dados.vinculos?.[o.chave]) || (S.roteiros || []).find(x => x.celebracao === o.chave);
+      // ilustração da capa do folheto (só da próxima semana; a imagem vai à parte, uma vez, em /api/cast/capa?id=)
+      // (fica no item de Abertura do roteiro; r.capa só existe enquanto o folheto é importado)
+      const ilus = r && i < 8 ? (r.itens || []).find(x => x.abertura && /^data:image\//.test(x.imagem || ''))?.imagem || r.capa || '' : '';
+      const capa = ilus ? idCapaCast(ilus) : '';
+      if (capa) CapaCast.pendentes.set(capa, ilus);
       lista.push({ data: o.iso, hora: o.hora, tipo: o.tipo, texto: o.texto,
-        local: l ? { nome: l.nome || '', sigla: l.sigla || '', tipo: l.tipo || '' } : null, temRoteiro });
+        local: l ? { nome: l.nome || '', sigla: l.sigla || '', tipo: l.tipo || '' } : null, temRoteiro: !!r, capa });
     }
   }
   return { paroquia: Agenda.dados.paroquia?.nome || '', locais: Agenda.dados.locais.map(l => ({ nome: l.nome || '', sigla: l.sigla || '', tipo: l.tipo || '' })), lista };
@@ -116,6 +144,7 @@ function agendaCast() {
 function enviarAgendaCast() {
   try {
     const a = agendaCast(); if (!a) return;
+    enviarCapasCast();                                  // as imagens primeiro (uma vez cada), a agenda logo depois
     const j = JSON.stringify(a);
     if (j === Cel.ultimaAgenda) return;
     Cel.ultimaAgenda = j;

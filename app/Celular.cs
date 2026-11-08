@@ -37,6 +37,19 @@ namespace MiguelAngelus
 
         internal string Codigo { get; private set; } = "";
         internal string AgendaCast { get; set; }          // (1.8.1) json das próximas celebrações, para o MiguelAngelus Cast
+        // (1.8.2) ilustrações do folheto (JPEG) das próximas celebrações, por id; só na memória, no máximo 12
+        readonly Dictionary<string, byte[]> capasCast = new Dictionary<string, byte[]>();
+        readonly Queue<string> ordemCapas = new Queue<string>();
+        internal void GuardarCapaCast(string id, byte[] jpeg)
+        {
+            if (string.IsNullOrEmpty(id) || id.Length > 40 || jpeg.Length > 8 * 1024 * 1024) return;
+            lock (trava)
+            {
+                if (!capasCast.ContainsKey(id)) ordemCapas.Enqueue(id);
+                capasCast[id] = jpeg;
+                while (ordemCapas.Count > 12) capasCast.Remove(ordemCapas.Dequeue());
+            }
+        }
         internal bool Ligado => escuta != null;
         internal string Erro { get; private set; }
 
@@ -330,6 +343,13 @@ namespace MiguelAngelus
                 if (caminho == "/api/cast/agenda" && metodo == "GET")
                 {
                     await Responder(fluxo, 200, "application/json; charset=utf-8", AgendaCast ?? "{\"lista\":[]}");
+                    return;
+                }
+                if (caminho == "/api/cast/capa" && metodo == "GET")
+                {
+                    byte[] img = null; var id = Parametro(consulta, "id") ?? "";
+                    lock (trava) capasCast.TryGetValue(id, out img);
+                    if (img == null) await Responder(fluxo, 404, "text/plain", "-"); else await Responder(fluxo, 200, "image/jpeg", img);
                     return;
                 }
                 if (caminho == "/api/ping")
