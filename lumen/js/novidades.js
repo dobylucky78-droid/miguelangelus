@@ -5,6 +5,9 @@
  * A versão mais nova fica em cima. Ao gerar uma versão nova, acrescente a entrada dela aqui.
  */
 const NOVIDADES = [
+  { versao: '1.8.1', data: '2026-11-08', itens: [
+    '📡 MiguelAngelus Cast (o programa de transmissão da Pascom, em testes): com o Controle pelo celular ligado, o MiguelAngelus passa a agenda das próximas 2 semanas para o Cast da rede — só datas, horas, capelas e se já tem roteiro (nada de intenções). Assim a capa da live e a "próxima transmissão" do Cast se acertam sozinhas.',
+  ] },
   { versao: '1.8.0', data: '2026-11-08', itens: [
     '🏷 Momento: um slide só com o nome do momento ("Saudação", "Bênção Final"…), como no folheto. Botão "Momento" no Adicionar: escolha o nome numa lista separada pelas partes da Missa, ou "✎ Outro nome…". Leva o número do folheto da parte seguinte, e a parte seguinte não repete o título.',
     '✋ Arrastar os itens do roteiro: segure um item e solte onde ele deve ficar (a linha dourada mostra onde entra).',

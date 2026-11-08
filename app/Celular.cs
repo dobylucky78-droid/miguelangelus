@@ -21,7 +21,8 @@ namespace MiguelAngelus
     // Só responde a celulares pareados; os pareamentos ficam em celulares.json (o celular não precisa parear de novo).
     sealed class ServidorCelular : IDisposable
     {
-        internal const int Porta = 8930;
+        // 8930; testes numa cópia, com o MiguelAngelus de verdade aberto: MIGUELANGELUS_PORTA_CELULAR=outra
+        internal static readonly int Porta = int.TryParse(Environment.GetEnvironmentVariable("MIGUELANGELUS_PORTA_CELULAR"), out var p) && p > 1024 ? p : 8930;
         readonly Action<string> aoComando;          // json do comando (já validado)
         readonly Action aoMudar;                    // aparelhos/código mudaram: a tela de Ajustes se atualiza
         readonly JavaScriptSerializer json = new JavaScriptSerializer { MaxJsonLength = 8 * 1024 * 1024 };
@@ -35,6 +36,7 @@ namespace MiguelAngelus
         DateTime travadoAte = DateTime.MinValue;
 
         internal string Codigo { get; private set; } = "";
+        internal string AgendaCast { get; set; }          // (1.8.1) json das próximas celebrações, para o MiguelAngelus Cast
         internal bool Ligado => escuta != null;
         internal string Erro { get; private set; }
 
@@ -322,6 +324,12 @@ namespace MiguelAngelus
                     lock (trava) if (aparelhos.TryGetValue(token, out var ap)) d["aparelho"] = ap.Nome;
                     aoComando(json.Serialize(d));
                     await Responder(fluxo, 200, "application/json", "{\"ok\":true}");
+                    return;
+                }
+                // (1.8.1) MiguelAngelus Cast: só leitura, só a agenda que a paróquia já divulga (datas, horas, capelas)
+                if (caminho == "/api/cast/agenda" && metodo == "GET")
+                {
+                    await Responder(fluxo, 200, "application/json; charset=utf-8", AgendaCast ?? "{\"lista\":[]}");
                     return;
                 }
                 if (caminho == "/api/ping")

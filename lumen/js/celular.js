@@ -97,6 +97,33 @@ function estadoCelular() {
   };
 }
 
+// (1.8.1) Agenda para o MiguelAngelus Cast: as celebrações das próximas 2 semanas (data, hora, tipo, capela e se já
+// tem roteiro). Só o que a paróquia divulga: sem intenções nem textos. O Cast lê em GET /api/cast/agenda.
+function agendaCast() {
+  if (typeof ocorrencias !== 'function' || !Agenda?.dados) return null;
+  const h = new Date(), lista = [];
+  for (let i = 0; i < 15; i++) {
+    for (const o of ocorrencias(new Date(h.getFullYear(), h.getMonth(), h.getDate() + i))) {
+      if (o.cancelada || !o.hora) continue;
+      const l = localDe(o.localId);
+      const temRoteiro = !!(S.roteiros || []).find(x => x.id === Agenda.dados.vinculos?.[o.chave] || x.celebracao === o.chave);
+      lista.push({ data: o.iso, hora: o.hora, tipo: o.tipo, texto: o.texto,
+        local: l ? { nome: l.nome || '', sigla: l.sigla || '', tipo: l.tipo || '' } : null, temRoteiro });
+    }
+  }
+  return { paroquia: Agenda.dados.paroquia?.nome || '', locais: Agenda.dados.locais.map(l => ({ nome: l.nome || '', sigla: l.sigla || '', tipo: l.tipo || '' })), lista };
+}
+function enviarAgendaCast() {
+  try {
+    const a = agendaCast(); if (!a) return;
+    const j = JSON.stringify(a);
+    if (j === Cel.ultimaAgenda) return;
+    Cel.ultimaAgenda = j;
+    postarApp({ tipo: 'celular', acao: 'agendaCast', agenda: a });
+  } catch (err) { console.warn('agenda do Cast', err); }
+}
+setInterval(() => { if (Cel.info?.ligado) enviarAgendaCast(); }, 5 * 60 * 1000);   // vira o dia, roteiro novo…
+
 // Manda o estado (no máximo ~4 vezes por segundo e só quando muda)
 function agendarEstadoCelular() {
   if (!Cel.info?.ligado) return;
@@ -109,6 +136,7 @@ function agendarEstadoCelular() {
       const mu = musicaCelular(), jm = JSON.stringify(mu);
       if (jm !== Cel.ultimaMusica) { Cel.ultimaMusica = jm; postarApp({ tipo: 'celular', acao: 'musica', musica: mu }); }
     } catch (err) { console.warn('cifras do celular', err); }
+    enviarAgendaCast();
     const j = JSON.stringify(e);
     if (j === Cel.ultimo) return;
     Cel.ultimo = j;

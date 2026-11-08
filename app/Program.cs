@@ -381,6 +381,7 @@ namespace MiguelAngelus
                 case "tirar": Celular.Tirar(m.TryGetValue("id", out var i) ? Convert.ToString(i) : null); InformarCelular(); break;
                 case "estado": if (celular != null && celular.Ligado && m.TryGetValue("estado", out var e)) celular.Atualizar(json.Serialize(e)); break;
                 case "musica": if (celular != null && celular.Ligado && m.TryGetValue("musica", out var mu)) celular.AtualizarMusica(json.Serialize(mu)); break;
+                case "agendaCast": if (celular != null && m.TryGetValue("agenda", out var ag)) celular.AgendaCast = json.Serialize(ag); break;   // (1.8.1)
             }
         }
 
