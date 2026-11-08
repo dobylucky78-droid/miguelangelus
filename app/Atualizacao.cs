@@ -58,9 +58,12 @@ namespace MiguelAngelus
             var j = new System.Web.Script.Serialization.JavaScriptSerializer().Deserialize<System.Collections.Generic.Dictionary<string, object>>(await r.Content.ReadAsStringAsync());
             var v = LerVersao(j.TryGetValue("tag_name", out var tg) ? tg as string : null);
             if (v == null || Normalizar(v) <= Normalizar(VersaoAtual)) return new { ok = true, ligada = true, atual, nova = (string)null };
-            // o instalador anexado à versão (o primeiro .exe)
-            var anexo = ((System.Collections.ArrayList)j["assets"]).Cast<System.Collections.Generic.Dictionary<string, object>>()
-                .FirstOrDefault(a => (a["name"] as string ?? "").EndsWith(".exe", StringComparison.OrdinalIgnoreCase));
+            // o instalador anexado à versão: de preferência o com o número (Instalar.MiguelAngelus.1.8.0.exe), para o
+            // Instalar-MiguelAngelus.exe (o do site) contar só as instalações novas; senão, o primeiro .exe
+            var exes = ((System.Collections.ArrayList)j["assets"]).Cast<System.Collections.Generic.Dictionary<string, object>>()
+                .Where(a => (a["name"] as string ?? "").EndsWith(".exe", StringComparison.OrdinalIgnoreCase)).ToList();
+            var anexo = exes.FirstOrDefault(a => !string.Equals(a["name"] as string, "Instalar-MiguelAngelus.exe", StringComparison.OrdinalIgnoreCase))
+                ?? exes.FirstOrDefault();
             if (anexo == null) return new { ok = true, ligada = true, atual, nova = (string)null };
             return new
             {

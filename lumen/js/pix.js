@@ -115,10 +115,30 @@ function enviarEstadoPix(w) { if (S.pixNoAr) enviar(msgPix(), [w]); }
 function alternarPix() {
   if (!S.pixNoAr && !Pix.qr) { toast('Coloque o QR code do Pix em Ajustes → 💠 Pix da paróquia.'); abrirAjustes('pix'); return; }
   S.pixNoAr = !S.pixNoAr;
+  S.pixAuto = false;                       // mexeu na mão: o automático não desliga (nem religa) por cima
   enviar(msgPix());
   atualizarPixNdi();                       // 💠 também no OBS (NDI), se ligado em Ajustes → Transmissão
   renderControles();
   if (typeof agendarEstadoCelular === 'function') agendarEstadoCelular();
+}
+
+// (1.8.0) Pix sozinho no ofertório (Ajustes → 💠 Pix, ligado de fábrica): liga quando o canto do Ofertório (ou um
+// Momento/texto "Apresentação das Oferendas") vai para o telão e desliga quando outro item do roteiro entra no ar.
+// Limpar a letra (Esc) não desliga — a coleta costuma continuar depois do canto. Se a pessoa mexer no botão durante o
+// ofertório, vale o que ela fez: o automático não liga de novo nem desliga até sair do ofertório.
+const ehOfertorio = it => !!it && (it.momento === 'Ofertório' ||
+  (['momento', 'texto'].includes(it.tipo) && /apresenta[cç][aã]o das oferendas|canto das oferendas|ofert[oó]rio/i.test(it.titulo || '')));
+function pixAutomatico(item) {
+  if (!item) return;                       // Altar, mensagem, limpar: não é troca de item
+  const of = ehOfertorio(item);
+  if (of && !S.pixNoOfertorio) {
+    S.pixNoOfertorio = true;
+    if (S.config.pixOfertorio !== false && !S.pixNoAr && Pix.qr) { alternarPix(); S.pixAuto = true; toast('💠 Pix ligado sozinho (ofertório). P desliga.'); }
+  } else if (!of && S.pixNoOfertorio) {
+    S.pixNoOfertorio = false;
+    if (S.pixAuto && S.pixNoAr) { alternarPix(); toast('💠 Pix desligado (saiu do ofertório).'); }
+    S.pixAuto = false;
+  }
 }
 
 function lerImagemPix(arquivo) {

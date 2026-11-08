@@ -34,9 +34,11 @@ function buscarEmTudo(bruto) {
     .sort((a, b) => (semAcento(b.titulo).includes(termo) - semAcento(a.titulo).includes(termo)) || (!!b.favorito - !!a.favorito) || a.titulo.localeCompare(b.titulo, 'pt-BR'))
     .map(c => ({ tit: c.titulo + (c.favorito ? ' ⭐' : ''), sub: [c.momento, c.autor].filter(Boolean).join(' · '),
       trecho: semAcento(c.titulo).includes(termo) ? '' : trechoCom(`${c.refrao || ''} ${c.letra || ''}`, termo),
+      item: { tipo: 'canto', cantoId: c.id },
       abrir: () => { mostrarAba('cantos'); abrirItem({ tipo: 'canto', cantoId: c.id }); } })));
   add('🙏 Orações', (typeof Oracoes !== 'undefined' ? Oracoes.lista : []).filter(o => semAcento(`${o.titulo} ${o.categoria || ''} ${o.texto}`).includes(termo))
     .map(o => ({ tit: o.titulo, sub: o.categoria || '', trecho: semAcento(o.titulo).includes(termo) ? '' : trechoCom(o.texto, termo),
+      item: { tipo: 'oracao', oracaoId: o.id },
       abrir: () => { mostrarAba('missa'); abrirItem({ tipo: 'oracao', oracaoId: o.id }); } })));
   add('📋 Roteiros', S.roteiros.map(r => {
     if (semAcento(r.nome).includes(termo)) return { r, trecho: '' };
@@ -52,7 +54,7 @@ function buscarEmTudo(bruto) {
   if (S.biblia && termo.length >= 3)
     add('📖 Bíblia', Biblia.buscar(S.biblia, bruto.trim(), 200).map(v => {
       const ref = `${refLivro(S.biblia.livros[v.li])} ${v.c},${v.n}`;
-      return { tit: ref, sub: '', trecho: trechoCom(v.t, termo), abrir: () => { mostrarAba('biblia'); abrirItem({ tipo: 'biblia', ref }); } };
+      return { tit: ref, sub: '', trecho: trechoCom(v.t, termo), item: { tipo: 'biblia', ref }, abrir: () => { mostrarAba('biblia'); abrirItem({ tipo: 'biblia', ref }); } };
     }));
   return grupos;
 }
@@ -61,11 +63,12 @@ function renderLocalizar() {
   const bruto = $('#locTermo').value;
   const grupos = buscarEmTudo(bruto);
   Localizar.resultados = grupos.flatMap(g => g.lista);
+  Localizar.sel = 0;
   let k = 0;
   $('#locResultados').innerHTML = bruto.trim().length < 2 ? '<p class="sutil">Digite pelo menos 2 letras.</p>'
     : !grupos.length ? `<p class="sutil">Nada encontrado para "${esc(bruto.trim())}".</p>`
     : grupos.map(g => `<div class="loc-grupo">${g.nome} <span class="sutil">(${g.total}${g.total > g.lista.length ? `, mostrando ${g.lista.length}` : ''})</span></div>` +
-      g.lista.map(x => `<button type="button" class="loc-item" data-loc="${k++}"><b>${esc(x.tit)}</b>${x.sub ? ` <span class="sutil">${esc(x.sub)}</span>` : ''}
+      g.lista.map(x => `<button type="button" class="loc-item ${k === 0 ? 'foco' : ''}" data-loc="${k++}"><b>${esc(x.tit)}</b>${x.sub ? ` <span class="sutil">${esc(x.sub)}</span>` : ''}${x.item ? ' <span class="loc-add sutil" title="Ctrl+Enter coloca no roteiro">＋ roteiro</span>' : ''}
         ${x.trecho ? `<div class="loc-trecho">${x.trecho}</div>` : ''}</button>`).join('')).join('');
 }
 
@@ -76,16 +79,44 @@ function abrirLocalizar() {
   renderLocalizar();
 }
 
+// Resultado da busca → item do roteiro, depois do item aberto (a janela fecha e o item novo fica aberto)
+function colocarNoRoteiro(x) {
+  if (!x) return;
+  if (!x.item) return toast('Este resultado não vai para o roteiro (só cantos, orações e versículos). Enter abre.');
+  if (!S.roteiro) return toast('Abra um roteiro primeiro.');
+  $('#dlgLocalizar').close();
+  const it = itemParaRoteiro(x.item);
+  const pos = adicionarAoRoteiro(it);
+  abrirItem(it, pos);
+  toast(`"${x.tit.replace(' ⭐', '')}" entrou no roteiro (posição ${pos + 1}).`);
+}
+
 function ligarLocalizar() {
   $('#locTermo').addEventListener('input', debounce(renderLocalizar, 200));
+  // (1.8.0, Lucas) ↑ ↓ escolhem o resultado; Enter abre; Ctrl+Enter coloca no roteiro (canto, oração, versículo)
   $('#locTermo').addEventListener('keydown', e => {
-    if (e.key === 'Enter' && Localizar.resultados[0]) { e.preventDefault(); $('#dlgLocalizar').close(); Localizar.resultados[0].abrir(); }
+    const n = Localizar.resultados.length;
+    if ((e.key === 'ArrowDown' || e.key === 'ArrowUp') && n) {
+      e.preventDefault();
+      Localizar.sel = ((Localizar.sel || 0) + (e.key === 'ArrowDown' ? 1 : -1) + n) % n;
+      $$('#locResultados .loc-item').forEach(b => b.classList.toggle('foco', +b.dataset.loc === Localizar.sel));
+      $(`#locResultados [data-loc="${Localizar.sel}"]`)?.scrollIntoView({ block: 'nearest' });
+      return;
+    }
+    if (e.key !== 'Enter') return;
+    const x = Localizar.resultados[Localizar.sel || 0];
+    if (!x) return;
+    e.preventDefault();
+    if (e.ctrlKey || e.metaKey) return colocarNoRoteiro(x);
+    $('#dlgLocalizar').close(); x.abrir();
   });
   $('#locResultados').addEventListener('click', e => {
     const b = e.target.closest('[data-loc]');
     if (!b) return;
+    const x = Localizar.resultados[+b.dataset.loc];
+    if (e.target.closest('.loc-add') || e.ctrlKey) return colocarNoRoteiro(x);
     $('#dlgLocalizar').close();
-    Localizar.resultados[+b.dataset.loc]?.abrir();
+    x?.abrir();
   });
   // Ctrl+F fora das caixas de texto (dentro de uma lista, cada busca continua a dela)
   document.addEventListener('keydown', e => {

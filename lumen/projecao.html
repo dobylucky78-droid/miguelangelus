@@ -92,7 +92,8 @@
   #texto .entre { display: block; height: .45em; }
   #texto .quem { font-weight: 700; color: var(--cor-quem, #ff5a4f); }
   #texto .cruz { color: var(--cor-cruz, #c8102e); font-weight: 400; font-family: "Segoe UI Symbol", "Segoe UI", sans-serif; }
-  #texto .vn { color: var(--cor-quem, #ff5a4f); font-weight: 700; margin-right: .08em; }
+  #texto .cruz.latina svg { height: .8em; width: auto; vertical-align: -.04em; filter: var(--sombra-cruz, none); }
+  #texto .vn { color: var(--cor-quem, #ff5a4f); font-weight: 700; margin-right: .12em; }
   #texto .tit-sec { display: block; color: var(--cor-secao, #5aa9ff); font-weight: 700; font-size: .62em; margin-bottom: .35em;
     text-align: center; text-align-last: center; }
   font.m-vermelho { color: #c8102e; } font.m-dourado { color: #f2c14e; } font.m-azul { color: #5aa9ff; } font.m-verde { color: #5cc46a; }
@@ -255,6 +256,10 @@ function htmlSlide(s) {
 // Negrito/itálico/sublinhado digitados como <b> <i> <u> (botões N I S na edição) e referências bíblicas sem quebrar:
 // "(Fl 4,6-9)" fica sempre inteira na mesma linha (espaço e hífen que não quebram).
 // Cor e tamanho (barrinha de formatação): <vermelho>…</vermelho> vira <font class="m-vermelho">, <g>/<gg> vira <big>, <pq> <small>
+// (1.8.0) Desenho da cruz: 'missal' = ✠ (letra); 'latina' = cruz latina fina, como a dos folhetos (desenhada, para
+// sair igual em qualquer fonte e nunca virar emoji). O texto continua com ✠; só o desenho no telão muda.
+let estiloCruz = 'latina';
+const CRUZ_LATINA = '<span class="cruz latina"><svg viewBox="0 0 10 16" aria-hidden="true"><path d="M4.1 0h1.8v4.3h4.1v1.8H5.9V16H4.1V6.1H0V4.3h4.1z" fill="currentColor"/></svg></span>';
 function acabamento(html) {
   return html
     .replace(/&lt;(\/?)(b|i|u)&gt;/gi, '<$1$2>')
@@ -263,8 +268,10 @@ function acabamento(html) {
     .replace(/&lt;(gg|g)&gt;/gi, (_, t) => `<big class="m-${t.toLowerCase()}">`).replace(/&lt;\/(gg|g)&gt;/gi, '</big>')
     .replace(/&lt;pq&gt;/gi, '<small class="m-pq">').replace(/&lt;\/pq&gt;/gi, '</small>')
     // (1.7.8) a cruz ✠ do Missal na cor escolhida e o nº do versículo (sobrescrito) colorido, como no folheto
-    .replace(/✠/g, '<span class="cruz">✠</span>')
-    .replace(/[⁰¹²³⁴⁵⁶⁷⁸⁹]+[ᵃᵇᶜᵈᵉ]?/g, n => `<span class="vn">${n}</span>`)
+    .replace(/✠/g, () => estiloCruz === 'latina' ? CRUZ_LATINA : '<span class="cruz">✠</span>')
+    // (1.8.0) o nº fica perto da palavra seguinte, como no folheto: o espaço depois dele sai (fica só uma folga pequena
+    // na margem do .vn, que não estica no texto justificado) e o "word joiner" não deixa a linha quebrar entre os dois
+    .replace(/([⁰¹²³⁴⁵⁶⁷⁸⁹]+[ᵃᵇᶜᵈᵉ]?)[   ]?/g, (_, n) => `<span class="vn">${n}</span>&#8288;`)
     .replace(/\(([^()<>]{0,40}\d[^()<>]{0,40})\)/g, (_, r) => '(' + r.replace(/ /g, ' ').replace(/-/g, '‑') + ')');
 }
 
@@ -676,6 +683,8 @@ function aplicarConfig(c) {
   t.style.setProperty('--cor-quem', cfg.corRotulo || '#ff5a4f');
   t.style.setProperty('--cor-secao', cfg.corSecao || '#5aa9ff');
   t.style.setProperty('--cor-cruz', cfg.corCruz || '#c8102e');
+  estiloCruz = cfg.estiloCruz === 'missal' ? 'missal' : 'latina';
+  t.style.setProperty('--sombra-cruz', cfg.sombra ? 'drop-shadow(0 .3vh .6vh rgba(0,0,0,.85))' : 'none');
   t.style.textShadow = cfg.sombra ? '0 .3vh .9vh rgba(0,0,0,.85), 0 0 .3vh rgba(0,0,0,.6)' : 'none';
   $('fundo').style.backgroundColor = cfg.corFundo || '#000';
   $('fundo').style.backgroundImage = cfg.fundoImagem ? `url("${cfg.fundoImagem}")` : 'none';
@@ -847,7 +856,7 @@ if (!PREVIEW) {
 
   // Teclas pressionadas aqui controlam o painel também
   window.addEventListener('keydown', e => {
-    if (['ArrowRight', 'ArrowLeft', 'ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', ' ', 'b', 'B', 'm', 'M', 'l', 'L', 'Escape'].includes(e.key)) {
+    if (['ArrowRight', 'ArrowLeft', 'ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', ' ', 'b', 'B', 'm', 'M', 'l', 'L', 'c', 'C', 'Escape'].includes(e.key)) {
       if (e.key !== 'Escape' || !document.fullscreenElement) e.preventDefault();
       ola(false);
       if (alvo) alvo.postMessage({ app: 'lumen', tipo: 'tecla', key: e.key }, '*');

@@ -90,6 +90,17 @@ code { background: var(--painel2); padding: 1px 4px; border-radius: 4px; }
 .divisor { position: absolute; left: -4px; top: 0; bottom: 0; width: 8px; cursor: col-resize; z-index: 5; }
 .divisor:hover, .divisor.arrastando { background: linear-gradient(90deg, transparent 3px, var(--acento) 3px, var(--acento) 5px, transparent 5px); }
 .rotulo-vivo.preto { color: #fff; background: #000; border-radius: 6px; padding: 2px 8px; align-self: flex-start; }
+/* (1.8.0) dica de atalho ao passar o mouse */
+.dica-atalho { position: fixed; z-index: 10000; pointer-events: none; padding: 3px 7px; border-radius: 6px; font-size: 12px;
+  background: #11151c; color: #e8ecf2; border: 1px solid #3a4354; box-shadow: 0 4px 12px rgba(0,0,0,.4); white-space: nowrap; }
+.dica-atalho kbd { display: inline-block; min-width: 16px; padding: 0 5px; border-radius: 4px; border: 1px solid #5a6578; border-bottom-width: 2px;
+  background: #232a36; font: 600 11.5px/18px "Segoe UI", sans-serif; text-align: center; }
+.dica-atalho span { color: #9aa6b8; }
+html[data-tema-app="claro"] .dica-atalho { background: #fff; color: #1d2430; border-color: #cfd6e0; }
+html[data-tema-app="claro"] .dica-atalho kbd { background: #f1f4f8; border-color: #b9c2cf; }
+/* (1.8.0) ❄ Congelar */
+.rotulo-vivo.congelado { color: #0b2740; background: #8fd0ff; border-radius: 6px; padding: 2px 8px; align-self: flex-start; }
+#btnCongelar.ligado { background: #8fd0ff; color: #0b2740; border-color: #8fd0ff; }
 .painel { display: flex; flex-direction: column; min-height: 0; border-right: 1px solid var(--borda); }
 .modulos { background: var(--painel); }
 .centro { background: var(--bg); }
@@ -547,6 +558,11 @@ big.m-g { font-size: 1.3em; } big.m-gg { font-size: 1.7em; } small.m-pq { font-s
 #aba-midia [data-so][hidden] { display: none !important; }
 #listaMidias .so-hover { opacity: 0; padding: 1px 6px; font-size: 12px; }
 #listaMidias .it:hover .so-hover, #listaMidias .it.sel .so-hover { opacity: 1; }
+/* (1.8.0) favoritas */
+#listaMidias .estrela { background: none; border: 0; padding: 0 4px; font-size: 15px; line-height: 1; color: var(--sutil, #9aa); cursor: pointer; }
+#listaMidias .estrela.on { color: #f5c542; }
+#listaMidias .it.fav .tit b { color: #f5c542; font-weight: 600; }
+#listaMidias .it.fav.sumiu { opacity: .5; }
 #pastaMidiaInfo { overflow-wrap: anywhere; }
 #pastaMidiaInfo .erro { color: #ff8a80; }
 /* filtros de tipo (Mídia) */
@@ -841,6 +857,12 @@ big.m-g { font-size: 1.3em; } big.m-gg { font-size: 1.7em; } small.m-pq { font-s
 .lit-auto .campo { flex: 0 0 auto; }
 
 .t-homilia { background: #3b2a12; color: #ffd27a; }
+.t-momento { background: #22303d; color: #9fc9ee; }
+/* (1.8.0) arrastar itens do roteiro */
+#roteiroItens .it[draggable="true"] { cursor: grab; }
+#roteiroItens .it.arrastando { opacity: .4; }
+#roteiroItens .it.drop-antes { box-shadow: inset 0 3px 0 #e8b931; }
+#roteiroItens .it.drop-depois { box-shadow: inset 0 -3px 0 #e8b931; }
 .t-avisos { background: #46161b; color: #ff9aa2; }
 /* Configurações da tela salvas (Ajustes → Aparência) */
 .perfis-tela { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 6px; padding: 8px; margin-bottom: 8px; border: 1px solid var(--borda); border-radius: 8px; background: var(--painel2); }
@@ -854,6 +876,17 @@ big.m-g { font-size: 1.3em; } big.m-gg { font-size: 1.7em; } small.m-pq { font-s
 .loc-resultados { max-height: 60vh; overflow: auto; display: flex; flex-direction: column; gap: 3px; }
 .loc-grupo { margin-top: 8px; font-weight: 700; font-size: 13px; color: var(--acento-claro); }
 .loc-item { text-align: left; padding: 6px 10px; font-size: 13.5px; }
+/* (1.8.0) escolha pelo teclado na busca e no Inserir */
+.loc-item.foco { outline: 2px solid #e8b931; outline-offset: -2px; }
+.loc-add { float: right; font-size: 12px; cursor: pointer; }
+.loc-add:hover { color: #e8b931; }
+/* (1.8.0) menu do botão direito (mídias) */
+.menu-ctx { position: fixed; z-index: 9999; min-width: 200px; padding: 4px; border-radius: 8px; background: #1f2530; border: 1px solid #3a4354;
+  box-shadow: 0 8px 24px rgba(0,0,0,.45); display: flex; flex-direction: column; }
+.menu-ctx button { text-align: left; padding: 7px 12px; background: none; border: 0; border-radius: 5px; color: inherit; font-size: 13.5px; }
+.menu-ctx button:hover, .menu-ctx button:focus { background: #2e3646; outline: none; }
+html[data-tema-app="claro"] .menu-ctx { background: #fff; border-color: #d5dae3; }
+html[data-tema-app="claro"] .menu-ctx button:hover, html[data-tema-app="claro"] .menu-ctx button:focus { background: #eef1f6; }
 .loc-trecho { font-size: 12.5px; color: var(--sutil); margin-top: 2px; white-space: normal; }
 .loc-trecho mark { background: #f2d16b; color: #111; border-radius: 2px; padding: 0 1px; }
 
@@ -897,6 +930,7 @@ html[data-tema-app="claro"] .t-oracao { background: #edf5dc; color: #5a7a1c; }
 html[data-tema-app="claro"] .t-terco, html[data-tema-app="claro"] .t-angelus { background: #e1edfb; color: #1d4f8c; }
 html[data-tema-app="claro"] .t-imagem, html[data-tema-app="claro"] .t-apres { background: #e1f0fa; color: #1f6a99; }
 html[data-tema-app="claro"] .t-homilia { background: #fbefd6; color: #8a5a10; }
+html[data-tema-app="claro"] .t-momento { background: #e2eef9; color: #2a5a85; }
 html[data-tema-app="claro"] .t-avisos { background: #fde3e5; color: #9b1c27; }
 html[data-tema-app="claro"] .tocando { background: #f7effb; border-color: #d9b8e8; }
 html[data-tema-app="claro"] .toc-tit { color: #8a3aa8; }

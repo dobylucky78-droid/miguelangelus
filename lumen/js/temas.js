@@ -92,6 +92,7 @@ function aoTrocarCapela() {
   Temas.manual = null;
   renderTemasRapidos();
   if (temaAtual() === 'liturgico') enviarConfigTelao();     // a cor do roteiro novo pode ser outra
+  if (typeof renderMidias === 'function') renderMidias();   // (1.8.0) favorita da capela (ex.: Seja bem-vindo NSC) sobe
 }
 
 // Ferramentas → "Temas por tempo litúrgico": liga/desliga para a paróquia toda (as capelas com tema próprio continuam com o delas)

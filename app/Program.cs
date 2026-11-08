@@ -524,6 +524,21 @@ namespace MiguelAngelus
                         File.Move(parcial, alvoLocal);
                         Responder(id, new { ok = true }); return;
                     }
+                    case "midiaMostrar":   // (1.8.0) botão direito numa mídia: abre o Explorer com o arquivo selecionado, ou a pasta dele
+                    {
+                        var alvo = CaminhoMidia(m);     // sempre dentro da pasta de mídias escolhida
+                        var soPasta = m.TryGetValue("pasta", out var sp) && sp is bool b && b;
+                        string args;
+                        if (!soPasta && File.Exists(alvo)) args = "/select,\"" + alvo + "\"";
+                        else
+                        {
+                            var dir = Directory.Exists(alvo) ? alvo : Path.GetDirectoryName(alvo);
+                            if (!Directory.Exists(dir)) throw new DirectoryNotFoundException("a pasta não foi encontrada neste computador: " + dir);
+                            args = "\"" + dir + "\"";
+                        }
+                        Process.Start(new ProcessStartInfo("explorer.exe", args) { UseShellExecute = true });
+                        Responder(id, new { ok = true }); return;
+                    }
                     case "midiaPasta":
                         var audio = Convert.ToString(m["tipoMidia"]) == "audio";
                         var pastaMidia = Convert.ToString(m["pasta"]);
@@ -641,7 +656,7 @@ namespace MiguelAngelus
             if (!Program.PastasMidia.TryGetValue(host, out var raiz)) throw new InvalidOperationException("escolha antes a pasta de vídeos/áudios");
             raiz = Path.GetFullPath(raiz).TrimEnd('\\') + "\\";
             var p = Path.GetFullPath(Path.Combine(raiz, Convert.ToString(m["caminho"]).Replace('/', '\\')));
-            if (!p.StartsWith(raiz, StringComparison.OrdinalIgnoreCase)) throw new InvalidOperationException("caminho fora da pasta de mídias");
+            if (!(p.TrimEnd('\\') + "\\").StartsWith(raiz, StringComparison.OrdinalIgnoreCase)) throw new InvalidOperationException("caminho fora da pasta de mídias");   // a própria raiz vale (abrir a pasta)
             return p;
         }
 

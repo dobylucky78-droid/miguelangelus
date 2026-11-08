@@ -1,4 +1,4 @@
-'use strict';
+﻿'use strict';
 /* MiguelAngelus — painel do operador. Controla a prévia e a janela de projeção via postMessage. */
 
 const $ = (s, r = document) => r.querySelector(s);
@@ -25,6 +25,7 @@ const itemCantoDeOracao = (momento, o) => ({ id: uid(), tipo: 'canto', momento, 
 
 const CONFIG_PADRAO = {
   pixCartao: 64, pixQrCamera: 36, pixFaixaCamera: 11,      // tamanhos do 💠 Pix no telão (% da altura da tela)
+  pixOfertorio: true,                                       // (1.8.0) 💠 liga sozinho no canto do Ofertório (pix.js)
   fonte: '"Segoe UI", Arial, sans-serif', fonteMax: 9, corTexto: '#ffffff', corFundo: '#000000', fundoImagem: '',
   alinhamento: 'justify-center', sombra: true, maiusculas: false, rodape: true, versosPorSlide: 1, numerarVersos: true,
   quebraAuto: true, linhasPorSlide: 4, caracteresPorLinha: 40, quebraCantos: false,
@@ -41,6 +42,7 @@ const CONFIG_PADRAO = {
   // ao desviar das imagens dos cantos
   transicao: 'suave', secaoJunto: false, corSecao: '#5aa9ff', centralizarCantos: true,
   cruz: true, corCruz: '#c8102e', versosFolheto: true,
+  estiloCruz: 'latina',                          // (1.8.0) desenho da cruz no telão: 'latina' (✝ do folheto, padrão) ou 'missal' (✠)
   // transmissão (NDI): faixa de letras para o OBS
   ndiLigado: false, ndiNome: 'MiguelAngelus Letras', faixaTamanho: 4.6, faixaOpacidade: 0.6,
   faixaCantos: true, faixaRespostas: true, faixaLeituras: true, faixaAvisos: true, faixaPix: true,
@@ -487,8 +489,8 @@ function gerarSlides(item) {
     // Ave-Maria do terço (com as contas) fica inteira num slide: cada Próximo é uma conta
     slides = slides.flatMap(s => s.contas ? [s] : limitarSlide(s));
   // 1º slide da parte com o nome dela (ideia do Hermínio) — ou o nome em cima do texto, colorido (ideia do Thiago, 1.7.6)
-  const secao = slides.length ? slideDaSecao(item) : null;
-  if (secao && S.config.secaoJunto && slides[0].texto && !slides[0].versos && !slides[0].img && !slides[0].linhas)
+  const secao = slides.length || item.tipo === 'momento' ? slideDaSecao(item) : null;
+  if (secao && slides.length && S.config.secaoJunto && slides[0].texto && !slides[0].versos && !slides[0].img && !slides[0].linhas)
     slides = [{ ...slides[0], secaoTit: secao.secaoNome }, ...slides.slice(1)];
   else if (secao) slides = [secao, ...slides];
   // A+ / A− de cada slide (ideia do Hermínio): guardado no item do roteiro, pela posição do slide
@@ -520,7 +522,8 @@ function comCruzes(slides) {
       t = t.replace(/^((?:[PD]\.\s*)?)(Proclama[çc][ãa]o do Evangelho)/m, '$1✠ $2')
         .replace(/(Pai,? e Filho)\s+(e Esp[íi]rito Santo)/g, '$1 ✠ $2');
       if (temCeia && !depoisDoTomai && !epiclese) {
-        const ceia = t.search(RX_TOMAI), m = /(Corpo e)(\s+)((?:o )?Sangue)/.exec(t);
+        // (1.8.0) também "…se mudem no Corpo e ✠ no Sangue…" (Orações Eucarísticas que dizem "no Corpo e no Sangue")
+        const ceia = t.search(RX_TOMAI), m = /(Corpo e)(\s+)((?:o |no )?Sangue)/.exec(t);
         if (m && (ceia < 0 || m.index < ceia)) { t = t.slice(0, m.index) + `${m[1]} ✠${m[2]}${m[3]}` + t.slice(m.index + m[0].length); epiclese = true; }
       }
     }
@@ -574,16 +577,30 @@ function nomeDaSecao(it) {
     case 'prefacio': return [nomeEuc(it.prefId), ''];
     case 'eucaristica': return [nomeEuc(it.oeId), ''];
     case 'angelus': return [resumoAngelus(it).tit.replace(/\s*\(.*$/, ''), ''];
+    case 'momento': return (it.titulo || '').trim() ? [it.titulo.trim(), (it.sub || '').trim()] : null;
   }
   return null;
 }
+
+// (1.8.0) Slide só com o nome do momento ("Saudação", "Bênção Final"…), escolhido de uma lista ou digitado.
+// O item logo depois dele não ganha outro slide de título (o momento já é o título dele).
+const MOMENTOS_MISSA = [
+  ['Ritos Iniciais', ['Acolhida', 'Comentário Inicial', 'Ritos Iniciais', 'Saudação', 'Ato Penitencial', 'Hino de Louvor', 'Oração do Dia']],
+  ['Liturgia da Palavra', ['Liturgia da Palavra', 'Primeira Leitura', 'Salmo Responsorial', 'Segunda Leitura', 'Aclamação ao Evangelho',
+    'Evangelho', 'Homilia', 'Profissão de Fé', 'Oração dos Fiéis']],
+  ['Liturgia Eucarística', ['Liturgia Eucarística', 'Apresentação das Oferendas', 'Oração sobre as Oferendas', 'Oração Eucarística']],
+  ['Rito da Comunhão', ['Rito da Comunhão', 'Pai-Nosso', 'Saudação da Paz', 'Cordeiro de Deus', 'Comunhão', 'Ação de Graças', 'Oração depois da Comunhão']],
+  ['Ritos Finais', ['Avisos', 'Ritos Finais', 'Bênção Final', 'Despedida', 'Canto Final']],
+];
+const nomesMomentos = () => MOMENTOS_MISSA.flatMap(g => g[1]);
 
 // Item que continua o anterior não ganha slide de título: o marcado (semSecao) e o Pai-Nosso logo depois do
 // "Rito da Comunhão" do folheto (que termina chamando o Pai-Nosso) e o "Eis o Cordeiro" logo depois do Cordeiro
 function continuaAnterior(item, itens) {
   if (item.semSecao) return true;
-  if (item.tipo !== 'ordinario') return false;
   const ant = itens[itens.indexOf(item) - 1];
+  if (ant?.tipo === 'momento' && item.tipo !== 'momento' && (ant.titulo || '').trim()) return true;     // o slide do momento já é o título
+  if (item.tipo !== 'ordinario') return false;
   if (!ant) return false;
   if (item.parte === 'pai-nosso') return (ant.tipo === 'texto' && /rito da comunhao/.test(semAcento(ant.titulo || ''))) || (ant.tipo === 'ordinario' && ant.parte === 'rito-comunhao');
   if (item.parte === 'eis-cordeiro') return (ant.tipo === 'canto' && ant.momento === 'Cordeiro') || (ant.tipo === 'ordinario' && ant.parte === 'cordeiro');   // emenda no Cordeiro
@@ -593,12 +610,19 @@ function continuaAnterior(item, itens) {
 // partes que o folheto não numera: comentários, antífonas e as intenções
 const semNumero = i => i.intencoes || i.antifona || (i.tipo === 'texto' && /^(coment[aá]rio|ant[ií]fona)/i.test(i.titulo || ''));
 function slideDaSecao(item) {
-  if (!S.config.slideSecao || !S.roteiro?.itens.includes(item) || continuaAnterior(item, S.roteiro.itens)) return null;
+  const momento = item.tipo === 'momento';      // o Momento é o próprio slide de título: sai mesmo sem "slide com o nome da parte"
+  const noRoteiro = !!S.roteiro?.itens.includes(item);
+  if (!momento && (!S.config.slideSecao || !noRoteiro || continuaAnterior(item, S.roteiro.itens))) return null;
   const nome = nomeDaSecao(item);
   if (!nome || !nome[0]) return null;
   let titulo = tirarMarcas(nome[0]);
-  if (S.config.numerarSecoes) {
+  if (S.config.numerarSecoes && noRoteiro) {
     const itens = S.roteiro.itens;
+    // o Momento leva o número que o folheto dá à parte que vem logo depois dele
+    const prox = momento ? itens[itens.indexOf(item) + 1] : null;
+    if (momento && prox?.numFolheto && itens.find(i => i.numFolheto === prox.numFolheto) === prox) titulo = `${prox.numFolheto}. ${titulo}`;
+    else if (momento && itens.some(i => i.numFolheto)) { /* folheto sem número para a parte seguinte: sem número */ }
+    else
     // (1.7.8, Thiago) roteiro do folheto: o número que a parte tem no folheto, só onde ele tem (comentários, antífonas e o
     // que foi acrescentado ficam sem); a parte que o programa dividiu em duas (Oração Eucarística, Rito da Comunhão) leva
     // o número só na primeira. Sem folheto (Missa de semana): conta as partes, sem comentários, antífonas e intenções.
@@ -715,6 +739,7 @@ function gerarSlidesBase(item) {
     }
     case 'terco': return slidesTerco(item);          // terco.js
     case 'angelus': return slidesAngelus(item);
+    case 'momento': return [];                       // o slide vem de slideDaSecao (o nome, como o das partes)
     case 'preces': {
       // Oração dos Fiéis: a resposta do povo entra no fim do convite e de cada prece (como o refrão no salmo)
       const rodape = item.titulo || 'Oração dos Fiéis';
@@ -796,8 +821,12 @@ function projetar(i) {
   const a = S.atual;
   if (!a || i < 0 || i >= a.slides.length) return;
   a.idx = i;
+  // (1.8.0, Lucas) telão congelado: o operador navega e edita à vontade; o slide escolhido fica preparado e
+  // só vai para o telão ao descongelar
+  if (S.congelado) { S.congelado.preparado = { item: a.item, idx: i }; renderSlides(); renderRoteiroLista(); return renderControles(); }
   S.live = { slide: a.slides[i], preto: false, item: a.item, idx: i };
   enviar({ tipo: 'slide', slide: S.live.slide });
+  if (a.rIdx >= 0 && typeof pixAutomatico === 'function') pixAutomatico(a.item);     // 💠 sozinho no ofertório (pix.js)
   if (Minis.size) atualizarMinis();       // a miniatura dos Ajustes mostra o slide no ar
   enviar({ tipo: 'preto', on: false });
   renderSlides();
@@ -867,6 +896,7 @@ function fimEdicao() {
 const palavrasDe = t => new Set(normEd(t).split(' ').filter(w => w.length > 2));
 function corrigirNoAr() {
   const a = S.atual;
+  if (S.congelado) return;                // congelado: a correção vai ao descongelar
   if (!a || S.live.item !== a.item || S.live.idx < 0 || S.live.preto || !S.live.slide) return;
   if (a.slides.some(s => JSON.stringify(s) === JSON.stringify(S.live.slide))) return;     // o slide no ar não mudou
   const velho = palavrasDe(S.live.slide.texto);
@@ -1092,7 +1122,26 @@ function alternarPreto() {
   renderControles();
 }
 
+// (1.8.0, Lucas) ❄ Congelar: o que está no telão fica parado enquanto o operador mexe em outros slides e itens.
+// Ao descongelar, vai para o telão o slide que ele deixou escolhido (clicado ou com as setas); se não escolheu nenhum,
+// o telão recebe só as correções feitas no texto que estava no ar.
+function alternarCongelar() {
+  if (!S.congelado) {
+    S.congelado = { preparado: null };
+    toast('❄ Telão congelado. Pode navegar e editar; C (ou o botão) solta.');
+  } else {
+    const p = S.congelado.preparado;
+    S.congelado = null;
+    if (p && S.atual?.item === p.item && p.idx < S.atual.slides.length) projetar(p.idx);
+    else corrigirNoAr();
+    toast('Telão descongelado.');
+  }
+  renderSlides(); renderRoteiroLista(); renderControles();
+}
+const avisoCongelado = () => { toast('❄ O telão está congelado. Aperte C (ou o botão Congelar) para soltar.'); return true; };
+
 function limpar() {
+  if (S.congelado) return avisoCongelado();
   S.live = { slide: null, preto: false, item: null, idx: -1 };
   enviar({ tipo: 'slide', slide: null });
   enviar({ tipo: 'preto', on: false });
@@ -1175,6 +1224,7 @@ function ligarDivisoria() {
 // Botão "Altar": slide "Todos dirijam seu olhar para o altar" (consagração), com a aparência atual do telão.
 // Clicar de novo devolve ao telão o que estava no ar antes.
 function alternarAltar() {
+  if (S.congelado) return avisoCongelado();
   if (S.live.altar) {
     S.live = S.antesAltar || { slide: null, preto: false, item: null, idx: -1 };
     S.antesAltar = null;
@@ -1201,6 +1251,7 @@ function atualizarAltarNoAr() {
 function projetarMensagem() {
   const t = $('#msgRapida').value.trim();
   if (!t) return;
+  if (S.congelado) return avisoCongelado();
   S.live = { slide: { texto: t, rodape: '' }, preto: false, item: null, idx: -1 };
   enviar({ tipo: 'slide', slide: S.live.slide });
   enviar({ tipo: 'preto', on: false });
@@ -1219,6 +1270,7 @@ function tratarTecla(key) {
     case 'l': case 'L': alternarAltar(); return true;
     case 'p': case 'P': alternarPix(); return true;
     case 'm': case 'M': alternarMudo(); return true;
+    case 'c': case 'C': alternarCongelar(); return true;
     case 'Escape': limpar(); return true;
   }
   return false;
@@ -1480,6 +1532,19 @@ function renderCabecalho() {
     case 'terco':
       h = htmlCabTerco(it);
       break;
+    case 'momento': {
+      const nomes = nomesMomentos(), livre = it.livre || ((it.titulo || '').trim() && !nomes.includes(it.titulo.trim()));
+      h = `<div class="cab-linha"><span class="tag t-momento">Momento</span>
+             <select data-campo="titulo" title="Nome do momento que aparece no telão">
+               <option value="" ${!it.titulo && !livre ? 'selected' : ''} disabled>— escolha o momento —</option>
+               ${MOMENTOS_MISSA.map(([g, ns]) => `<optgroup label="${esc(g)}">${ns.map(n => `<option ${!livre && n === it.titulo ? 'selected' : ''}>${esc(n)}</option>`).join('')}</optgroup>`).join('')}
+               <option value="__outro" ${livre ? 'selected' : ''}>✎ Outro nome…</option></select>
+             ${livre ? `<input data-campo="titulo" class="estreito" value="${esc(it.titulo)}" placeholder="Digite o nome do momento">` : ''}
+             <input data-campo="sub" value="${esc(it.sub || '')}" placeholder="Linha de baixo (opcional)"></div>
+           <p class="sutil pequeno" style="margin:0">Slide só com o nome do momento, no telão (não vai para a faixa da transmissão).
+             A parte que vem logo depois dele não repete o título.</p>`;
+      break;
+    }
     case 'angelus': {
       const r = resumoAngelus(it);
       h = `<div class="cab-linha"><span class="tag t-oracao">Oração</span><h2>${esc(r.tit)}</h2></div>
@@ -1576,6 +1641,7 @@ function resumoItem(it) {
     case 'preces': return { rot: 'Preces', tit: it.titulo || 'Oração dos Fiéis', vazio: !(it.texto || '').trim() };
     case 'terco': return resumoTerco(it);
     case 'angelus': return resumoAngelus(it);
+    case 'momento': return { rot: 'Momento', tit: it.titulo || 'escolher momento…', vazio: !(it.titulo || '').trim() };
     case 'avisos': {
       const n = avisosDoItem(it).length;
       return { rot: 'Avisos', tit: `${it.titulo || estiloAvisos().titulo} · ${n ? n + ' aviso(s)' : 'só o título'}`, vazio: false };
@@ -1608,7 +1674,7 @@ function renderRoteiroLista() {
   el.innerHTML = itens.map((it, i) => {
     const r = resumoItem(it);
     const sel = S.atual && S.atual.rIdx === i;
-    return `<div class="it ${sel ? 'sel' : ''} ${r.vazio ? 'pendente' : ''}" data-i="${i}">
+    return `<div class="it ${sel ? 'sel' : ''} ${r.vazio ? 'pendente' : ''}" data-i="${i}" draggable="true" title="Arraste para mudar a ordem">
       <span class="tag t-${it.tipo}">${esc(r.rot)}</span>
       <span class="tit">${esc(tirarMarcas(r.tit || ''))}</span>
       ${S.live.item === it ? '<span class="pt-vivo" title="No ar"></span>' : ''}
@@ -1683,6 +1749,7 @@ function novoItem(tipo) {
     case 'midia': return { ...base, midiaId: '', loop: false };
     case 'oracao': return { ...base, oracaoId: '' };
     case 'angelus': return base;
+    case 'momento': return { ...base, titulo: '', sub: '' };
     case 'ladainha': return itemCantoDeOracao('Ladainha', oracoesDoMomento('Ladainha').find(o => /Nossa Senhora/.test(o.titulo)) || oracoesDoMomento('Ladainha')[0]);
     case 'preces': return { ...base, titulo: 'Oração dos Fiéis', resposta: 'Senhor, escutai a nossa prece.', convite: '', texto: '', conclusao: '' };
     case 'avisos': return { ...base, titulo: '', extras: '', programados: true };
@@ -2632,6 +2699,7 @@ function ligarEventos() {
   $('#btnTirarCamera').addEventListener('click', () => { pararCamera(); renderControles(); });
   $('#arqFundoItem').addEventListener('change', e => { const f = e.target.files[0]; e.target.value = ''; if (f) definirFundoDoItem(f); });
   $('#btnAltar').addEventListener('click', alternarAltar);
+  $('#btnCongelar').addEventListener('click', alternarCongelar);
   $('#btnMsg').addEventListener('click', projetarMensagem);
   setInterval(renderEstadoProj, 1500);
 
@@ -2692,6 +2760,12 @@ function ligarEventos() {
     const campo = e.target.dataset.campo;
     if (!campo || !S.atual) return;
     const it = S.atual.item;
+    // Momento: "✎ Outro nome…" abre a caixa para digitar; um nome da lista fecha
+    if (it.tipo === 'momento' && campo === 'titulo' && e.target.tagName === 'SELECT') {
+      it.livre = e.target.value === '__outro';
+      if (it.livre) { it.titulo = ''; if (S.atual.rIdx >= 0) { salvarRoteiro(); renderRoteiroLista(); } atualizarSlides(); renderCabecalho();
+        return $('#itemCab input[data-campo=titulo]')?.focus(); }
+    }
     it[campo] = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
     if (campo === 'cantoId' || campo === 'momento') { BuscaCanto.item = null; BuscaCanto.termo = ''; }      // escolheu: a busca limpa
     if (it.tipo === 'terco') aoMudarTerco(it, campo);
@@ -2842,6 +2916,56 @@ function ligarEventos() {
     }
     if (S.atual?.item === itens[i]) return;
     abrirItem(itens[i], i);
+  });
+  // (1.8.0) Segurar um item do roteiro e arrastar para outro lugar da lista (além das setas ↑ ↓)
+  const Arrasto = { de: -1 };
+  const limparMarcaArrasto = () => $$('#roteiroItens .drop-antes, #roteiroItens .drop-depois').forEach(x => x.classList.remove('drop-antes', 'drop-depois'));
+  const alvoArrasto = e => {
+    const row = e.target.closest('#roteiroItens .it');
+    if (!row) return null;
+    const r = row.getBoundingClientRect();
+    return { row, i: +row.dataset.i, depois: e.clientY > r.top + r.height / 2 };
+  };
+  $('#roteiroItens').addEventListener('dragstart', e => {
+    const row = e.target.closest?.('.it');
+    if (!row) return;
+    Arrasto.de = +row.dataset.i;
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/x-miguelangelus-roteiro', String(Arrasto.de));
+    row.classList.add('arrastando');
+  });
+  $('#roteiroItens').addEventListener('dragover', e => {
+    if (Arrasto.de < 0) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    const a = alvoArrasto(e);
+    limparMarcaArrasto();
+    if (a && a.i !== Arrasto.de) a.row.classList.add(a.depois ? 'drop-depois' : 'drop-antes');
+    // perto das bordas da lista: rola sozinha
+    const el = $('#roteiroItens'), r = el.getBoundingClientRect();
+    if (e.clientY < r.top + 30) el.scrollTop -= 12; else if (e.clientY > r.bottom - 30) el.scrollTop += 12;
+  });
+  $('#roteiroItens').addEventListener('drop', e => {
+    if (Arrasto.de < 0) return;
+    e.preventDefault(); e.stopPropagation();
+    const a = alvoArrasto(e), de = Arrasto.de;
+    limparMarcaArrasto();
+    if (!a) return;
+    const itens = S.roteiro.itens;
+    let para = a.i + (a.depois ? 1 : 0);
+    if (para > de) para--;              // tirar o item de cima desloca os de baixo
+    if (para === de) return;
+    const [it] = itens.splice(de, 1);
+    itens.splice(para, 0, it);
+    if (S.atual && S.atual.rIdx >= 0) S.atual.rIdx = itens.indexOf(S.atual.item);
+    salvarRoteiro();
+    renderRoteiroLista();
+    atualizarSlides();                  // os números das partes podem mudar com a ordem
+  });
+  $('#roteiroItens').addEventListener('dragend', () => {
+    Arrasto.de = -1;
+    limparMarcaArrasto();
+    $$('#roteiroItens .arrastando').forEach(x => x.classList.remove('arrastando'));
   });
   for (const b of $$('[data-add]')) b.addEventListener('click', () => {
     if (b.dataset.add === 'terco') return adicionarTercoAoRoteiro();
@@ -3027,8 +3151,11 @@ function alternarMudo() {
 
 function renderControles() {
   // sem o botão, o aviso de tela preta fica no rótulo em cima da prévia
-  if (Edicao.i < 0) $('#rotuloVivo').textContent = S.live.preto ? 'TELA PRETA (B para voltar)' : S.mudo ? 'MUDO — só o fundo (M para voltar)' : 'AO VIVO';
+  if (Edicao.i < 0) $('#rotuloVivo').textContent = S.congelado ? `❄ CONGELADO — o telão não muda${S.congelado.preparado ? ' · ao soltar vai o slide escolhido' : ''} (C para soltar)`
+    : S.live.preto ? 'TELA PRETA (B para voltar)' : S.mudo ? 'MUDO — só o fundo (M para voltar)' : 'AO VIVO';
   $('.rotulo-vivo').classList.toggle('preto', !!S.live.preto || !!S.mudo);
+  $('.rotulo-vivo').classList.toggle('congelado', !!S.congelado);
+  $('#btnCongelar').classList.toggle('ligado', !!S.congelado);
   $('#btnMudo').classList.toggle('ligado', !!S.mudo);
   const camNoAr = typeof Camera !== 'undefined' && !!Camera.ativa;
   $('#btnTirarCamera').disabled = !camNoAr;
@@ -3093,6 +3220,7 @@ async function iniciar() {
   ligarPerfis();
   ligarHistorico();
   ligarLocalizar();
+  ligarInserir();
   ligarAgenda();
   ligarApresentacao();
   renderLocalRoteiro();
@@ -3131,7 +3259,7 @@ async function iniciar() {
   renderBiblia();
   renderCabecalho();
   renderEstadoProj();
-  $('#versaoApp').textContent = NO_APP ? 'Versão 1.7.9 · aplicativo para Windows' : 'Versão 1.7.9 · no navegador';
+  $('#versaoApp').textContent = NO_APP ? 'Versão 1.8.0 · aplicativo para Windows' : 'Versão 1.8.0 · no navegador';
   // pede armazenamento permanente (o navegador não apaga os dados para liberar espaço)
   try { navigator.storage?.persist?.(); } catch (_) {}
   enviarConfigTelao(); renderTemasRapidos();

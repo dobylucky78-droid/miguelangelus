@@ -102,6 +102,39 @@ async function escolherPastaMidia() {
 }
 const volumeMidia = () => S.config.volumeMidia ?? 1;
 
+// (1.8.0) Abre o Explorer do Windows com o arquivo selecionado (soPasta = só abre a pasta dele)
+async function mostrarMidiaNaPasta(tipo, caminho, soPasta) {
+  if (!NO_APP) return toast('Abrir a pasta funciona só no aplicativo MiguelAngelus para Windows.');
+  escutarRespostasSync();
+  try { await arqApp('midiaMostrar', { tipoMidia: tipo, caminho, pasta: !!soPasta }); }
+  catch (e) { alert('Não foi possível abrir a pasta: ' + e.message); }
+}
+
+// Menu pequeno do botão direito: [{ txt, fazer }]. Fecha com clique fora, Esc ou rolagem; ↑ ↓ e Enter funcionam.
+function menuContexto(e, opcoes) {
+  document.querySelector('.menu-ctx')?.remove();
+  const el = document.createElement('div');
+  el.className = 'menu-ctx';
+  el.innerHTML = opcoes.map((o, i) => `<button type="button" data-i="${i}">${esc(o.txt)}</button>`).join('');
+  document.body.appendChild(el);
+  const r = el.getBoundingClientRect();
+  el.style.left = Math.min(e.clientX, innerWidth - r.width - 6) + 'px';
+  el.style.top = Math.min(e.clientY, innerHeight - r.height - 6) + 'px';
+  const fechar = () => { el.remove(); removeEventListener('pointerdown', fora, true); removeEventListener('keydown', tecla, true); removeEventListener('scroll', fechar, true); };
+  const fora = ev => { if (!el.contains(ev.target)) fechar(); };
+  const tecla = ev => {
+    const bs = [...el.querySelectorAll('button')], k = bs.indexOf(document.activeElement);
+    if (ev.key === 'Escape') { ev.preventDefault(); ev.stopImmediatePropagation(); fechar(); }      // não limpa a projeção
+    else if ((ev.key === 'Enter' || ev.key === ' ') && k >= 0) { ev.preventDefault(); ev.stopImmediatePropagation(); bs[k].click(); }   // Espaço não passa o slide
+    else if (ev.key === 'ArrowDown' || ev.key === 'ArrowUp') { ev.preventDefault(); ev.stopImmediatePropagation(); bs[(k + (ev.key === 'ArrowDown' ? 1 : -1) + bs.length) % bs.length].focus(); }
+  };
+  el.addEventListener('click', ev => { const b = ev.target.closest('[data-i]'); if (!b) return; fechar(); opcoes[+b.dataset.i].fazer(); });
+  addEventListener('pointerdown', fora, true);
+  addEventListener('keydown', tecla, true);
+  addEventListener('scroll', fechar, true);
+  el.querySelector('button')?.focus();
+}
+
 function tipoDoArquivo(f) {
   if (f.type.startsWith('video/')) return 'video';
   if (f.type.startsWith('audio/')) return 'audio';
@@ -171,9 +204,109 @@ async function removerMidia(id) {
   }
   await DB.remover('midias', id);
   Midia.lista = Midia.lista.filter(x => x.id !== id);
+  // favorita sem apelido sai junto; com apelido fica (apagada) até o apelido passar para o arquivo novo
+  const fi = favsMidia().findIndex(f => f.id === id && !f.apelido);
+  if (fi >= 0) { favsMidia().splice(fi, 1); salvarConfig(); }
   if (S.atual?.item.tipo === 'midia' && S.atual.item.midiaId === id && S.atual.rIdx < 0) S.atual = null;
   renderMidias(); renderRoteiroLista(); renderCabecalho(); renderSlides();
 }
+
+// ---------- (1.8.0) Favoritas ----------
+// ⭐ nas mídias mais usadas (ex.: Abertura da transmissão, Seja bem-vindo): ficam no topo da lista e da escolha no roteiro.
+// Apelido opcional ("Boas-vindas"): aparece na lista, entra na busca e passa para o arquivo novo quando o vídeo é trocado.
+// Fica neste computador (S.config.midiasFav = [{ id, apelido }]).
+const favsMidia = () => S.config.midiasFav || (S.config.midiasFav = []);
+const favDe = id => favsMidia().find(f => f.id === id);
+const ehVideoAudio = m => m && (m.tipo === 'video' || m.tipo === 'audio');
+
+// Favorita "desta capela": o apelido ou o nome do arquivo tem a sigla (ex.: NSC) ou o nome da capela do roteiro aberto.
+// Assim, com três "Seja bem-vindo" (SJO, NSF, NSC), o da capela do roteiro aparece primeiro, marcado com 📍.
+function favDaCapela(f) {
+  const loc = typeof localDe === 'function' && typeof localDoRoteiro === 'function' ? localDe(localDoRoteiro(S.roteiro)) : null;
+  if (!loc) return false;
+  const m = midiaPorId(f.id);
+  const txt = semAcento(`${f.apelido || ''} ${m?.caminho || ''} ${m?.nome || ''}`);
+  const sigla = semAcento(loc.sigla || '').replace(/[^a-z0-9]/g, '');
+  return (sigla && new RegExp(`(^|[^a-z0-9])${sigla}([^a-z0-9]|$)`).test(txt)) || (!!loc.nome && txt.includes(semAcento(loc.nome)));
+}
+// Favoritas na ordem de mostrar: as da capela do roteiro primeiro, depois as outras na ordem em que foram marcadas
+const favsOrdenadas = () => { const l = favsMidia().map(f => ({ ...f, capela: favDaCapela(f) })); return [...l.filter(f => f.capela), ...l.filter(f => !f.capela)]; };
+
+function alternarFavMidia(id) {
+  const l = favsMidia(), i = l.findIndex(f => f.id === id);
+  if (i >= 0) l.splice(i, 1); else l.push({ id, apelido: '' });
+  salvarConfig(); renderMidias(); renderRoteiroLista();
+}
+
+// Itens do roteiro aberto que usam a mídia "de" passam a usar "para" (pergunta antes)
+function trocarNoRoteiro(de, para, nomeNovo) {
+  const its = S.roteiro?.itens?.filter(it => it.tipo === 'midia' && it.midiaId === de) || [];
+  if (!its.length || !confirm(`O roteiro aberto usa o arquivo antigo em ${its.length} lugar(es).\nTrocar por "${nomeNovo}" também no roteiro?`)) return;
+  its.forEach(it => { it.midiaId = para; });
+  salvarRoteiro(); renderRoteiroLista(); renderSlides();
+}
+
+function apelidoFavMidia(id) {
+  const m = midiaPorId(id);
+  if (!m) return;
+  const atual = favDe(id);
+  const r = prompt(`Apelido de "${m.nome}" nas favoritas (ex.: Boas-vindas, Abertura).\n` +
+    'Quando o vídeo for trocado, dê o mesmo apelido ao arquivo novo: a ⭐ passa para ele. Vazio = sem apelido.', atual?.apelido || '');
+  if (r === null) return;
+  const ap = r.trim().slice(0, 40);
+  const outro = ap && favsMidia().find(f => f.id !== id && f.apelido && semAcento(f.apelido) === semAcento(ap));
+  if (outro) {
+    const om = midiaPorId(outro.id);
+    if (!confirm(`"${ap}" é o apelido de "${om ? om.nome : 'um arquivo que não existe mais'}".\n\n` +
+      `OK = passar o apelido e a ⭐ para "${m.nome}" (o antigo sai das favoritas)\nCancelar = deixar como está`)) return;
+    favsMidia().splice(favsMidia().indexOf(outro), 1);
+    trocarNoRoteiro(outro.id, id, m.nome);
+  }
+  if (atual) atual.apelido = ap; else favsMidia().push({ id, apelido: ap });
+  salvarConfig(); renderMidias(); renderRoteiroLista();
+}
+
+// Vídeo/áudio guardado no MiguelAngelus: troca o arquivo e mantém o resto (⭐, apelido e os roteiros que usam esta mídia)
+function trocarArquivoMidia(id) {
+  const m = Midia.lista.find(x => x.id === id);
+  if (!ehVideoAudio(m)) return;
+  const inp = document.createElement('input');
+  inp.type = 'file';
+  inp.accept = m.tipo === 'audio' ? 'audio/*' : 'video/*,.mkv,.mov';
+  inp.addEventListener('change', async () => {
+    const f = inp.files[0];
+    if (!f) return;
+    toast(`Trocando por "${f.name}"…`);
+    const duracao = await duracaoDe(f, m.tipo);
+    if (duracao < 0) return alert(`O navegador não consegue tocar "${f.name}" (formato não suportado).\nConverta para MP4 (vídeo) ou MP3 (áudio).`);
+    if (Midia.audioId === id) pararAudio();
+    if (Midia.video.id === id && Midia.video.ativo) pararVideo();
+    const antes = { ...m };
+    Object.assign(m, { nome: nomeSemExt(f.name), arquivo: f.name, mime: f.type, tamanho: f.size, duracao, blob: f, soNuvem: false, atualizado: Date.now() });
+    try { await DB.salvar('midias', m); }
+    catch (err) { Object.assign(m, antes); return alert(`Não foi possível guardar "${f.name}".\n${err?.message || err}\nTalvez falte espaço no disco.`); }
+    renderMidias(); renderRoteiroLista(); renderCabecalho(); renderSlides();
+    toast(`Trocado: "${antes.nome}" → "${m.nome}". A ⭐ e os roteiros continuam valendo.`);
+    if (m.nuvem && ligadaSync() && confirm(`"${antes.nome}" estava na nuvem. Enviar o arquivo novo para a nuvem no lugar dele?\n` +
+      '(Os outros computadores que já tinham baixado o antigo continuam com ele até removerem e baixarem de novo.)'))
+      enviarMidiaNuvem(m);
+  });
+  inp.click();
+}
+
+// Linha de uma favorita (topo da lista): apelido em destaque; arquivo que sumiu fica apagado
+function linhaFav(f, selId) {
+  const m = midiaPorId(f.id);
+  const some = !m || m.faltando;
+  const nome = m ? (m.pasta ? m.caminho : m.nome) : 'arquivo removido';
+  return `<div class="it fav ${some ? 'sumiu' : ''} ${f.id === selId ? 'sel' : ''}" data-id="${esc(f.id)}" data-fav="1" title="${esc(nome)}${some ? ' — não encontrado' : ''}">
+      <span class="tit">${f.capela ? '<span title="Desta capela (a do roteiro aberto)">📍</span> ' : ''}${f.apelido ? `<b>${esc(f.apelido)}</b> <span class="sutil pequeno">${esc(m?.nome || nome)}</span>` : esc(m?.nome || nome)}</span>
+      ${some ? '<span class="sutil pequeno">não encontrado</span>' : m.duracao ? `<span class="sutil pequeno">${fmtTempo(m.duracao)}</span>` : ''}
+      <button data-acao="fav" class="estrela on" title="Tirar das favoritas">★</button></div>`;
+}
+const botaoFav = m => !ehVideoAudio(m) ? '' : favDe(m.id)
+  ? '<button data-acao="fav" class="estrela on" title="Tirar das favoritas">★</button>'
+  : '<button data-acao="fav" class="estrela so-hover" title="Marcar como favorita (fica no topo da lista)">☆</button>';
 
 // ---------- Lista (aba Mídia) ----------
 
@@ -199,7 +332,7 @@ function linhaMidia(m, selId) {
       ${m.soNuvem ? '<button data-acao="baixar" class="primario" title="Baixar esta mídia da nuvem para este computador">⬇ Baixar</button>'
         : (m.tipo === 'video' || m.tipo === 'audio') && m.nuvem ? '<span class="nuvem-ok" title="Também está na nuvem">☁</span>'
         : (m.tipo === 'video' || m.tipo === 'audio') && ligadaSync() ? '<button data-acao="subir" title="Enviar para a nuvem (outros computadores)">☁↑</button>' : ''}
-      <span class="acoes"><button data-acao="remover" title="Remover">✕</button></span>
+      ${botaoFav(m)}<span class="acoes"><button data-acao="remover" title="Remover">✕</button></span>
     </div>`;
 }
 // Linha de um arquivo da pasta (não dá para remover daqui: é o arquivo do computador)
@@ -209,7 +342,7 @@ const botaoNuvemPasta = m => !ligadaSync() ? ''
   : '<button data-acao="subirPasta" class="so-hover" title="Enviar para a nuvem (os outros computadores poderão baixar)">☁↑</button>';
 const linhaArquivo = (m, selId, comCaminho) => `<div class="it ${m.id === selId ? 'sel' : ''}" data-id="${esc(m.id)}" title="${esc(m.caminho)}">
       <span class="tit">${esc(m.nome)}</span>${comCaminho && m.caminho.includes('/') ? `<span class="sutil pequeno">${esc(m.caminho.split('/').slice(0, -1).join(' › '))}</span>` : ''}
-      ${m.duracao ? `<span class="sutil pequeno">${fmtTempo(m.duracao)}</span>` : ''}${botaoNuvemPasta(m)}</div>`;
+      ${m.duracao ? `<span class="sutil pequeno">${fmtTempo(m.duracao)}</span>` : ''}${botaoNuvemPasta(m)}${botaoFav(m)}</div>`;
 // Arquivo que está na nuvem mas não nesta pasta: ⬇ Baixar grava na mesma subpasta
 const linhaSoNuvem = (f, selId) => `<div class="it ${idPasta(f.tipo, f.caminho) === selId ? 'sel' : ''}" data-id="${esc(idPasta(f.tipo, f.caminho))}" title="${esc(f.caminho)}">
       <span class="tit">${esc(f.nome)}</span><span class="sutil pequeno">${esc(f.caminho.split('/').slice(0, -1).join(' › '))}</span>
@@ -263,13 +396,22 @@ function renderMidias() {
     : `📁 <span title="${esc(p.raiz)}">${esc(p.raiz)}</span> · ${p.lendo ? 'lendo…' : p.erro ? `<span class="erro">${esc(p.erro)}</span>` : `${p.arquivos.length} arquivo(s)`}`;
   const arquivos = p?.arquivos || [];
   let h = '';
+  const favs = favsOrdenadas().filter(f => (midiaPorId(f.id)?.tipo || '') === tipo);
   if (termo) {
-    const achados = arquivos.filter(m => semAcento(m.caminho).includes(termo)).sort(porNome);
-    h = achados.slice(0, 300).map(m => linhaArquivo(m, selId, true)).join('') +
+    // favoritas primeiro (também pelo apelido); as outras abaixo
+    const favAchadas = favs.filter(f => semAcento((f.apelido || '') + ' ' + (midiaPorId(f.id)?.caminho || midiaPorId(f.id)?.nome || '')).includes(termo));
+    const ehFav = new Set(favAchadas.map(f => f.id));
+    const achados = arquivos.filter(m => !ehFav.has(m.id) && semAcento(m.caminho).includes(termo)).sort(porNome);
+    h = favAchadas.map(f => linhaFav(f, selId)).join('') + achados.slice(0, 300).map(m => linhaArquivo(m, selId, true)).join('') +
       (achados.length > 300 ? `<p class="sutil pequeno">… e mais ${achados.length - 300}. Refine a busca.</p>` : '') +
-      guardados.map(m => linhaMidia(m, selId)).join('');
+      guardados.filter(m => !ehFav.has(m.id)).map(m => linhaMidia(m, selId)).join('');
     el.innerHTML = h || '<p class="vazio">Nada encontrado.</p>';
     return;
+  }
+  if (favs.length) {
+    const f = Recolher.fechado('m' + tipo + ':#favoritas', false);
+    h += `<button class="pasta" data-pasta-midia="m${tipo}:#favoritas"><span class="seta">${f ? '▸' : '▾'}</span>⭐ Favoritas<span class="n">${favs.length}</span></button>
+      ${f ? '' : `<div class="pasta-itens">${favs.map(x => linhaFav(x, selId)).join('')}</div>`}`;
   }
   const soNuvem = typeof Sync !== 'undefined' && ligadaSync() ? Object.values(Sync.estado.pastas || {}).filter(f => f.tipo === tipo && !p?.mapa?.has(f.caminho)) : [];
   if (soNuvem.length && !p?.lendo) {
@@ -297,7 +439,10 @@ function opcoesMidias(sel) {
     return l.length ? `<optgroup label="${rot}">${l.map(opt).join('')}</optgroup>` : '';
   };
   const faltando = midiaDaPasta(sel)?.faltando ? `<option value="${esc(sel)}" selected>${esc(midiaDaPasta(sel).caminho)} (não encontrado)</option>` : '';
-  return '<option value="">— escolher mídia —</option>' + faltando + grupo('apresentacao', 'Apresentações') + grupo('camera', 'Câmeras') +
+  const favs = favsOrdenadas().map(f => ({ f, m: midiaPorId(f.id) })).filter(x => x.m && !x.m.faltando);
+  const grupoFav = favs.length ? `<optgroup label="⭐ Favoritas">${favs.map(({ f, m }) =>
+    `<option value="${esc(m.id)}" ${m.id === sel ? 'selected' : ''}>${f.capela ? '📍' : '⭐'} ${esc(f.apelido ? `${f.apelido} — ${m.nome}` : m.nome)}</option>`).join('')}</optgroup>` : '';
+  return '<option value="">— escolher mídia —</option>' + faltando + grupoFav + grupo('apresentacao', 'Apresentações') + grupo('camera', 'Câmeras') +
     grupoPasta('video', 'Vídeos (pasta)') + grupo('video', 'Vídeos guardados') + grupoPasta('audio', 'Áudios (pasta)') + grupo('audio', 'Áudios guardados');
 }
 
@@ -495,11 +640,48 @@ function ligarMidia() {
     alert(`"${m?.nome || 'Este vídeo'}" está num formato antigo (MPEG-4 Parte 2 / Xvid) que o MiguelAngelus não consegue mostrar: só o som vai tocar.\n\n` +
       'Converta o arquivo para MP4 (H.264) — por exemplo no HandBrake ou no "Converter/Salvar" do VLC — e coloque o novo no lugar.');
   });
+  // (1.8.0) Botão direito numa mídia da pasta (ou numa subpasta, ou num item de mídia do roteiro): mostrar no Explorer
+  const ctxMidia = e => {
+    const sub = e.target.closest('#listaMidias [data-pasta-midia]');
+    if (sub) {
+      const [, tipo, cam] = /^m(video|audio):(.*)$/.exec(sub.dataset.pastaMidia) || [];
+      if (!tipo || cam.startsWith('#')) return;
+      e.preventDefault();
+      return menuContexto(e, [{ txt: '📂 Abrir esta pasta', fazer: () => mostrarMidiaNaPasta(tipo, cam, true) }]);
+    }
+    if (e.target.closest('#pastaMidiaInfo') && Midia.pastas[Midia.tipoAba]?.raiz) {
+      e.preventDefault();
+      return menuContexto(e, [{ txt: '📂 Abrir a pasta de ' + (Midia.tipoAba === 'audio' ? 'áudios' : 'vídeos'), fazer: () => mostrarMidiaNaPasta(Midia.tipoAba, '', true) }]);
+    }
+    const row = e.target.closest('#listaMidias .it[data-id], #roteiroItens .it');
+    if (!row) return;
+    const id = row.dataset.id || (S.roteiro.itens[+row.dataset.i]?.tipo === 'midia' ? S.roteiro.itens[+row.dataset.i].midiaId : null);
+    const m = id ? midiaPorId(id) : null;
+    if (!m && !(id && favDe(id))) return;                   // favorita cujo arquivo foi removido ainda tem menu
+    if (m && !ehVideoAudio(m)) return;
+    e.preventDefault();
+    const fav = favDe(id);
+    const opFav = [
+      { txt: fav ? '☆ Tirar das favoritas' : '⭐ Marcar como favorita', fazer: () => alternarFavMidia(id) },
+      { txt: fav?.apelido ? `🏷 Apelido: "${fav.apelido}" (mudar…)` : '🏷 Dar um apelido… (ex.: Boas-vindas)', fazer: () => apelidoFavMidia(id) },
+    ];
+    if (!m) return menuContexto(e, opFav.slice(0, 1));
+    const opArq = !m.pasta
+      ? [{ txt: '🔁 Trocar o arquivo… (mantém ⭐, apelido e roteiros)', fazer: () => trocarArquivoMidia(id) },
+         { txt: 'ℹ Guardado dentro do MiguelAngelus (sem pasta)', fazer: () => toast('Este arquivo foi adicionado ao MiguelAngelus e fica guardado dentro dele, não numa pasta do computador.') }]
+      : m.faltando ? [{ txt: '📂 Abrir a pasta (o arquivo não está aqui)', fazer: () => mostrarMidiaNaPasta(m.tipo, m.caminho, true) }]
+      : [{ txt: '📂 Mostrar na pasta', fazer: () => mostrarMidiaNaPasta(m.tipo, m.caminho, false) },
+         { txt: '🗂 Abrir a pasta', fazer: () => mostrarMidiaNaPasta(m.tipo, m.caminho, true) }];
+    menuContexto(e, [...opArq, ...opFav]);
+  };
+  $('#listaMidias').addEventListener('contextmenu', ctxMidia);
+  $('#pastaMidiaInfo').addEventListener('contextmenu', ctxMidia);
+  $('#roteiroItens').addEventListener('contextmenu', ctxMidia);
   $('#btnPastaMidia').addEventListener('click', escolherPastaMidia);
   $('#btnRelerPasta').addEventListener('click', () => lerPastaMidia(Midia.tipoAba));
   $('#listaMidias').addEventListener('click', e => {
     const pasta = e.target.closest('[data-pasta-midia]');
-    if (pasta) { Recolher.alternar(pasta.dataset.pastaMidia, !/#(guardados|nuvem)$/.test(pasta.dataset.pastaMidia)); return renderMidias(); }
+    if (pasta) { Recolher.alternar(pasta.dataset.pastaMidia, !/#(guardados|nuvem|favoritas)$/.test(pasta.dataset.pastaMidia)); return renderMidias(); }
     const bx = e.target.closest('[data-acao="baixarPasta"]');
     if (bx) return baixarPastaNuvem(Sync.estado.pastas?.[bx.dataset.chave]);
     const sp = e.target.closest('[data-acao="subirPasta"]');
@@ -507,7 +689,9 @@ function ligarMidia() {
     const row = e.target.closest('.it');
     if (!row) return;
     if (e.target.closest('[data-acao="remover"]')) return removerMidia(row.dataset.id);
+    if (e.target.closest('[data-acao="fav"]')) return alternarFavMidia(row.dataset.id);
     const m = midiaPorId(row.dataset.id);
+    if (row.dataset.fav && (!m || m.faltando)) return toast('O arquivo desta favorita não foi encontrado. Dê o mesmo apelido ao arquivo novo (botão direito → Apelido) ou tire a ⭐.');
     if (e.target.closest('[data-acao="baixar"]')) return baixarMidiaNuvem(m);
     if (e.target.closest('[data-acao="subir"]')) return enviarMidiaNuvem(m);
     if (m?.soNuvem) return toast('Esta mídia está na nuvem. Clique em ⬇ Baixar para usar neste computador.');

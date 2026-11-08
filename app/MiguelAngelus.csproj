@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <!--
     MiguelAngelus para Windows: uma janela com o WebView2 (motor do Edge, já presente no Windows 10/11)
@@ -16,7 +16,7 @@
     <RootNamespace>MiguelAngelus</RootNamespace>
     <ApplicationIcon>..\lumen\img\miguelangelus.ico</ApplicationIcon>
     <ApplicationManifest>app.manifest</ApplicationManifest>
-    <Version>1.7.9</Version>
+    <Version>1.8.0</Version>
     <Product>MiguelAngelus</Product>
     <Description>MiguelAngelus — projeção para a Missa</Description>
     <Copyright>Paróquia São José Operário — PASCOM</Copyright>

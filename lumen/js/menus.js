@@ -96,6 +96,7 @@ function acaoMenu(acao) {
     case 'anterior': return anterior();
     case 'preto': case 'mudo': return alternarMudo();       // a Tela preta virou o 🔇 Mudo (1.6.5)
     case 'limpar': return limpar();
+    case 'congelar': return alternarCongelar();
     case 'altar': return alternarAltar();
     case 'mensagem': abrirDialogo('dlgMensagem'); return $('#msgRapida').select();
     case 'aviso': return abrirAviso();
@@ -121,10 +122,46 @@ function acaoMenu(acao) {
     case 'desfazer': return desfazer();
     case 'refazer': return refazer();
     case 'localizar': return abrirLocalizar();
+    case 'inserir': return abrirInserir();
   }
 }
 
+// (1.8.0) Dica de atalho: passando o mouse num botão que tem tecla, aparece logo uma etiqueta com ela
+// (a explicação comprida do "title" continua vindo depois, como sempre)
+const ATALHOS_BOTOES = { btnAnt: '← · PgUp', btnProx: '→ · Espaço · PgDn', btnLimpar: 'Esc', btnCongelar: 'C', btnMudo: 'M',
+  btnAltar: 'L', btnAviso: 'A', btnPix: 'P' };
+function ligarDicasAtalho() {
+  for (const [id, k] of Object.entries(ATALHOS_BOTOES)) $('#' + id)?.setAttribute('data-atalho', k);
+  MODULOS.forEach((m, i) => $(`.abas [data-aba="${m}"]`)?.setAttribute('data-atalho', `Alt+${i + 1}`));
+  for (const b of $$('[data-add]')) { b.dataset.atalho = 'Ctrl+I'; b.dataset.atalhoTxt = 'pelo teclado:'; }
+  const dica = document.createElement('div');
+  dica.className = 'dica-atalho'; dica.hidden = true;
+  document.body.appendChild(dica);
+  let tempo = 0, alvo = null;
+  const esconder = () => { clearTimeout(tempo); alvo = null; dica.hidden = true; };
+  const tecla = k => k.split('+').map(x => `<kbd>${esc(x)}</kbd>`).join('+');
+  const mostrar = b => {
+    dica.innerHTML = (b.dataset.atalhoTxt ? `<span>${esc(b.dataset.atalhoTxt)}</span> ` : '') + b.dataset.atalho.split(' · ').map(tecla).join(' <span>ou</span> ');
+    dica.hidden = false;
+    const r = b.getBoundingClientRect(), d = dica.getBoundingClientRect();
+    const x = Math.max(4, Math.min(innerWidth - d.width - 4, r.left + r.width / 2 - d.width / 2));
+    const y = r.top - d.height - 6 >= 4 ? r.top - d.height - 6 : r.bottom + 6;
+    dica.style.left = x + 'px'; dica.style.top = y + 'px';
+  };
+  document.addEventListener('mouseover', e => {
+    const b = e.target.closest?.('[data-atalho]');
+    if (b === alvo) return;
+    esconder();
+    if (!b || b.disabled) return;
+    alvo = b;
+    tempo = setTimeout(() => { if (alvo === b && b.isConnected) mostrar(b); }, 250);
+  });
+  for (const ev of ['mousedown', 'keydown', 'wheel']) document.addEventListener(ev, esconder, true);
+  addEventListener('blur', esconder);
+}
+
 function ligarMenus() {
+  ligarDicasAtalho();
   const bar = $('#menubar');
   let aberto = null;
   const fechar = () => { aberto?.classList.remove('aberto'); aberto = null; };

@@ -5,6 +5,18 @@
  * A versão mais nova fica em cima. Ao gerar uma versão nova, acrescente a entrada dela aqui.
  */
 const NOVIDADES = [
+  { versao: '1.8.0', data: '2026-11-08', itens: [
+    '🏷 Momento: um slide só com o nome do momento ("Saudação", "Bênção Final"…), como no folheto. Botão "Momento" no Adicionar: escolha o nome numa lista separada pelas partes da Missa, ou "✎ Outro nome…". Leva o número do folheto da parte seguinte, e a parte seguinte não repete o título.',
+    '✋ Arrastar os itens do roteiro: segure um item e solte onde ele deve ficar (a linha dourada mostra onde entra).',
+    '⌨ Para quem usa mais o teclado (pedido do Lucas): Ctrl+I (ou Insert) abre "Inserir no roteiro" — digite e Enter (Canto, Leitura, Momento, Parte da Missa…). No Ctrl+F, as setas ↑ ↓ escolhem o resultado, Enter abre e Ctrl+Enter coloca o canto, a oração ou o versículo no roteiro.',
+    '❄ Congelar (tecla C, também pedido do Lucas): o telão fica parado no slide que está no ar enquanto você procura, abre e prepara o próximo. Ao descongelar, vai ao ar o que estiver preparado.',
+    '💡 Passando o mouse num botão que tem tecla de atalho, aparece a tecla.',
+    '💠 Pix sozinho no ofertório: o QR do Pix liga quando entra o canto do Ofertório (ou a Apresentação das Oferendas) e desliga quando o próximo item do roteiro vai ao ar. Ajustes → 💠 Pix (dá para desligar).',
+    '✝ A cruz latina, como a dos folhetos, agora é o desenho padrão no telão (o ✠ do Missal continua em Ajustes → Aparência do telão → Cruz → Desenho). E a cruz aparece também em "no Corpo e ✝ no Sangue" (Oração Eucarística V).',
+    '¹² O número do versículo fica colado na palavra seguinte, como no folheto (ideia do Thiago).',
+    '📂 Botão direito num vídeo ou áudio da pasta: "Mostrar na pasta" ou "Abrir a pasta" no Windows Explorer.',
+    '⭐ Mídias favoritas: marque a ☆ dos vídeos e áudios mais usados (Abertura da transmissão, Seja bem-vindo) e eles ficam no topo da lista e da escolha de mídia no roteiro. Botão direito → "Dar um apelido" (ex.: Boas-vindas NSC). O Seja bem-vindo da capela do roteiro aberto aparece primeiro, com 📍 (pela sigla da capela no nome ou no apelido). Para trocar o vídeo sem perder a ⭐ nem os roteiros: botão direito → "Trocar o arquivo…" (nos guardados no MiguelAngelus), ou dê o mesmo apelido ao arquivo novo.',
+  ] },
   { versao: '1.7.9', data: '2026-11-07', itens: [
     '✉ O MiguelAngelus tem e-mail: contato.miguelangelus@gmail.com — para dúvidas, sugestões e outras paróquias que queiram usar. Está em Ajuda → Sobre o MiguelAngelus, no Manual e no site.',
   ] },

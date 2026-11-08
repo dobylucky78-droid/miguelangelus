@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
@@ -21,7 +21,7 @@
     </div>
     <div class="splash-info">
       <div class="splash-gratis"><b>Gratuito · uso livre</b></div>
-      <div>Versão 1.7.9</div>
+      <div>Versão 1.8.0</div>
       <div>© 2026</div>
       <div><b>PASCOM</b></div>
       <div><b>São José Operário Ilha</b></div>
@@ -62,6 +62,7 @@
         <button data-menu="classificacoes">Classificações dos cantos…</button>
         <hr>
         <button data-menu="localizar">🔎 Localizar em tudo… <span class="atalho">Ctrl+F</span></button>
+        <button data-menu="inserir">＋ Inserir no roteiro… <span class="atalho">Ctrl+I</span></button>
       </div>
     </div>
     <div class="menu"><button class="menu-titulo">Exibir</button>
@@ -86,6 +87,7 @@
         <button data-menu="proximo">Próximo slide <span class="atalho">→</span></button>
         <button data-menu="anterior">Slide anterior <span class="atalho">←</span></button>
         <button data-menu="mudo">🔇 Mudo (só o fundo) <span class="atalho">M</span></button>
+        <button data-menu="congelar">❄ Congelar o telão <span class="atalho">C</span></button>
         <button data-menu="limpar">Limpar a tela <span class="atalho">Esc</span></button>
         <button data-menu="altar">Olhar para o altar <span class="atalho">L</span></button>
         <button data-menu="pix">Pix da paróquia (QR code) <span class="atalho">P</span></button>
@@ -320,7 +322,8 @@
     </div>
     <div class="linha controles">
       <button id="btnLimpar" title="Limpar texto (Esc)">Limpar</button>
-      <button id="btnMudo" title="Mudo: o telão fica só com o fundo enquanto você navega pelos slides; clique de novo (ou M) para mostrar o slide que estiver no ar">Mudo</button>
+      <button id="btnCongelar" title="Congelar o telão (C): o slide que está no ar fica parado enquanto você navega e edita outros slides. Clique de novo para soltar — vai para o telão o slide que você deixou escolhido.">Congelar</button>
+      <button id="btnMudo" title="Mudo: o telão fica só com o fundo enquanto você navega pelos slides; clique de novo (ou M) para mostrar o slide que estiver no ar (M)">Mudo</button>
       <button id="btnTirarCamera" title="Tirar a câmera do telão (volta o slide)" disabled>📷 Tirar</button>
       <button id="btnAltar" title="Slide &quot;Todos dirijam seu olhar para o altar&quot; (L). Clique de novo para voltar ao slide que estava no ar.">⛪ Altar</button>
       <button id="btnAviso" title="Aviso na tela: placa de carro, responsável por criança… (A)">📢 Aviso</button>
@@ -358,6 +361,7 @@
         <button data-add="preces">Preces</button>
         <button data-add="ordinario">Parte da Missa</button>
         <button data-add="homilia" title="Slide para a homilia (fica no ar o tempo todo)">Homilia</button>
+        <button data-add="momento" title="Slide só com o nome do momento (Saudação, Bênção Final…), escolhido de uma lista">Momento</button>
         <button data-add="texto">Texto</button>
         <button data-add="avisos" title="Tela de avisos paroquiais: título chamativo e os avisos programados para a data">Avisos</button>
         <button data-add="midia" title="Vídeo, áudio, apresentação ou câmera">Mídia</button>
@@ -489,6 +493,9 @@
           </div>
           <div class="linha">
             <label class="check" title="Como no folheto: ✠ Proclamação do Evangelho; na Oração Eucarística, no &quot;Santificai&quot; (…o Corpo e ✠ o Sangue…), logo antes da consagração — a hora do carrilhão; e na bênção final (Pai e Filho ✠ e Espírito Santo) — ideia do Thiago"><input type="checkbox" data-cfg="cruz"> Cruz <b style="color:#c8102e">✠</b> do Missal (Evangelho, Santificai, bênção)</label>
+            <label class="campo">Desenho <select data-cfg="estiloCruz" title="O desenho da cruz no telão">
+              <option value="missal">✠ do Missal</option>
+              <option value="latina">✝ latina (como no folheto)</option></select></label>
             <label class="campo">Cor <input type="color" data-cfg="corCruz"></label>
           </div>
           <label class="check" title="Nas leituras importadas do folheto (da versão 1.7.8 em diante), o número de cada versículo pequeno em cima, na cor do P./T. — ideia do Thiago"><input type="checkbox" data-cfg="versosFolheto"> Números dos versículos nas leituras, como no folheto</label>
@@ -581,6 +588,7 @@
           </div>
           <p class="sutil pequeno">Antes de usar na Missa, leia o QR code com o aplicativo do banco e confira se aparece o nome e o
             CNPJ da paróquia (não precisa pagar nada).</p>
+          <label class="check" title="Liga quando o canto do Ofertório (ou &quot;Apresentação das Oferendas&quot;) vai para o telão e desliga quando outro item do roteiro entra no ar. Limpar a letra (Esc) não desliga. Se você mexer no botão durante o ofertório, vale o que você fez."><input type="checkbox" data-cfg="pixOfertorio"> Ligar o Pix sozinho no ofertório (e desligar ao passar para o próximo item)</label>
           <h4>Tamanho no telão (deste computador)</h4>
           <label class="campo">Sem câmera — altura do cartão (faixa + QR code; os slides ficam embaixo)
             <span class="linha"><input type="range" min="40" max="80" step="1" data-cfg="pixCartao"><b class="pix-val" data-pixval="pixCartao"></b></span></label>
@@ -909,7 +917,17 @@
     <h2>🔎 Localizar em tudo</h2>
     <input id="locTermo" type="search" placeholder="Canto, oração, roteiro, aviso ou trecho da Bíblia…" autocomplete="off">
     <div id="locResultados" class="loc-resultados"></div>
-    <div class="linha"><span class="sutil pequeno">Enter abre o primeiro resultado.</span><span class="espaco"></span><button value="fechar">Fechar</button></div>
+    <div class="linha"><span class="sutil pequeno"><kbd>↑</kbd> <kbd>↓</kbd> escolhem · <kbd>Enter</kbd> abre · <kbd>Ctrl</kbd>+<kbd>Enter</kbd> coloca no roteiro</span><span class="espaco"></span><button value="fechar">Fechar</button></div>
+  </form>
+</dialog>
+
+<!-- ============ Inserir no roteiro (Ctrl+I / Insert) ============ -->
+<dialog id="dlgInserir">
+  <form method="dialog" class="form">
+    <h2>＋ Inserir no roteiro</h2>
+    <input id="insTermo" type="search" placeholder="O que inserir? Ex.: bênção, comunhão, pai nosso, leitura, canto entrada…" autocomplete="off">
+    <div id="insLista" class="loc-resultados"></div>
+    <div class="linha"><span class="sutil pequeno"><kbd>↑</kbd> <kbd>↓</kbd> escolhem · <kbd>Enter</kbd> insere depois do item aberto · para um canto, oração ou versículo pelo nome: <kbd>Ctrl</kbd>+<kbd>F</kbd></span><span class="espaco"></span><button value="fechar">Fechar</button></div>
   </form>
 </dialog>
 
@@ -1016,11 +1034,14 @@
       <li><kbd>M</kbd> (ou <kbd>B</kbd>) mudo: só o fundo do tema</li>
       <li><kbd>L</kbd> "Todos dirijam seu olhar para o altar" (de novo: volta ao slide anterior)</li>
       <li><kbd>Esc</kbd> limpar a tela (e parar o vídeo)</li>
+      <li><kbd>C</kbd> congelar o telão: navegue e edite à vontade; <kbd>C</kbd> de novo solta e mostra o slide escolhido</li>
       <li>No fim de um item, <kbd>→</kbd> passa para o próximo do roteiro</li>
       <li>Numa mídia, <kbd>Espaço</kbd> pausa e continua</li>
       <li><kbd>Alt</kbd>+<kbd>1</kbd> a <kbd>9</kbd> troca de módulo (Roteiros, Cantos, Bíblia, Orações, Vídeos, Áudios, Apresentações, Câmeras, Calendário)</li>
       <li><kbd>A</kbd> aviso na tela · <kbd>F1</kbd> manual · <kbd>F11</kbd> painel em tela cheia</li>
       <li>Na busca de orações, <kbd>Enter</kbd> abre a primeira encontrada</li>
+      <li><kbd>Ctrl</kbd>+<kbd>F</kbd> localizar em tudo: <kbd>↑</kbd> <kbd>↓</kbd> escolhem, <kbd>Enter</kbd> abre, <kbd>Ctrl</kbd>+<kbd>Enter</kbd> coloca no roteiro</li>
+      <li><kbd>Ctrl</kbd>+<kbd>I</kbd> (ou <kbd>Insert</kbd>) inserir no roteiro: digite "bênção", "comunhão", "leitura"… e <kbd>Enter</kbd></li>
     </ul>
     <div class="linha"><span class="espaco"></span><button value="ok" class="primario">OK</button></div>
   </form>
@@ -1056,7 +1077,7 @@
       <a href="mailto:contato.miguelangelus@gmail.com" target="_blank" rel="noopener" class="mail" title="E-mail do MiguelAngelus: dúvidas, sugestões e outras paróquias">
         <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M3.5 6.5 12 13l8.5-6.5" fill="none" stroke="currentColor" stroke-width="2"/></svg>contato.miguelangelus@gmail.com</a>
     </div>
-    <p class="sutil pequeno" id="versaoApp">Versão 1.7.9</p>
+    <p class="sutil pequeno" id="versaoApp">Versão 1.8.0</p>
     <div class="linha"><span class="espaco"></span><button value="ok" class="primario">OK</button></div>
   </form>
 </dialog>
@@ -1355,6 +1376,7 @@
 <script src="js/perfis.js"></script>
 <script src="js/historico.js"></script>
 <script src="js/localizar.js"></script>
+<script src="js/inserir.js"></script>
 <script src="js/apresentacoes.js"></script>
 <script src="js/calendario.js"></script>
 <script src="js/transmissao.js"></script>

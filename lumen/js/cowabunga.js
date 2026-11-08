@@ -81,7 +81,9 @@ function ligarCowabunga() {
     const tentativa = Cowa.buf + e.key.toLowerCase();
     if (!PALAVRA.startsWith(tentativa)) { Cowa.buf = PALAVRA.startsWith(e.key.toLowerCase()) ? e.key.toLowerCase() : ''; return; }
     Cowa.buf = tentativa;
+    if (tentativa.length === 1) Cowa.congeladoAntes = !!S.congelado;      // o "c" também é o ❄ Congelar (1.8.0)
     if (tentativa.length >= 4) { e.preventDefault(); e.stopImmediatePropagation(); }   // "cowa…": já é a palavra secreta
+    if (tentativa.length === 4 && !!S.congelado !== Cowa.congeladoAntes && typeof alternarCongelar === 'function') alternarCongelar();   // desfaz o "c"
     if (tentativa === PALAVRA) { Cowa.buf = ''; cowabunga(); }
   }, true);
   // digitando numa caixa de busca: a palavra some da caixa e a tartaruga aparece
