@@ -3259,7 +3259,7 @@ async function iniciar() {
   renderBiblia();
   renderCabecalho();
   renderEstadoProj();
-  $('#versaoApp').textContent = NO_APP ? 'Versão 1.8.2 · aplicativo para Windows' : 'Versão 1.8.2 · no navegador';
+  $('#versaoApp').textContent = NO_APP ? 'Versão 1.8.3 · aplicativo para Windows' : 'Versão 1.8.3 · no navegador';
   // pede armazenamento permanente (o navegador não apaga os dados para liberar espaço)
   try { navigator.storage?.persist?.(); } catch (_) {}
   enviarConfigTelao(); renderTemasRapidos();

@@ -349,7 +349,8 @@ namespace MiguelAngelus
                 {
                     byte[] img = null; var id = Parametro(consulta, "id") ?? "";
                     lock (trava) capasCast.TryGetValue(id, out img);
-                    if (img == null) await Responder(fluxo, 404, "text/plain", "-"); else await Responder(fluxo, 200, "image/jpeg", img);
+                    if (img == null) await Responder(fluxo, 404, "text/plain", "-");
+                    else await Responder(fluxo, 200, img.Length > 4 && img[0] == 0x89 && img[1] == 0x50 ? "image/png" : "image/jpeg", img);
                     return;
                 }
                 if (caminho == "/api/ping")

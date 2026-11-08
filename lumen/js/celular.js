@@ -107,17 +107,20 @@ function idCapaCast(s) {
   for (let i = 0; i < s.length; i += 7) h = ((h * 33) ^ s.charCodeAt(i)) >>> 0;
   return h.toString(36) + s.length.toString(36);
 }
-async function jpegCast(dataUrl) {
+// ids que começam com "p" vão em PNG (brasão e logo: fundo transparente); os outros em JPEG (ilustração)
+async function jpegCast(dataUrl, png) {
   const img = new Image(); img.src = dataUrl; await img.decode();
-  const k = Math.min(1, 1600 / Math.max(img.naturalWidth, img.naturalHeight));
+  const k = Math.min(1, (png ? 800 : 1600) / Math.max(img.naturalWidth, img.naturalHeight));
   const c = document.createElement('canvas'); c.width = Math.round(img.naturalWidth * k); c.height = Math.round(img.naturalHeight * k);
-  const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); g.drawImage(img, 0, 0, c.width, c.height);
-  return c.toDataURL('image/jpeg', 0.9);
+  const g = c.getContext('2d');
+  if (!png) { g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); }
+  g.drawImage(img, 0, 0, c.width, c.height);
+  return png ? c.toDataURL('image/png') : c.toDataURL('image/jpeg', 0.9);
 }
 async function enviarCapasCast() {
   for (const [id, url] of CapaCast.pendentes) {
     if (CapaCast.enviadas.has(id)) continue;
-    try { postarApp({ tipo: 'celular', acao: 'capaCast', id, jpeg: await jpegCast(url) }); CapaCast.enviadas.add(id); }
+    try { postarApp({ tipo: 'celular', acao: 'capaCast', id, jpeg: await jpegCast(url, id[0] === 'p') }); CapaCast.enviadas.add(id); }
     catch (err) { console.warn('capa para o Cast', err); }
   }
   CapaCast.pendentes.clear();
@@ -139,7 +142,15 @@ function agendaCast() {
         local: l ? { nome: l.nome || '', sigla: l.sigla || '', tipo: l.tipo || '' } : null, temRoteiro: !!r, capa });
     }
   }
-  return { paroquia: Agenda.dados.paroquia?.nome || '', locais: Agenda.dados.locais.map(l => ({ nome: l.nome || '', sigla: l.sigla || '', tipo: l.tipo || '' })), lista };
+  // (1.8.3) brasão e logo: os cantos de cima do telão da paróquia (superior esquerdo = brasão, superior direito = logo)
+  // (o padrão da paróquia; se estiver vazio, o da Matriz; senão o da primeira comunidade que tiver)
+  const locs = [...Agenda.dados.locais].sort((a, b) => (b.tipo === 'Matriz') - (a.tipo === 'Matriz'));
+  const marcas = {};
+  for (const [canto, nome] of [['se', 'brasao'], ['sd', 'logo']]) {
+    const img = Agenda.dados.paroquia?.layout?.[canto]?.img || locs.map(l => l.layout?.[canto]?.img).find(Boolean);
+    if (img && /^data:image\//.test(img)) { const id = 'p' + idCapaCast(img); marcas[nome] = id; CapaCast.pendentes.set(id, img); }
+  }
+  return { paroquia: Agenda.dados.paroquia?.nome || '', marcas, locais: Agenda.dados.locais.map(l => ({ nome: l.nome || '', sigla: l.sigla || '', tipo: l.tipo || '' })), lista };
 }
 function enviarAgendaCast() {
   try {

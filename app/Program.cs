@@ -383,8 +383,11 @@ namespace MiguelAngelus
                 case "musica": if (celular != null && celular.Ligado && m.TryGetValue("musica", out var mu)) celular.AtualizarMusica(json.Serialize(mu)); break;
                 case "agendaCast": if (celular != null && m.TryGetValue("agenda", out var ag)) celular.AgendaCast = json.Serialize(ag); break;   // (1.8.1)
                 case "capaCast":   // (1.8.2) ilustração do folheto em JPEG (data URL) para o Cast
-                    if (celular != null && m.TryGetValue("id", out var cid) && m.TryGetValue("jpeg", out var cj) && cj is string du && du.StartsWith("data:image/jpeg;base64,"))
-                        try { celular.GuardarCapaCast(Convert.ToString(cid), Convert.FromBase64String(du.Substring(23))); } catch { }
+                    if (celular != null && m.TryGetValue("id", out var cid) && m.TryGetValue("jpeg", out var cj) && cj is string du)
+                    {
+                        var pre = du.StartsWith("data:image/jpeg;base64,") ? 23 : du.StartsWith("data:image/png;base64,") ? 22 : 0;   // (1.8.3) PNG: brasão e logo
+                        if (pre > 0) try { celular.GuardarCapaCast(Convert.ToString(cid), Convert.FromBase64String(du.Substring(pre))); } catch { }
+                    }
                     break;
             }
         }

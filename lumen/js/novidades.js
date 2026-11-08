@@ -5,6 +5,9 @@
  * A versão mais nova fica em cima. Ao gerar uma versão nova, acrescente a entrada dela aqui.
  */
 const NOVIDADES = [
+  { versao: '1.8.3', data: '2026-11-08', itens: [
+    '🛡 MiguelAngelus Cast: o brasão e o logo da Pascom (os cantos de cima do telão, em Apresentação) também vão para o Cast da rede e entram sozinhos na capa da live.',
+  ] },
   { versao: '1.8.2', data: '2026-11-08', itens: [
     '🖼 MiguelAngelus Cast: a ilustração do folheto da semana (a da Abertura do roteiro) também vai para o Cast da rede, e entra sozinha na capa da live. Só na rede local, como a agenda.',
   ] },
