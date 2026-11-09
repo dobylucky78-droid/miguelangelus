@@ -92,7 +92,9 @@ function estadoCelular() {
       ptz: !!c.ptz?.ip, posicoes: (c.ptzPosicoes || []).slice().sort((a, b) => a.n - b.n).map(p => ({ n: p.n, nome: p.nome })) })),
     camera: Camera.ativa, letra: !!Camera.letra,
     tocando, volume: volumeMidia(),
-    cfg: { corRotulo: cfg.corRotulo || '#ff5a4f', mostrarRotulos: cfg.mostrarRotulos !== false, espacoResposta: cfg.espacoResposta !== false },
+    cfg: { corRotulo: cfg.corRotulo || '#ff5a4f', mostrarRotulos: cfg.mostrarRotulos !== false, espacoResposta: cfg.espacoResposta !== false,
+      // (1.8.4) 📺 aparelho "Telão": o slide em tela cheia com as cores e o jeito do telão
+      corFundo: cfg.corFundo || '#000000', corTexto: cfg.corTexto || '#ffffff', maiusculas: !!cfg.maiusculas, negrito: !!cfg.negrito, sombra: cfg.sombra !== false },
     links: typeof linksCelular === 'function' ? linksCelular() : [],      // links.js: mesa de som e outros
   };
 }
@@ -309,12 +311,13 @@ function renderCelular() {
       <p>Código: <span class="cel-cod">${esc(i.codigo.split('').join(' '))}</span>
         <button type="button" data-cel-atualizar title="Ler as redes do computador de novo">↻ Redes</button></p>
       <p class="sutil pequeno">🎸 <b>Músicos</b>: o mesmo QR; no celular, escolham <b>Músico</b> — veem só as cifras dos cantos, acompanhando o telão.
+        📺 <b>Telão</b> (tablet ou TV no presbitério): o mesmo QR, escolhendo <b>Telão</b> — mostra o slide do telão em tela cheia e não mexe em nada.
         Cada código serve para um celular; depois de usado, aparece outro.</p>
     </div>
     <div class="campo">Celulares pareados</div>
     ${i.aparelhos.length ? `<div class="cel-lista">${i.aparelhos.map(p => `
       <div class="cel-ap"><span class="cel-pt ${p.online ? 'on' : ''}" title="${p.online ? 'Conectado agora' : 'Desconectado'}"></span>
-        <span class="cel-nome">${p.papel === 'musico' ? '🎸' : '📱'} ${esc(p.nome)} <span class="sutil pequeno">${p.papel === 'musico' ? 'músico (só vê as cifras)' : 'controle'}</span></span>
+        <span class="cel-nome">${p.papel === 'musico' ? '🎸' : p.papel === 'telao' ? '📺' : '📱'} ${esc(p.nome)} <span class="sutil pequeno">${p.papel === 'musico' ? 'músico (só vê as cifras)' : p.papel === 'telao' ? 'telão (só vê o slide)' : 'controle'}</span></span>
         <span class="sutil pequeno">${p.online ? 'conectado' : 'desde ' + new Date(p.desde).toLocaleDateString('pt-BR')}</span>
         <button type="button" data-cel-tirar="${esc(p.id)}" title="Este celular não controla mais o telão (precisa parear de novo)">Tirar</button></div>`).join('')}</div>`
       : '<p class="sutil pequeno">Nenhum ainda.</p>'}

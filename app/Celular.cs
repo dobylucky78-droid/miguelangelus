@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -54,7 +54,7 @@ namespace MiguelAngelus
         internal string Erro { get; private set; }
 
         sealed class Cliente { public string Token; public Stream Fluxo; public TcpClient Tcp; public readonly SemaphoreSlim Vez = new SemaphoreSlim(1); }
-        sealed class Aparelho { public string Nome; public long Desde; public string Papel = "controle"; }   // "controle" ou "musico" (só vê as cifras)
+        sealed class Aparelho { public string Nome; public long Desde; public string Papel = "controle"; }   // "controle", "musico" (só vê as cifras) ou "telao" (1.8.4: só vê o slide em tela cheia)
 
         static string Arq => Path.Combine(Program.PastaDados, "celulares.json");
 
@@ -67,7 +67,7 @@ namespace MiguelAngelus
                 if (File.Exists(Arq))
                     foreach (var kv in json.Deserialize<Dictionary<string, Dictionary<string, object>>>(File.ReadAllText(Arq)))
                         aparelhos[kv.Key] = new Aparelho { Nome = Convert.ToString(kv.Value["nome"]), Desde = Convert.ToInt64(kv.Value["desde"]),
-                            Papel = kv.Value.TryGetValue("papel", out var p) && Convert.ToString(p) == "musico" ? "musico" : "controle" };
+                            Papel = kv.Value.TryGetValue("papel", out var p) ? PapelValido(Convert.ToString(p)) : "controle" };
             }
             catch { }
         }
@@ -314,7 +314,7 @@ namespace MiguelAngelus
                     }
                     var nome = d.TryGetValue("nome", out var n) ? (Convert.ToString(n) ?? "").Trim() : "";
                     if (nome.Length > 40) nome = nome.Substring(0, 40);
-                    var papel = d.TryGetValue("papel", out var pp) && Convert.ToString(pp) == "musico" ? "musico" : "controle";
+                    var papel = d.TryGetValue("papel", out var pp) ? PapelValido(Convert.ToString(pp)) : "controle";
                     var b = new byte[24];
                     using (var r = RandomNumberGenerator.Create()) r.GetBytes(b);
                     var novo = BitConverter.ToString(b).Replace("-", "").ToLowerInvariant();
@@ -330,7 +330,7 @@ namespace MiguelAngelus
                     if (!Valido(token)) { await Responder(fluxo, 401, "application/json", "{\"ok\":false,\"motivo\":\"pareamento\"}"); return; }
                     // aparelho de músico só acompanha: não mexe no telão
                     bool soVe;
-                    lock (trava) soVe = aparelhos.TryGetValue(token, out var apx) && apx.Papel == "musico";
+                    lock (trava) soVe = aparelhos.TryGetValue(token, out var apx) && apx.Papel != "controle";   // músico e telão só veem
                     if (soVe) { await Responder(fluxo, 403, "application/json", "{\"ok\":false,\"motivo\":\"musico\"}"); return; }
                     var d = LerJson(corpo);
                     if (d == null || !d.ContainsKey("acao")) { await Responder(fluxo, 400, "application/json", "{\"ok\":false}"); return; }
@@ -366,6 +366,8 @@ namespace MiguelAngelus
             catch { }
             finally { if (!manter) try { tcp.Close(); } catch { } }
         }
+
+        static string PapelValido(string p) => p == "musico" || p == "telao" ? p : "controle";
 
         bool Valido(string token)
         {

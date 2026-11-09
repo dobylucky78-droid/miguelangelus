@@ -5,6 +5,10 @@
  * A versão mais nova fica em cima. Ao gerar uma versão nova, acrescente a entrada dela aqui.
  */
 const NOVIDADES = [
+  { versao: '1.8.4', data: '2026-11-09', itens: [
+    '📺 Telão no tablet ou na TV: no pareamento do Controle pelo celular, escolha "📺 Telão". O aparelho (tablet, TV com navegador, um celular velho no presbitério) mostra em tela cheia o mesmo slide do telão, com as mesmas cores, e acompanha sozinho pelo Wi-Fi — sem cabo. Ele só vê: não mexe em nada. Toque na tela para ocupar a tela inteira. Funciona também nas TVs e tablets antigos.',
+    '🙏 Ideia do Luciano, da Pascom da Paróquia Santa Marina (Vila Carrão, Zona Leste de São Paulo). Obrigado, Luciano! E que alegria saber que os folhetos da Arquidiocese de São Paulo entraram certinho no MiguelAngelus.',
+  ] },
   { versao: '1.8.3', data: '2026-11-08', itens: [
     '🛡 MiguelAngelus Cast: o brasão e o logo da Pascom (os cantos de cima do telão, em Apresentação) também vão para o Cast da rede e entram sozinhos na capa da live.',
   ] },

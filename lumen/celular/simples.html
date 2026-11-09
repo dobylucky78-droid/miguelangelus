@@ -67,8 +67,20 @@
   .letra { font-family: inherit; }
   pre.cifra .ac { color: #f2d16b; font-weight: 700; }
   pre.cifra .sec { color: #9aa3b2; }
-  .papeis button { display: inline-block; width: 48.5%; }
-  .papeis button + button { margin-left: 3%; }
+  .papeis button { display: inline-block; width: 32%; padding: 12px 2px; }
+  .papeis button + button { margin-left: 2%; }
+  /* (1.8.4) 📺 Telão: o slide em tela cheia, só para ver (tablet ou TV); tabela para centralizar em navegadores antigos */
+  #telao { position: fixed; top: 0; right: 0; bottom: 0; left: 0; z-index: 8; background: #000; color: #fff; overflow: hidden; cursor: none; }
+  #telaoCx { display: table; width: 100%; height: 100%; }
+  #telaoCel { display: table-cell; vertical-align: middle; text-align: center; padding: 4% 5%; }
+  #telaoTxt { line-height: 1.22; word-wrap: break-word; }
+  #telaoTxt sup { font-size: .55em; opacity: .75; }
+  #telao.sombra #telaoTxt { text-shadow: 0 .04em .12em rgba(0,0,0,.85); }
+  #telao.maius #telaoTxt { text-transform: uppercase; }
+  #telao.negrito #telaoTxt { font-weight: 700; }
+  #telaoAviso { position: absolute; left: 0; right: 0; bottom: 0; background: #b3261e; color: #fff; font-weight: 700; padding: 10px 3%; font-size: 26px; }
+  #telaoPt { position: absolute; top: 10px; right: 10px; width: 10px; height: 10px; border-radius: 50%; background: #e0463c; }
+  .telao .topo, .telao main, .telao .baixo { display: none !important; }
   .papeis button.sel { border-color: #c99a2e; color: #f2d16b; }
   .cobre { position: fixed; top: 0; right: 0; bottom: 0; left: 0; background: #12151b; padding: 24px; text-align: center; z-index: 10; overflow-y: auto; }
   .cobre input { font: inherit; font-size: 22px; width: 100%; padding: 10px; border-radius: 10px; border: 1px solid #3a404b; background: #0b0d11; color: #fff; text-align: center; margin: 6px 0 12px; }
@@ -128,8 +140,9 @@
   <div>Nome deste aparelho</div>
   <input id="parNome" maxlength="40" style="font-size:17px">
   <div style="margin-bottom:6px">Este aparelho é para</div>
-  <div class="papeis"><button data-papel="controle" class="sel">📱 Controle</button><button data-papel="musico">🎸 Músico</button></div>
-  <p style="font-size:13px;color:#9aa3b2">Músico: só vê as cifras dos cantos, acompanhando o telão (não mexe nele).</p>
+  <div class="papeis"><button data-papel="controle" class="sel">📱 Controle</button><button data-papel="musico">🎸 Músico</button><button data-papel="telao">📺 Telão</button></div>
+  <p style="font-size:13px;color:#9aa3b2">Músico: só vê as cifras dos cantos, acompanhando o telão (não mexe nele).<br>
+    Telão: tablet ou TV que mostra o slide do telão em tela cheia (não mexe em nada).</p>
   <div class="erro" id="parErro"></div>
   <button id="parOk" class="largo" style="background:#c99a2e;border-color:#c99a2e;color:#1b1503;font-weight:700">Conectar</button>
 </div>
@@ -137,6 +150,11 @@
   <h2>Sem conexão com o computador</h2>
   <p>Confira se o aparelho está no <b>mesmo Wi-Fi</b> do computador e se o MiguelAngelus está aberto, com o controle pelo celular ligado.</p>
   <button class="largo" onclick="location.reload()">Tentar de novo</button>
+</div>
+<div id="telao" hidden>
+  <div id="telaoCx"><div id="telaoCel"><div id="telaoTxt"></div></div></div>
+  <div id="telaoAviso" hidden></div>
+  <span id="telaoPt" hidden></span>
 </div>
 <div class="toast" id="toast"></div>
 
@@ -262,6 +280,7 @@ function render() {
     lk += '<a href="' + esc(ls[k].url) + '" target="_blank" style="display:inline-block;margin:0 8px 8px 0;padding:9px 14px;border:1px solid #444;border-radius:10px;color:#eee;text-decoration:none;font-weight:bold">' +
       (/^data:image\//.test(ls[k].img || '') ? '<img src="' + ls[k].img + '" alt="" style="width:22px;height:22px;vertical-align:middle;border-radius:5px"> ' : esc(ls[k].icone || '🔗') + ' ') + esc(ls[k].nome) + '</a>';
   if ($('links').innerHTML !== lk) $('links').innerHTML = lk;
+  if (papel === 'telao') return renderTelao();
   if (papel === 'musico' || aba === 'cifras') return renderCifras(true);
   $('noArTit').textContent = n.tit ? '· ' + n.tit + (n.idx >= 0 ? ' ' + (n.idx + 1) + '/' + n.total : '') : '';
   $('noAr').innerHTML = est.preto ? '<span class="vazia">■ Tela preta</span>' : est.camera ? '<span class="vazia">📷 Câmera no telão</span>' :
@@ -287,8 +306,49 @@ function render() {
 
 function aplicarPapel() {
   alternar(document.documentElement, 'musico', papel === 'musico');
+  alternar(document.documentElement, 'telao', papel === 'telao');
+  $('telao').hidden = papel !== 'telao';
+  telaoChave = '';
   if (papel === 'musico') irAba('cifras');
 }
+
+// ---------- 📺 Telão (1.8.4, ideia do Luciano — Pascom da Paróquia Santa Marina, SP): o slide em tela cheia ----------
+var telaoChave = '';
+function renderTelao() {
+  var t = $('telao'), cfg = est.cfg || {}, s = est.noAr && est.noAr.slide;
+  t.style.background = cfg.corFundo || '#000';
+  t.style.color = cfg.corTexto || '#fff';
+  alternar(t, 'maius', !!cfg.maiusculas);
+  alternar(t, 'negrito', !!cfg.negrito);
+  alternar(t, 'sombra', cfg.sombra !== false);
+  var vazio = est.preto || est.mudo || est.camera || est.altar || !s || (s.img && !s.texto && !s.versos && !s.avisos);
+  var html = vazio ? '' : htmlSlide(s);
+  var av = $('telaoAviso');
+  av.hidden = !est.aviso;
+  if (est.aviso) av.textContent = '📢 ' + est.aviso.texto;
+  var chave = [html, window.innerWidth, window.innerHeight, JSON.stringify(cfg), est.aviso ? est.aviso.texto : ''].join('|');
+  if (chave === telaoChave) return;
+  telaoChave = chave;
+  var tx = $('telaoTxt');
+  tx.innerHTML = html;
+  var qs = tx.querySelectorAll('.quem');
+  for (var i = 0; i < qs.length; i++) qs[i].style.color = cfg.corRotulo || '#ff5a4f';
+  if (!html) return;
+  // o maior tamanho de letra em que o slide inteiro cabe (busca binária)
+  var cel = $('telaoCel'), W = cel.clientWidth * 0.9, H = t.clientHeight * 0.86 -(av.hidden ? 0 : av.offsetHeight);
+  var lo = 10, hi = Math.max(12, H / 2);
+  for (var k = 0; k < 16; k++) {
+    var m = (lo + hi) / 2;
+    tx.style.fontSize = m + 'px';
+    if (tx.offsetHeight <= H && tx.scrollWidth <= W) lo = m; else hi = m;
+  }
+  tx.style.fontSize = Math.floor(lo) + 'px';
+}
+window.addEventListener('resize', function () { if (papel === 'telao' && est) { telaoChave = ''; renderTelao(); } });
+$('telao').addEventListener('click', function () {
+  var d = document.documentElement, f = d.requestFullscreen || d.webkitRequestFullscreen;
+  try { if (f) f.call(d); } catch (e) {}
+});
 function irAba(nova) {
   aba = nova;
   $('pgControle').hidden = aba !== 'controle';
@@ -302,7 +362,7 @@ function irAba(nova) {
 }
 
 // ---------- conexão ----------
-function conectado(sim) { alternar($('pt'), 'on', sim); if (sim) { vivoEm = Date.now(); $('fora').hidden = true; } }
+function conectado(sim) { alternar($('pt'), 'on', sim); $('telaoPt').hidden = sim; if (sim) { vivoEm = Date.now(); $('fora').hidden = true; } }
 function conectar() {
   if (fonte) fonte.close();
   if (!token) return mostrarPareamento();

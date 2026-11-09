@@ -119,6 +119,23 @@
   .papeis button { padding: 10px 6px; font-size: 14px; }
   .papeis button small { display: block; font-size: 11px; color: var(--sutil); margin-top: 2px; }
   .papeis button.sel { border-color: var(--acento); background: var(--acento-esc); color: var(--acento); }
+  .papeis.tres { grid-template-columns: 1fr 1fr 1fr; }
+  /* (1.8.4) 📺 modo Telão: o slide do telão em tela cheia, só para ver (tablet ou TV no presbitério) */
+  #telao { position: fixed; top: 0; right: 0; bottom: 0; left: 0; z-index: 8; background: #000; color: #fff; display: flex;
+    align-items: center; justify-content: center; text-align: center; padding: 4vh 5vw; overflow: hidden; cursor: none; }
+  #telaoTxt { line-height: 1.22; max-width: 100%; max-height: 100%; overflow-wrap: break-word; }
+  #telaoTxt .quem { color: var(--cor-quem); font-weight: 700; }
+  #telaoTxt .resp { font-weight: 700; }
+  #telaoTxt .entre { display: block; height: .45em; }
+  #telaoTxt sup { font-size: .55em; opacity: .75; }
+  #telao.sombra #telaoTxt { text-shadow: 0 .04em .12em rgba(0,0,0,.85); }
+  #telao.maius #telaoTxt { text-transform: uppercase; }
+  #telao.negrito #telaoTxt { font-weight: 700; }
+  #telaoAviso { position: absolute; left: 0; right: 0; bottom: 0; background: #b3261e; color: #fff; font-weight: 700; padding: 1.2vh 3vw; font-size: 3.4vh; }
+  #telaoDica { position: absolute; left: 50%; bottom: 3vh; transform: translateX(-50%); background: #0009; color: #ddd; font-size: 14px;
+    padding: 6px 14px; border-radius: 20px; transition: opacity 1s; pointer-events: none; }
+  #telaoPt { position: absolute; top: 10px; right: 10px; width: 10px; height: 10px; border-radius: 50%; background: #e0463c; }
+  body.telao .topo, body.telao main, body.telao .abas, body.telao #nav, body.telao #faixa { display: none !important; }
   /* modo músico */
   body.musico .abas, body.musico #nav { display: none !important; }
   .m-barra { position: sticky; top: -12px; z-index: 2; background: var(--bg); display: flex; gap: 8px; align-items: center; padding: 6px 0 8px; }
@@ -192,8 +209,9 @@
   <div class="campo"><label for="parNome">Nome deste celular</label>
     <input id="parNome" maxlength="40" placeholder="Celular da PASCOM"></div>
   <div class="campo"><label>Este aparelho é para</label>
-    <div class="papeis"><button id="papelControle" class="sel" type="button">📱 Controle do telão<small>PASCOM</small></button>
-      <button id="papelMusico" type="button">🎸 Músico<small>só ver as cifras</small></button></div></div>
+    <div class="papeis tres"><button id="papelControle" class="sel" type="button">📱 Controle<small>PASCOM</small></button>
+      <button id="papelMusico" type="button">🎸 Músico<small>só as cifras</small></button>
+      <button id="papelTelao" type="button">📺 Telão<small>só ver o slide</small></button></div></div>
   <button id="parOk" class="acao">Conectar</button>
   <div id="parErro" class="erro"></div>
   <div class="sutil">No computador: Ferramentas → Ajustes → 📱 Controle pelo celular</div>
@@ -303,6 +321,14 @@
   </div>
 </div>
 
+<!-- 📺 Telão (1.8.4): o slide em tela cheia -->
+<div id="telao" hidden>
+  <div id="telaoTxt"></div>
+  <div id="telaoAviso" hidden></div>
+  <span id="telaoPt" hidden title="Sem conexão com o computador"></span>
+  <div id="telaoDica">Toque na tela para ocupar a tela inteira</div>
+</div>
+
 <div id="toast" class="toast" style="opacity:0"></div>
 <video id="acordado" src="acordado.mp4" muted loop playsinline webkit-playsinline preload="auto"></video>
 
@@ -400,6 +426,7 @@ function render() {
   selo.textContent = est.preto ? 'Tela preta' : est.mudo ? 'Mudo' : est.altar ? 'Altar' : est.camera ? 'Câmera' : est.noAr.slide ? 'Ao vivo' : est.tocando.some(t => t.tipo === 'video' && !t.pausado) ? 'Vídeo' : 'Livre';
   selo.classList.toggle('vivo', !!(est.preto || est.altar || est.noAr.slide || est.camera));
   if (!est.projecao) selo.textContent += ' · telão fechado';
+  if (papel === 'telao') return renderTelao();        // 📺 telão: só o slide, em tela cheia
   renderLinksCel();
   if (papel === 'musico') return renderMusico();      // músico: só as cifras
 
@@ -591,8 +618,54 @@ function renderMusico(refazer) {
 
 function aplicarPapel() {
   document.body.classList.toggle('musico', papel === 'musico');
+  document.body.classList.toggle('telao', papel === 'telao');
+  $('#telao').hidden = papel !== 'telao';
   if (papel === 'musico') irAba('musico');
+  if (papel === 'telao') { telaoChave = ''; setTimeout(() => $('#telaoDica').style.opacity = 0, 6000); if (est) renderTelao(); }
 }
+
+// ---------- 📺 Telão (1.8.4, ideia do Luciano — Pascom da Paróquia Santa Marina, SP) ----------
+// Um tablet ou TV no presbitério mostra o mesmo slide do telão, com as cores do telão, e não controla nada.
+let telaoChave = '';
+function renderTelao() {
+  const t = $('#telao'), cfg = est.cfg || {}, s = est.noAr && est.noAr.slide;
+  t.style.background = cfg.corFundo || '#000';
+  t.style.color = cfg.corTexto || '#fff';
+  t.classList.toggle('maius', !!cfg.maiusculas);
+  t.classList.toggle('negrito', !!cfg.negrito);
+  t.classList.toggle('sombra', cfg.sombra !== false);
+  const vazio = est.preto || est.mudo || est.camera || est.altar || !s || (s.img && !s.texto && !s.versos && !s.avisos);
+  const html = vazio ? '' : htmlSlide(s);
+  const av = $('#telaoAviso');
+  av.hidden = !est.aviso;
+  if (est.aviso) av.textContent = '📢 ' + est.aviso.texto;
+  const chave = [html, innerWidth, innerHeight, JSON.stringify(cfg), est.aviso ? est.aviso.texto : ''].join('|');
+  if (chave === telaoChave) return;
+  telaoChave = chave;
+  $('#telaoTxt').innerHTML = html;
+  ajustarTelao();
+}
+// o maior tamanho de letra em que o slide inteiro cabe na tela (busca binária)
+function ajustarTelao() {
+  const t = $('#telao'), tx = $('#telaoTxt'), av = $('#telaoAviso');
+  if (!tx.innerHTML) return;
+  const cs = getComputedStyle(t);
+  const W = t.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+  const H = t.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom) - (av.hidden ? 0 : av.offsetHeight);
+  let lo = 10, hi = Math.max(12, H / 2);
+  for (let k = 0; k < 16; k++) {
+    const m = (lo + hi) / 2;
+    tx.style.fontSize = m + 'px';
+    if (tx.scrollHeight <= H && tx.scrollWidth <= W) lo = m; else hi = m;
+  }
+  tx.style.fontSize = Math.floor(lo) + 'px';
+}
+addEventListener('resize', () => { if (papel === 'telao' && est) { telaoChave = ''; renderTelao(); } });
+$('#telao').addEventListener('click', () => {
+  const d = document.documentElement, f = d.requestFullscreen || d.webkitRequestFullscreen;
+  if (f && !(document.fullscreenElement || document.webkitFullscreenElement)) { try { const p = f.call(d); if (p && p.catch) p.catch(() => {}); } catch (_) {} }
+  $('#telaoDica').style.opacity = 0;
+});
 
 // ---------- trocar de roteiro (lista como os cards do computador) ----------
 let trocando = false;
@@ -650,6 +723,7 @@ function irAba(nome) {
 function conectado(sim) {
   $('#pt').classList.toggle('on', sim);
   $('#faixa').hidden = sim;
+  $('#telaoPt').hidden = sim;
   if (sim) { vivoEm = Date.now(); $('#fora').hidden = true; }
 }
 
@@ -749,12 +823,7 @@ document.addEventListener('click', e => {
   if (b.dataset.macao) return cmd(b.dataset.macao, { id: b.dataset.midia });
   if (b.dataset.camera !== undefined) return cmd('camera', { id: b.dataset.camera });
   if (b.dataset.tema) return cmd('tema', { id: b.dataset.tema });
-  if (b.id === 'papelControle' || b.id === 'papelMusico') {
-    papelEscolhido = b.id === 'papelMusico' ? 'musico' : 'controle';
-    $('#papelControle').classList.toggle('sel', papelEscolhido === 'controle');
-    $('#papelMusico').classList.toggle('sel', papelEscolhido === 'musico');
-    return;
-  }
+  if (b.id === 'papelControle' || b.id === 'papelMusico' || b.id === 'papelTelao') return escolherPapel(b.id === 'papelMusico' ? 'musico' : b.id === 'papelTelao' ? 'telao' : 'controle');
   if (b.dataset.tr) { transp[b.dataset.tr] = (transp[b.dataset.tr] || 0) + +b.dataset.p; try { localStorage.setItem('mgl.celular.transp', JSON.stringify(transp)); } catch (_) {} return renderMusico(true); }
   if (b.id === 'mMenor' || b.id === 'mMaior') { tamCifra = Math.max(10, Math.min(28, tamCifra + (b.id === 'mMaior' ? 1 : -1))); try { localStorage.setItem('mgl.celular.tamCifra', tamCifra); } catch (_) {} return renderMusico(); }
   if (b.id === 'btTrocar') { trocando = !trocando; renderRoteiros(); $('main').scrollTop = 0; return; }
@@ -811,7 +880,13 @@ $('#parCod').addEventListener('keydown', e => { if (e.key === 'Enter') parear();
 $('#foraTentar').addEventListener('click', () => { $('#fora').hidden = true; verificar(); });
 
 // início: com token, conecta; com ?c= no endereço (QR code), já preenche o código
-if (new URLSearchParams(location.search).get('papel') === 'musico') { papelEscolhido = 'musico'; $('#papelControle').classList.remove('sel'); $('#papelMusico').classList.add('sel'); }
+function escolherPapel(p) {
+  papelEscolhido = p;
+  $('#papelControle').classList.toggle('sel', p === 'controle');
+  $('#papelMusico').classList.toggle('sel', p === 'musico');
+  $('#papelTelao').classList.toggle('sel', p === 'telao');
+}
+{ const p = new URLSearchParams(location.search).get('papel'); if (p === 'musico' || p === 'telao') escolherPapel(p); }
 if (token) { aplicarPapel(); conectar(); } else mostrarPareamento();
 </script>
 </body>
