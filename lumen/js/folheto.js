@@ -117,8 +117,61 @@ const Folheto = (() => {
       out[k] = juntarTil(limparHifens(out[k]));
       if (!leitura) out[k] = out[k].replace(/<v>[^<]*<\/v>\s*/g, '');
     }
-    return out;
+    return leitura ? comFormas(out) : out;
   };
+
+  // (1.8.5) Forma breve nos folhetos (Rio e São Paulo): o que está entre colchetes é a breve.
+  //  Rio: no título — "Evangelho (Mt 25,14-30 ou mais breve 25,14-15.19-21)".
+  //  SP: numa linha no começo — "(Jo 1,1-18 (mais longo) mais breve: Jo 1,1-5.9-14)" ou "(mais breve: Gn 1, 1.26-31a)"
+  //      (essa linha sai do texto: não é para o telão).
+  //  Sem aviso nenhum (ex.: Paixão no Ramos), os colchetes bastam; a referência da breve fica "forma breve".
+  //  PDF com colchete torto: "]" sem "[" no começo = desde o começo do parágrafo; "]" sobrando = o "]" de antes estava errado.
+  const FIM_FOLHETO = /(?:^|\s)(?:[PLC]\.\s*)?Palavra d(?:o Senhor|a Salva[çc][ãa]o)/gi;
+  function comFormas(it) {
+    let t = it.texto || '', refC = '', refB = '';
+    const aviso = t.match(/^\s*\(([^\n]*?mais breve[^\n]*)\)\s*\n*/i);
+    if (aviso) {
+      t = t.slice(aviso[0].length);
+      const mb = aviso[1].match(/mais breve:?\s*(.+?)\s*\)?\s*$/i); if (mb) refB = mb[1].replace(/,\s+/g, ',').trim();
+      const ml = aviso[1].match(/^(.*?)\s*\(mais longo\)/i); if (ml) refC = ml[1].trim();
+    }
+    let nome = (it.titulo || '').replace(/\s*\(.*$/, '').trim();
+    const mt = (it.titulo || '').match(/\((.*?)\s+ou\s+(?:mais\s+breve|forma\s+breve)?:?\s*(.+)\)\s*$/i);
+    if (mt) {
+      const r = typeof refsDasFormas === 'function' ? refsDasFormas(mt[1].trim() + ' ou ' + mt[2].trim()) : { completa: mt[1].trim(), breve: mt[2].trim() };
+      refC = r.completa; refB = r.breve;
+    }
+    const titC = refC ? `${nome} (${refC})` : it.titulo;
+    const completo = t.replace(/[\[\]]/g, '');
+    const fora = { ...it, titulo: titC, texto: completo };
+    // trechos entre colchetes
+    const segs = []; let abre = -1;
+    for (const m of t.matchAll(/[\[\]]/g)) {
+      if (m[0] === '[') { if (abre < 0) abre = m.index + 1; }
+      else if (abre >= 0) { segs.push([abre, m.index]); abre = -1; }
+      else if (segs.length) segs[segs.length - 1][1] = m.index;
+      else { const p = t.lastIndexOf('\n\n', m.index); segs.push([p < 0 ? 0 : p + 2, m.index]); }
+    }
+    if (abre >= 0) segs.push([abre, t.length]);
+    if (!segs.length) return fora;
+    // o fecho ("Palavra da Salvação" / "Palavra do Senhor" + a resposta) vale para as duas
+    let fim = -1; for (const m of t.matchAll(FIM_FOLHETO)) fim = m.index;
+    if (fim >= 0) for (const s of segs) s[1] = Math.min(s[1], fim);
+    // cabeçalho: os parágrafos antes do texto (saudação, "Proclamação…", "Leitura do livro…") + o começo do parágrafo
+    // do primeiro trecho ("P. NAQUELE TEMPO, ", "C. ")
+    const inicioPar = i => { const p = t.lastIndexOf('\n\n', i); return p < 0 ? 0 : p + 2; };
+    const s0 = segs[0][0], p0 = inicioPar(s0 - 1);
+    const iv = t.search(/<v>/), cabFim = iv >= 0 && iv < p0 ? inicioPar(iv) : p0;
+    let lead = t.slice(p0, s0).replace(/\[$/, '');
+    if (/<v>/.test(lead)) lead = '';
+    const corpo = segs.map(([a, b]) => t.slice(a, b).trim()).filter(Boolean).join(' ').replace(/[\[\]]/g, '');
+    const fecho = fim >= 0 ? t.slice(fim).trim() : '';
+    const breve = (t.slice(0, cabFim).replace(/[\[\]]/g, '') + lead + corpo).trim() + (fecho ? '\n\n' + fecho.replace(/[\[\]]/g, '') : '');
+    const nC = completo.length, nB = breve.length;
+    if (nB < nC * 0.1 || nB > nC * 0.95) return fora;           // colchete que não é forma breve
+    const titB = refB ? `${nome} (${refB})` : `${titC} — forma breve`;
+    return { ...fora, formas: { completa: { titulo: titC, texto: completo }, breve: { titulo: titB, texto: breve } }, breve: false };
+  }
 
   async function lerRuns(pdf) {
     const runs = [], paginasDaFonte = {};

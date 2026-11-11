@@ -1084,3 +1084,12 @@ html[data-tema-app="claro"] .tema-amostra { border-color: #aab1ba; }
 
 /* (1.7.4) 🔎 procurar canto no item do roteiro */
 .item-cab .busca-canto { width: 170px; min-width: 120px; }
+
+/* (1.8.5) chave da forma breve das leituras (cabeçalho do item) */
+.chave-forma { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; white-space: nowrap; font-weight: 600; }
+.chave-forma input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.chave-forma .trilho { position: relative; width: 38px; height: 20px; border-radius: 10px; background: var(--borda); transition: background .15s; flex: none; }
+.chave-forma .trilho::after { content: ''; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: var(--texto); transition: transform .15s; }
+.chave-forma input:checked + .trilho { background: var(--acento); }
+.chave-forma input:checked + .trilho::after { transform: translateX(18px); background: #fff; }
+.chave-forma input:focus-visible + .trilho { outline: 2px solid var(--acento-claro); outline-offset: 2px; }

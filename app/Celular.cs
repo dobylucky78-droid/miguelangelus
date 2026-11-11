@@ -37,6 +37,13 @@ namespace MiguelAngelus
 
         internal string Codigo { get; private set; } = "";
         internal string AgendaCast { get; set; }          // (1.8.1) json das próximas celebrações, para o MiguelAngelus Cast
+        // (1.8.5) item e slide no telão, para o roteiro do Cast acompanhar: vai na hora para os Cast ligados em /api/cast/eventos
+        string aoVivoCast;
+        internal string AoVivoCast
+        {
+            get => aoVivoCast;
+            set { aoVivoCast = value; Enviar("data: " + value + "\n\n", null, true); }
+        }
         // (1.8.2) ilustrações do folheto (JPEG) das próximas celebrações, por id; só na memória, no máximo 12
         readonly Dictionary<string, byte[]> capasCast = new Dictionary<string, byte[]>();
         readonly Queue<string> ordemCapas = new Queue<string>();
@@ -53,7 +60,7 @@ namespace MiguelAngelus
         internal bool Ligado => escuta != null;
         internal string Erro { get; private set; }
 
-        sealed class Cliente { public string Token; public Stream Fluxo; public TcpClient Tcp; public readonly SemaphoreSlim Vez = new SemaphoreSlim(1); }
+        sealed class Cliente { public string Token; public Stream Fluxo; public TcpClient Tcp; public bool Cast; public readonly SemaphoreSlim Vez = new SemaphoreSlim(1); }
         sealed class Aparelho { public string Nome; public long Desde; public string Papel = "controle"; }   // "controle", "musico" (só vê as cifras) ou "telao" (1.8.4: só vê o slide em tela cheia)
 
         static string Arq => Path.Combine(Program.PastaDados, "celulares.json");
@@ -106,7 +113,7 @@ namespace MiguelAngelus
             }
             var e = escuta;
             Task.Run(() => Aceitar(e));
-            pulso = new Timer(_ => Enviar(": pulso\n\n", null), null, 15000, 15000);
+            pulso = new Timer(_ => { Enviar(": pulso\n\n", null); Enviar(": pulso\n\n", null, true); }, null, 15000, 15000);
         }
 
         internal void Desligar()
@@ -345,6 +352,22 @@ namespace MiguelAngelus
                     await Responder(fluxo, 200, "application/json; charset=utf-8", AgendaCast ?? "{\"lista\":[]}");
                     return;
                 }
+                // (1.8.5) Cast: só leitura, sem pareamento (só os nomes dos itens e o slide no ar). /aovivo = uma vez;
+                // /eventos = conexão aberta: cada mudança de item ou slide chega na hora (sem o Cast ficar perguntando)
+                if (caminho == "/api/cast/aovivo" && metodo == "GET")
+                {
+                    await Responder(fluxo, 200, "application/json; charset=utf-8", AoVivoCast ?? "{\"vivoIdx\":-1,\"itens\":[]}");
+                    return;
+                }
+                if (caminho == "/api/cast/eventos" && metodo == "GET")
+                {
+                    var inicio = Encoding.UTF8.GetBytes("HTTP/1.1 200 OK\r\nContent-Type: text/event-stream; charset=utf-8\r\nCache-Control: no-cache\r\n" +
+                        "Connection: keep-alive\r\n\r\ndata: " + (AoVivoCast ?? "{\"vivoIdx\":-1,\"itens\":[]}") + "\n\n");
+                    await fluxo.WriteAsync(inicio, 0, inicio.Length);
+                    lock (trava) clientes.Add(new Cliente { Token = "", Cast = true, Fluxo = fluxo, Tcp = tcp });
+                    manter = true;
+                    return;
+                }
                 if (caminho == "/api/cast/capa" && metodo == "GET")
                 {
                     byte[] img = null; var id = Parametro(consulta, "id") ?? "";
@@ -456,10 +479,11 @@ namespace MiguelAngelus
 
         // ---------- Envio para os celulares conectados ----------
 
-        void Enviar(string texto, string soToken)
+        // soToken: só aquele celular; cast: só os MiguelAngelus Cast ligados em /api/cast/eventos (eles não recebem o estado dos celulares)
+        void Enviar(string texto, string soToken, bool cast = false)
         {
             List<Cliente> alvo;
-            lock (trava) alvo = clientes.Where(c => soToken == null || c.Token == soToken).ToList();
+            lock (trava) alvo = clientes.Where(c => cast ? c.Cast : soToken == null ? !c.Cast : c.Token == soToken).ToList();
             if (alvo.Count == 0) return;
             var dados = Encoding.UTF8.GetBytes(texto);
             foreach (var c in alvo)
@@ -480,7 +504,7 @@ namespace MiguelAngelus
                         bool saiu;
                         lock (trava) saiu = clientes.Remove(c);
                         Fechar(c);
-                        if (saiu) aoMudar();
+                        if (saiu && !c.Cast) aoMudar();
                     }
                 });
         }

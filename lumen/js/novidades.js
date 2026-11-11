@@ -5,9 +5,14 @@
  * A versão mais nova fica em cima. Ao gerar uma versão nova, acrescente a entrada dela aqui.
  */
 const NOVIDADES = [
+  { versao: '1.8.5', data: '2026-11-10', itens: [
+    '📡 O telão inteiro por NDI: em Ajustes → Transmissão (NDI → OBS), marque "Transmitir também o telão inteiro". Vai a mesma imagem da janela de projeção — fundo, imagens, vídeos, Pix — com o nome "MiguelAngelus Telão". No MiguelAngelus Cast de outro computador da rede ele aparece sozinho, em primeiro, no "+ Cena". Só pesa enquanto algum programa está recebendo. A projeção precisa estar aberta (pode ficar atrás de outras janelas, mas não minimizada).',
+    '🔗 O roteiro do MiguelAngelus Cast acompanha o telão: a cada troca de slide, o MiguelAngelus avisa o Cast da rede (só o nome do item e o número do slide). Perto do fim de cada item, o Cast já prepara a cena e a câmera do próximo momento. Precisa do Controle pelo celular ligado.',
+    '✂️ Forma breve das leituras: quando a leitura tem forma breve (os trechos entre colchetes), o roteiro entra com a completa e, ao abrir a leitura, aparece a chave "Forma breve" ao lado do título. Ligou, o texto e a referência trocam para a breve; desligou, volta a completa. Funciona com a Liturgia do dia (Paulus) e com os folhetos da Arquidiocese do Rio e de São Paulo (PDF), nos roteiros montados a partir desta versão. A linha "(… mais breve: …)" do folheto de São Paulo não vai mais para o telão.',
+  ] },
   { versao: '1.8.4', data: '2026-11-09', itens: [
     '📺 Telão no tablet ou na TV: no pareamento do Controle pelo celular, escolha "📺 Telão". O aparelho (tablet, TV com navegador, um celular velho no presbitério) mostra em tela cheia o mesmo slide do telão, com as mesmas cores, e acompanha sozinho pelo Wi-Fi — sem cabo. Ele só vê: não mexe em nada. Toque na tela para ocupar a tela inteira. Funciona também nas TVs e tablets antigos.',
-    '🙏 Ideia do Luciano, da Pascom da Paróquia Santa Marina (Vila Carrão, Zona Leste de São Paulo). Obrigado, Luciano! E que alegria saber que os folhetos da Arquidiocese de São Paulo entraram certinho no MiguelAngelus.',
+    '🙏 Ideia do Luciano, da Paróquia Santa Marina (Vila Carrão, Zona Leste de São Paulo). Obrigado, Luciano! E que alegria saber que os folhetos da Arquidiocese de São Paulo entraram certinho no MiguelAngelus.',
   ] },
   { versao: '1.8.3', data: '2026-11-08', itens: [
     '🛡 MiguelAngelus Cast: o brasão e o logo da Pascom (os cantos de cima do telão, em Apresentação) também vão para o Cast da rede e entram sozinhos na capa da live.',

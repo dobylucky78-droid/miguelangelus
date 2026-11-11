@@ -94,6 +94,7 @@ const primeiraFonte = f => (f || 'Segoe UI').split(',')[0].replace(/["']/g, '').
 function aplicarNdi() {
   if (!NO_APP) return renderNdi();
   paraApp({ tipo: 'ndi', ligar: !!S.config.ndiLigado, nome: S.config.ndiNome || 'MiguelAngelus Letras' });
+  paraApp({ tipo: 'ndiTelao', ligar: !!S.config.ndiTelao });
   Transmissao.ultimo = '';
   atualizarFaixa(true);
   atualizarPixNdi(true);
@@ -108,6 +109,17 @@ function renderNdi() {
   else if (st.conexoes > 0) { txt = `● Transmitindo — ${st.conexoes} programa(s) recebendo (ex.: OBS).`; cls = 'ok'; }
   else txt = '● Transmitindo — esperando o OBS conectar.';
   if (el) { el.textContent = txt; el.className = 'status ' + cls; }
+  // (1.8.5) telão inteiro
+  const et = $('#ndiTelaoInfo');
+  if (et) {
+    let t2 = '', c2 = '';
+    if (!NO_APP) t2 = '';
+    else if (st.telaoErro) { t2 = '⚠ ' + st.telaoErro; c2 = 'erro'; }
+    else if (!st.telao) t2 = '';
+    else if (st.telaoConexoes > 0) { t2 = `● Telão inteiro: ${st.telaoConexoes} programa(s) recebendo${st.telaoSituacao ? ' — ' + st.telaoSituacao : ''}.`; c2 = 'ok'; }
+    else t2 = '● Telão inteiro: esperando o Cast (ou o OBS) conectar.';
+    et.textContent = t2; et.className = 'status ' + c2; et.hidden = !t2;
+  }
   if (selo) {
     selo.hidden = !(NO_APP && st.ativo);
     selo.textContent = st.conexoes > 0 ? `● NDI (${st.conexoes})` : '● NDI';
@@ -126,10 +138,12 @@ function ligarTransmissao() {
   $('#dlgAjustes').addEventListener('input', e => {
     const k = e.target.dataset?.cfg || '';
     if (k === 'ndiLigado' || k === 'ndiNome') aplicarNdi();
+    else if (k === 'ndiTelao') paraApp({ tipo: 'ndiTelao', ligar: !!S.config.ndiTelao });
     else if (k === 'faixaPix' || /^pix(Qr|Faixa)Camera$/.test(k)) atualizarPixNdi();
     else if (/^faixa|^fonte$|^corTexto$|^maiusculas$/.test(k)) atualizarFaixa(true);
   });
   $('#estadoNdi').addEventListener('click', () => abrirAjustes('ndi'));
   renderNdi();
   if (S.config.ndiLigado) aplicarNdi();
+  else if (S.config.ndiTelao && NO_APP) paraApp({ tipo: 'ndiTelao', ligar: true });
 }

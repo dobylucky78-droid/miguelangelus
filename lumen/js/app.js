@@ -44,7 +44,7 @@ const CONFIG_PADRAO = {
   cruz: true, corCruz: '#c8102e', versosFolheto: true,
   estiloCruz: 'latina',                          // (1.8.0) desenho da cruz no telão: 'latina' (✝ do folheto, padrão) ou 'missal' (✠)
   // transmissão (NDI): faixa de letras para o OBS
-  ndiLigado: false, ndiNome: 'MiguelAngelus Letras', faixaTamanho: 4.6, faixaOpacidade: 0.6,
+  ndiLigado: false, ndiNome: 'MiguelAngelus Letras', ndiTelao: false, faixaTamanho: 4.6, faixaOpacidade: 0.6,
   faixaCantos: true, faixaRespostas: true, faixaLeituras: true, faixaAvisos: true, faixaPix: true,
   bibliaAtiva: '', roteiroAtivo: '',
 };
@@ -1478,7 +1478,8 @@ function renderCabecalho() {
       break;
     case 'texto':
       h = `<div class="cab-linha"><span class="tag t-texto">Texto</span>
-             <input data-campo="titulo" value="${esc(it.titulo)}" placeholder="Título (aparece no rodapé)"></div>
+             <input data-campo="titulo" value="${esc(it.titulo)}" placeholder="Título (aparece no rodapé)">
+             ${it.formas ? `<label class="chave-forma" title="Esta leitura tem forma breve. Desligado: a completa (padrão). Ligado: a breve — título e texto trocam juntos."><input type="checkbox" data-campo="breve" ${it.breve ? 'checked' : ''}><span class="trilho"></span> Forma breve</label>` : ''}</div>
            <textarea data-campo="texto" rows="5" placeholder="${it.antifona ? 'Cole aqui a antífona do Missal (ou do folheto), com a referência no fim, ex.: (Sl 104,3s).'
              : it.intencoes ? 'Uma intenção por linha, ex.:&#10;Pelas almas de João da Silva e Maria de Souza&#10;Em ação de graças pelos 50 anos de casamento de José e Ana&#10;(linha em branco: começa outro slide)'
              : 'Digite o texto. Deixe uma linha em branco para separar os slides.'}">${esc(it.texto)}</textarea>`;
@@ -1630,7 +1631,7 @@ function resumoItem(it) {
       const tit = it.rotulo === 'Canto' ? it.titulo : it.ref || (it.refrao || '').split('\n')[0];
       return { rot: it.rotulo || 'Salmo', tit: tit || 'preencher salmo…', vazio: !it.refrao && !it.texto };
     }
-    case 'texto': return { rot: 'Texto', tit: it.titulo || (it.texto || '').split('\n')[0] || 'texto livre…', vazio: !it.texto };
+    case 'texto': return { rot: 'Texto', tit: (it.titulo || (it.texto || '').split('\n')[0] || 'texto livre…') + (it.formas && it.breve ? ' · forma breve' : ''), vazio: !it.texto };
     case 'homilia': return { rot: 'Homilia', tit: [it.titulo || 'Homilia', refEvangelho(S.roteiro?.itens || [])].filter(Boolean).join(' · '), vazio: false };
     case 'imagem': return { rot: it.abertura ? 'Abertura' : 'Imagem', tit: it.titulo || (it.texto || '').split('\n')[0] || (it.imagem ? 'imagem' : 'escolher imagem…'), vazio: !it.imagem };
     case 'ordinario': return { rot: 'Missa', tit: Ordinario.parte(it.parte)?.titulo || '?', vazio: false };
@@ -2765,6 +2766,14 @@ function ligarEventos() {
       it.livre = e.target.value === '__outro';
       if (it.livre) { it.titulo = ''; if (S.atual.rIdx >= 0) { salvarRoteiro(); renderRoteiroLista(); } atualizarSlides(); renderCabecalho();
         return $('#itemCab input[data-campo=titulo]')?.focus(); }
+    }
+    // (1.8.5) leitura com forma breve: guarda o que foi editado na forma de agora e traz a outra (título e texto)
+    if (campo === 'breve' && it.formas) {
+      const de = it.breve ? 'breve' : 'completa', para = e.target.checked ? 'breve' : 'completa';
+      it.formas[de] = { titulo: it.titulo, texto: it.texto };
+      Object.assign(it, it.formas[para]); it.breve = e.target.checked;
+      if (S.atual.rIdx >= 0) { salvarRoteiro(); renderRoteiroLista(); }
+      atualizarSlides(); return renderCabecalho();
     }
     it[campo] = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
     if (campo === 'cantoId' || campo === 'momento') { BuscaCanto.item = null; BuscaCanto.termo = ''; }      // escolheu: a busca limpa

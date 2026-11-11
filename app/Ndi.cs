@@ -328,4 +328,110 @@ namespace MiguelAngelus
             lock (trava) { pixQr?.Dispose(); pixFaixa?.Dispose(); }
         }
     }
+
+    // (1.8.5) O TELÃO INTEIRO por NDI ("MiguelAngelus Telão"), para o MiguelAngelus Cast (ou o OBS) em outro computador:
+    // a mesma imagem da janela de projeção — fundo, imagens, vídeos, Pix, câmera. Tirada 15 vezes por segundo com
+    // PrintWindow (pega o conteúdo do WebView2 mesmo com outra janela por cima) e SÓ enquanto alguém está recebendo;
+    // sem a projeção aberta (ou minimizada) vai tela preta.
+    sealed class EnvioNdiTelao : IDisposable
+    {
+        readonly IntPtr envio;
+        readonly Thread laco;
+        volatile bool rodando = true;
+        public volatile string Situacao = "";
+
+        public static EnvioNdiTelao Criar(string nome, out string erro)
+        {
+            erro = NdiNativo.Carregar();
+            if (erro != null) return null;
+            if (!NdiNativo.NDIlib_initialize()) { erro = "Este processador não é compatível com o NDI."; return null; }
+            return new EnvioNdiTelao(nome);
+        }
+
+        EnvioNdiTelao(string nome)
+        {
+            var bytesNome = System.Text.Encoding.UTF8.GetBytes(nome + "\0");
+            var pNome = Marshal.AllocHGlobal(bytesNome.Length);
+            Marshal.Copy(bytesNome, 0, pNome, bytesNome.Length);
+            var cfg = new NdiNativo.CriarEnvio { nome = pNome, relogioVideo = true };
+            envio = NdiNativo.NDIlib_send_create(ref cfg);
+            Marshal.FreeHGlobal(pNome);
+            if (envio == IntPtr.Zero) throw new InvalidOperationException("Não foi possível criar a fonte NDI do telão.");
+            laco = new Thread(Rodar) { IsBackground = true, Name = "NDI telão", Priority = ThreadPriority.BelowNormal };
+            laco.Start();
+        }
+
+        public int Conexoes => envio == IntPtr.Zero ? 0 : NdiNativo.NDIlib_send_get_no_connections(envio, 0);
+
+        void Rodar()
+        {
+            byte[] buf = null; GCHandle h = default;
+            try
+            {
+                while (rodando)
+                {
+                    if (Conexoes == 0) { Situacao = ""; Thread.Sleep(400); continue; }
+                    int l = 0, a = 0;
+                    var hw = JanelaProjecao.Atual;
+                    if (hw != IntPtr.Zero && IsWindow(hw) && !IsIconic(hw) && GetClientRect(hw, out var r)) { l = r.Right - r.Left; a = r.Bottom - r.Top; }
+                    bool temImagem = l >= 16 && a >= 16;
+                    if (!temImagem) { l = 320; a = 180; }
+                    if (buf == null || buf.Length != l * a * 4)
+                    {
+                        if (h.IsAllocated) h.Free();
+                        buf = new byte[l * a * 4]; h = GCHandle.Alloc(buf, GCHandleType.Pinned);
+                    }
+                    if (temImagem) { Copiar(hw, l, a, buf); Situacao = "telão " + l + "×" + a; }
+                    else { Array.Clear(buf, 0, buf.Length); Situacao = "a projeção está fechada (vai tela preta)"; }
+                    var q = new NdiNativo.QuadroVideo
+                    {
+                        largura = l, altura = a, fourCC = 0x58524742 /* BGRX: sem transparência */, taxaN = 15, taxaD = 1,
+                        proporcao = (float)l / a, formato = 1, timecode = long.MaxValue, bytesPorLinha = l * 4, dados = h.AddrOfPinnedObject(),
+                    };
+                    NdiNativo.NDIlib_send_send_video_v2(envio, ref q);   // com relógio: espera o tempo de 1 quadro (15 q/s)
+                }
+            }
+            catch (Exception ex) { Situacao = "erro: " + ex.Message; }
+            finally { if (h.IsAllocated) h.Free(); }
+        }
+
+        static void Copiar(IntPtr hw, int l, int a, byte[] destino)
+        {
+            var dc = GetDC(hw);
+            var mem = CreateCompatibleDC(dc);
+            var bi = new BITMAPINFO { biSize = 40, biWidth = l, biHeight = -a, biPlanes = 1, biBitCount = 32 };
+            var dib = CreateDIBSection(dc, ref bi, 0, out var bits, IntPtr.Zero, 0);
+            var velho = SelectObject(mem, dib);
+            try
+            {
+                if (!PrintWindow(hw, mem, 3 /* só a área de dentro + conteúdo acelerado (WebView2) */)) BitBlt(mem, 0, 0, l, a, dc, 0, 0, 0x00CC0020);
+                GdiFlush();
+                Marshal.Copy(bits, destino, 0, l * a * 4);
+            }
+            finally { SelectObject(mem, velho); DeleteObject(dib); DeleteDC(mem); ReleaseDC(hw, dc); }
+        }
+
+        public void Dispose()
+        {
+            rodando = false;
+            laco?.Join(1000);
+            if (envio != IntPtr.Zero) NdiNativo.NDIlib_send_destroy(envio);
+        }
+
+        [StructLayout(LayoutKind.Sequential)] struct RECT { public int Left, Top, Right, Bottom; }
+        [StructLayout(LayoutKind.Sequential)] struct BITMAPINFO { public int biSize, biWidth, biHeight; public short biPlanes, biBitCount; public int biCompression, biSizeImage, biXPelsPerMeter, biYPelsPerMeter, biClrUsed, biClrImportant; public int cores; }
+        [DllImport("user32.dll")] static extern bool IsWindow(IntPtr h);
+        [DllImport("user32.dll")] static extern bool IsIconic(IntPtr h);
+        [DllImport("user32.dll")] static extern bool GetClientRect(IntPtr h, out RECT r);
+        [DllImport("user32.dll")] static extern bool PrintWindow(IntPtr h, IntPtr dc, uint f);
+        [DllImport("user32.dll")] static extern IntPtr GetDC(IntPtr h);
+        [DllImport("user32.dll")] static extern int ReleaseDC(IntPtr h, IntPtr dc);
+        [DllImport("gdi32.dll")] static extern IntPtr CreateCompatibleDC(IntPtr dc);
+        [DllImport("gdi32.dll")] static extern IntPtr CreateDIBSection(IntPtr dc, ref BITMAPINFO bi, uint uso, out IntPtr bits, IntPtr sec, uint off);
+        [DllImport("gdi32.dll")] static extern IntPtr SelectObject(IntPtr dc, IntPtr o);
+        [DllImport("gdi32.dll")] static extern bool DeleteObject(IntPtr o);
+        [DllImport("gdi32.dll")] static extern bool DeleteDC(IntPtr dc);
+        [DllImport("gdi32.dll")] static extern bool GdiFlush();
+        [DllImport("gdi32.dll")] static extern bool BitBlt(IntPtr d, int x, int y, int l, int a, IntPtr o, int ox, int oy, uint rop);
+    }
 }

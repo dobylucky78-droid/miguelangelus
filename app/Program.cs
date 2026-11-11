@@ -251,7 +251,8 @@ namespace MiguelAngelus
     class JanelaPrincipal : JanelaWeb
     {
         EnvioNdi ndi;
-        string erroNdi;
+        EnvioNdiTelao ndiTelao;      // (1.8.5) o telão inteiro por NDI
+        string erroNdi, erroNdiTelao;
         readonly Timer relogioNdi = new Timer { Interval = 2000 };
         // MaxJsonLength: Bíblias e o acervo de cantos passam de 2 MB
         readonly System.Web.Script.Serialization.JavaScriptSerializer json = new System.Web.Script.Serialization.JavaScriptSerializer { MaxJsonLength = int.MaxValue };
@@ -274,7 +275,7 @@ namespace MiguelAngelus
                 catch (Exception ex) { Program.Erro("iniciar o MiguelAngelus", ex); Close(); }
             };
             relogioNdi.Tick += (s, e) => InformarNdi();
-            FormClosed += (s, e) => { relogioNdi.Stop(); ndi?.Dispose(); celular?.Dispose(); joystick?.Dispose(); };
+            FormClosed += (s, e) => { relogioNdi.Stop(); ndi?.Dispose(); ndiTelao?.Dispose(); celular?.Dispose(); joystick?.Dispose(); };
         }
 
         LeitorJoystick joystick;     // ligado quando a página pede ({tipo:'joyLigar'}), depois de carregar
@@ -288,6 +289,7 @@ namespace MiguelAngelus
                 var tipo = m.TryGetValue("tipo", out var t) ? t as string : null;
                 if (tipo == "ndi") LigarNdi(m.TryGetValue("ligar", out var l) && l is bool b && b, m.TryGetValue("nome", out var n) ? n as string : null);
                 else if (tipo == "faixa") ndi?.Desenhar(LerFaixa(m));
+                else if (tipo == "ndiTelao") LigarNdiTelao(m.TryGetValue("ligar", out var lt) && lt is bool bt && bt, m.TryGetValue("nome", out var nt) ? nt as string : null);
                 else if (tipo == "joyLigar" && joystick == null)
                     joystick = new LeitorJoystick(o => { try { Web.CoreWebView2?.PostWebMessageAsJson(json.Serialize(o)); } catch { } });
                 else if (tipo == "ndiPix") ndi?.DefinirPix(m.TryGetValue("on", out var po) && po is bool pb && pb,
@@ -382,6 +384,7 @@ namespace MiguelAngelus
                 case "estado": if (celular != null && celular.Ligado && m.TryGetValue("estado", out var e)) celular.Atualizar(json.Serialize(e)); break;
                 case "musica": if (celular != null && celular.Ligado && m.TryGetValue("musica", out var mu)) celular.AtualizarMusica(json.Serialize(mu)); break;
                 case "agendaCast": if (celular != null && m.TryGetValue("agenda", out var ag)) celular.AgendaCast = json.Serialize(ag); break;   // (1.8.1)
+                case "aoVivoCast": if (celular != null && m.TryGetValue("dados", out var av)) celular.AoVivoCast = json.Serialize(av); break;   // (1.8.5)
                 case "capaCast":   // (1.8.2) ilustração do folheto em JPEG (data URL) para o Cast
                     if (celular != null && m.TryGetValue("id", out var cid) && m.TryGetValue("jpeg", out var cj) && cj is string du)
                     {
@@ -819,15 +822,31 @@ namespace MiguelAngelus
             {
                 try { ndi = EnvioNdi.Criar(string.IsNullOrWhiteSpace(nome) ? "MiguelAngelus Letras" : nome.Trim(), out erroNdi); }
                 catch (Exception ex) { erroNdi = ex.Message; ndi = null; }
-                if (ndi != null) { erroNdi = null; relogioNdi.Start(); }
+                if (ndi != null) erroNdi = null;
             }
-            else if (!ligar && ndi != null) { relogioNdi.Stop(); ndi.Dispose(); ndi = null; erroNdi = null; }
+            else if (!ligar && ndi != null) { ndi.Dispose(); ndi = null; erroNdi = null; }
+            relogioNdi.Enabled = ndi != null || ndiTelao != null;
+            InformarNdi();
+        }
+
+        // (1.8.5) o telão inteiro por NDI, para o MiguelAngelus Cast em outro computador (ele acha sozinho pelo nome)
+        void LigarNdiTelao(bool ligar, string nome)
+        {
+            if (ligar && ndiTelao == null)
+            {
+                try { ndiTelao = EnvioNdiTelao.Criar(string.IsNullOrWhiteSpace(nome) ? "MiguelAngelus Telão" : nome.Trim(), out erroNdiTelao); }
+                catch (Exception ex) { erroNdiTelao = ex.Message; ndiTelao = null; }
+                if (ndiTelao != null) erroNdiTelao = null;
+            }
+            else if (!ligar && ndiTelao != null) { ndiTelao.Dispose(); ndiTelao = null; erroNdiTelao = null; }
+            relogioNdi.Enabled = ndi != null || ndiTelao != null;
             InformarNdi();
         }
 
         void InformarNdi()
         {
-            var estado = new { tipo = "ndiStatus", ativo = ndi != null, conexoes = ndi?.Conexoes ?? 0, erro = erroNdi };
+            var estado = new { tipo = "ndiStatus", ativo = ndi != null, conexoes = ndi?.Conexoes ?? 0, erro = erroNdi,
+                telao = ndiTelao != null, telaoConexoes = ndiTelao?.Conexoes ?? 0, telaoErro = erroNdiTelao, telaoSituacao = ndiTelao?.Situacao ?? "" };
             try { Web.CoreWebView2?.PostWebMessageAsJson(json.Serialize(estado)); } catch { }
         }
 
@@ -882,5 +901,10 @@ namespace MiguelAngelus
         }
 
         protected override bool ShowWithoutActivation => noTelao;
+
+        // (1.8.5) a janela de projeção aberta agora, para o envio do telão inteiro por NDI (lida de outra linha)
+        internal static volatile IntPtr Atual;
+        protected override void OnHandleCreated(EventArgs e) { base.OnHandleCreated(e); Atual = Handle; }
+        protected override void OnFormClosed(FormClosedEventArgs e) { if (Atual == Handle) Atual = IntPtr.Zero; base.OnFormClosed(e); }
     }
 }

@@ -166,6 +166,28 @@ function enviarAgendaCast() {
 }
 setInterval(() => { if (Cel.info?.ligado) enviarAgendaCast(); }, 5 * 60 * 1000);   // vira o dia, roteiro novo…
 
+// (1.8.5) MiguelAngelus Cast: o que está no telão, para o roteiro do Cast acompanhar e preparar a próxima cena.
+// Só os nomes dos itens (rótulo + título), o item no ar e o slide — nada de letras, intenções ou avisos.
+const contaSlides = new WeakMap();
+function aoVivoCast() {
+  const a = S.atual, live = S.live || {}, itens = S.roteiro?.itens || [];
+  const vivoIdx = live.item ? itens.indexOf(live.item) : -1;
+  let idx = -1, total = 0;
+  if (live.item) {
+    idx = typeof live.idx === 'number' ? live.idx : -1;
+    if (a && a.item === live.item) total = a.slides.length;
+    else {
+      if (!contaSlides.has(live.item)) { let n = 0; try { n = gerarSlides(live.item).length; } catch (_) {} contaSlides.set(live.item, n); }
+      total = contaSlides.get(live.item);
+    }
+  }
+  return {
+    roteiroId: S.roteiro?.id || '', roteiro: S.roteiro?.nome || '',
+    itens: itens.map(it => { let r = { rot: '', tit: '' }; try { r = resumoItem(it); } catch (_) {} return { rot: r.rot || '', tit: r.tit || '', tipo: it.tipo }; }),
+    vivoIdx, idx, total, preto: !!live.preto, altar: !!live.altar,
+  };
+}
+
 // Manda o estado (no máximo ~4 vezes por segundo e só quando muda)
 function agendarEstadoCelular() {
   if (!Cel.info?.ligado) return;
@@ -179,6 +201,10 @@ function agendarEstadoCelular() {
       if (jm !== Cel.ultimaMusica) { Cel.ultimaMusica = jm; postarApp({ tipo: 'celular', acao: 'musica', musica: mu }); }
     } catch (err) { console.warn('cifras do celular', err); }
     enviarAgendaCast();
+    try {
+      const av = JSON.stringify(aoVivoCast());
+      if (av !== Cel.ultimoAoVivo) { Cel.ultimoAoVivo = av; postarApp({ tipo: 'celular', acao: 'aoVivoCast', dados: JSON.parse(av) }); }
+    } catch (err) { console.warn('ao vivo do Cast', err); }
     const j = JSON.stringify(e);
     if (j === Cel.ultimo) return;
     Cel.ultimo = j;

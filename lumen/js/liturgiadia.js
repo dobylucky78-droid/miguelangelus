@@ -19,6 +19,29 @@ const semVersiculos = t => t
 const estrofeLiturgia = t => t.replace(/^\d+\.\s*/, '').replace(/\s*[–-]\s*R\.\s*$/, '').replace(/\s*\([^)]*\d[^)]*\)(?=\.?\s*$)/, '')
   .replace(/\s*[\/†]\s*/g, '\n').trim();
 
+// (1.8.5) Forma breve: a Paulus avisa "[A forma breve está entre colchetes.]" e põe entre colchetes os trechos que
+// formam a breve. A completa é o texto todo (sem os colchetes); a breve, só os trechos entre colchetes.
+const FIM_LEITURA = /\s*[–-]\s*Palavra (do Senhor|da Salva[çc][ãa]o)\.?\]?\s*$/i;
+function textoBreve(bruto) {
+  const trechos = [...bruto.matchAll(/\[([^\]]*)(?:\]|$)/g)].map(m => m[1].trim()).filter(Boolean);
+  return trechos.length ? semVersiculos(trechos.join(' ').replace(FIM_LEITURA, '')) : '';
+}
+// "Mateus 25,14-30 ou 14-15.19-21" → completa "Mateus 25,14-30", breve "Mateus 25,14-15.19-21"
+function refsDasFormas(ref) {
+  const m = ref.match(/^(.*?)\s+ou\s+(.+)$/i);
+  if (!m) return { completa: ref, breve: ref };
+  const completa = m[1].trim(), b = m[2].trim();
+  const breve = /^\D/.test(b) ? b : /,/.test(b) ? completa.replace(/\s*\d+,.*$/, '') + ' ' + b : completa.replace(/,.*$/, ',') + b;
+  return { completa, breve };
+}
+function leituraComFormas(nome, ref, intro, bruto, temBreve, extra = {}) {
+  const texto = semVersiculos(bruto.replace(FIM_LEITURA, ''));
+  const refs = refsDasFormas(ref.trim());
+  const tb = temBreve ? textoBreve(bruto) : '';
+  return { nome, ref: tb ? refs.completa : ref.trim(), intro: intro.trim(), texto, ...extra,
+    breve: tb && tb !== texto ? { ref: refs.breve, texto: tb } : null };
+}
+
 function lerLiturgiaColada(texto) {
   const linhas = texto.replace(/\r/g, '').split('\n').map(l => l.trim()).filter(Boolean);
   const r = { dia: null, diaSemana: null, titulo: '', cor: '', gloria: false, creio: false, antifona: '', leituras: [], salmo: null, aclamacao: null };
@@ -45,18 +68,18 @@ function lerLiturgiaColada(texto) {
     if (fim(l) && k > j + 2) break;
     let mm;
     if ((mm = l.match(/^(Primeira|Segunda) Leitura:\s*(.+)$/i))) {
-      let corpo = linhas[k + 1] || '';
-      if (/^\[A forma breve/i.test(corpo)) corpo = linhas[k + 2] || '';
+      let corpo = linhas[k + 1] || '', temBreve = false;
+      if (/^\[A forma breve/i.test(corpo)) { corpo = linhas[k + 2] || ''; temBreve = true; }
       const [intro, ...resto] = corpo.split(/\s+[–-]\s+/);
-      const texto = semVersiculos(resto.join(' – ').replace(/\s*[–-]\s*Palavra do Senhor\.?\s*$/i, ''));
-      r.leituras.push({ nome: /primeira/i.test(mm[1]) ? 'Primeira Leitura' : 'Segunda Leitura', ref: mm[2].trim(), intro: intro.trim(), texto });
+      r.leituras.push(leituraComFormas(/primeira/i.test(mm[1]) ? 'Primeira Leitura' : 'Segunda Leitura', mm[2], intro, resto.join(' – '), temBreve));
     } else if ((mm = l.match(/^Salmo Responsorial:\s*(.+)$/i))) {
       const refrao = linhas[k + 1] || '';
       const estrofes = [];
       for (let q = k + 2; q < linhas.length && /^\d+\./.test(linhas[q]); q++) estrofes.push(estrofeLiturgia(linhas[q]));
       r.salmo = { ref: 'Sl ' + mm[1].trim(), refrao: refrao.replace(/\s*[\/†]\s*/g, '\n'), estrofes };
     } else if ((mm = l.match(/^Evangelho:\s*(.+)$/i))) {
-      let q = k + 1;
+      let q = k + 1, temBreve = false;
+      if (/^\[A forma breve/i.test(linhas[q] || '')) { temBreve = true; q++; }     // não é o refrão da aclamação
       if (/^aleluia/i.test(linhas[q] || '') || !/Proclama[çc][ãa]o/i.test(linhas[q] || '')) {
         const refrao = linhas[q] || '';
         const verso = linhas[q + 1] && !/Proclama[çc][ãa]o/i.test(linhas[q + 1]) ? linhas[q + 1] : '';
@@ -65,8 +88,7 @@ function lerLiturgiaColada(texto) {
       }
       const corpo = linhas.slice(q).find(x => /Proclama[çc][ãa]o do Evangelho/i.test(x)) || '';
       const [intro, ...resto] = corpo.split(/\s+[–-]\s+/);
-      r.leituras.push({ nome: 'Evangelho', ref: mm[1].trim(), intro: intro.trim(),
-        texto: semVersiculos(resto.join(' – ').replace(/\s*[–-]\s*Palavra da Salva[çc][ãa]o\.?\s*$/i, '')), evangelho: true });
+      r.leituras.push(leituraComFormas('Evangelho', mm[1], intro, resto.join(' – '), temBreve, { evangelho: true }));
     }
   }
   if (!r.leituras.length) throw new Error('Não encontrei as leituras na página colada.');
@@ -101,6 +123,12 @@ function itensDaLiturgia(r, domingo, comOE2) {
     const fechamento = l.evangelho ? 'P. Palavra da Salvação.\nT. Glória a vós, Senhor.' : 'L. Palavra do Senhor.\nT. Graças a Deus.';
     const abertura = l.evangelho ? `P. O Senhor esteja convosco.\nT. Ele está no meio de nós.\n\nP. ${l.intro}.\nT. Glória a vós, Senhor.` : 'L. ' + l.intro + '.';
     const item = { id: uid(), tipo: 'texto', titulo: `${l.nome} (${l.ref})`, texto: `${abertura}\n\n${l.texto}\n\n${fechamento}` };
+    // (1.8.5) com forma breve: entra a completa; a chave "Forma breve" no cabeçalho troca (app.js trocarForma)
+    if (l.breve) {
+      item.formas = { completa: { titulo: item.titulo, texto: item.texto },
+        breve: { titulo: `${l.nome} (${l.breve.ref})`, texto: `${abertura}\n\n${l.breve.texto}\n\n${fechamento}` } };
+      item.breve = false;
+    }
     const s = slotLeitura(l.nome);
     if (s >= 0) itens[s] = item; else itens.splice(achar(i => i.tipo === 'salmo') + (l.nome === 'Primeira Leitura' ? 0 : 1), 0, item);
   }
@@ -235,7 +263,7 @@ function renderLiturgiaReconhecida() {
     <div><b>${esc(r.titulo)}</b> <span class="sutil">· ${esc(r.cor)}${r.gloria ? ' · Glória' : ''}${r.creio ? ' · Creio' : ''}</span></div>
     <ul class="lit-lista">
       ${r.antifona ? '<li>✓ Antífona de entrada</li>' : ''}
-      ${r.leituras.map(l => `<li>✓ ${esc(l.nome)}: ${esc(l.ref)}</li>`).join('')}
+      ${r.leituras.map(l => `<li>✓ ${esc(l.nome)}: ${esc(l.ref)}${l.breve ? ` <span class="sutil">(forma breve: ${esc(l.breve.ref)} — escolha na hora)</span>` : ''}</li>`).join('')}
       ${r.salmo ? `<li>✓ Salmo ${esc(r.salmo.ref.replace(/^Sl /, ''))} (refrão + ${r.salmo.estrofes.length} estrofes)</li>` : ''}
       ${r.aclamacao ? '<li>✓ Aclamação ao Evangelho</li>' : ''}
     </ul>`;
