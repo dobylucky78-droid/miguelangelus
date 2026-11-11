@@ -5,6 +5,10 @@
  * A versão mais nova fica em cima. Ao gerar uma versão nova, acrescente a entrada dela aqui.
  */
 const NOVIDADES = [
+  { versao: '1.8.7', data: '2026-11-11', itens: [
+    '✎ Ato Penitencial, Glória, Santo, Cordeiro e Aclamação rezados (o texto que veio do folheto): o botão Editar do item agora abre o texto para corrigir ali mesmo — antes ficava cinza. O ✎ no canto do slide também leva direto ao trecho. A correção vale só para aquele roteiro.',
+    '📱 No app dos músicos, o título do canto não fica mais espremido ao lado dos botões "Cifra | Partitura" em celular estreito.',
+  ] },
   { versao: '1.8.6', data: '2026-11-11', itens: [
     '🎼 Partitura dos cantos: no cadastro do canto, abaixo da cifra, "🎼 Partitura para os músicos" → Carregar PDF ou imagem. No PDF do folheto (como o "Povo de Deus" de São Paulo, com várias músicas), você toca nas páginas daquele canto — as que têm o título dele já vêm marcadas — e as margens brancas saem sozinhas. Também aceita foto ou imagem da partitura. Sincroniza com a nuvem junto com os cantos.',
     '🎸🎼 No app dos músicos, o canto que tem as duas mostra os botões "Cifra | Partitura": cada músico escolhe o que quer ver (quem toca violão fica na cifra; sopro e teclado, na partitura). A escolha fica guardada no aparelho e vale para os próximos cantos. A− e A+ ampliam a partitura. Só aparelhos pareados recebem as partituras.',

@@ -157,6 +157,10 @@ html[data-tema-app="claro"] .dica-atalho kbd { background: #f1f4f8; border-color
 .cab-linha { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .cab-linha > input:not(.estreito):not([type=checkbox]), .cab-linha > select:not(.estreito) { flex: 1 1 160px; width: auto; }
 .cab-linha > .estreito { flex: 0 1 170px; }
+.rezado-ed { margin-top: 6px; }
+.rezado-ed > summary { cursor: pointer; color: var(--sutil); font-size: 12px; }
+.rezado-ed[open] > summary { margin-bottom: 4px; }
+.rezado-ed .campo + .campo { margin-top: 6px; }
 .cab-grade { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .cab-grade.cab-preces { grid-template-columns: 1fr 1.6fr 1fr; }
 .boas-vindas h2 { margin: 4px 0 6px; font-size: 18px; white-space: normal; }

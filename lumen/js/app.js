@@ -965,6 +965,8 @@ function editarSlide(i) {
     const t = trechoDoSlide(ta.value, s);
     if (!t) continue;
     Edicao.doBotao = i;
+    const d = ta.closest('details');
+    if (d && !d.open) { d.open = true; RezadoAberto = a.item.id; }
     ta.focus();
     ta.setSelectionRange(t.ini, t.fim);
     ta.scrollTop = Math.max(0, ta.scrollHeight * t.ini / Math.max(1, ta.value.length) - ta.clientHeight / 3);
@@ -1388,6 +1390,16 @@ function opcoesCantosBusca(momento, sel, soFav, rezado, termo) {
   return h;
 }
 
+// (1.8.7) Ato Penitencial, Glória, Santo, Cordeiro e Aclamação "rezados": o texto do folheto se corrige numa caixa
+// do próprio item (recolhida; o Editar e o ✎ do slide a abrem). Sequência/Ladainha rezada se edita em Orações.
+const temTextoRezado = it => it.tipo === 'canto' && !it.oracaoId && ('textoRezado' in it || 'refraoRezado' in it);
+let RezadoAberto = null;      // id do item com a caixa aberta (continua aberta quando o cabeçalho é refeito)
+function htmlTextoRezado(it) {
+  return `<details class="rezado-ed" ${RezadoAberto === it.id ? 'open' : ''}><summary>✎ Texto rezado (do folheto)</summary>
+    ${it.refraoRezado ? `<label class="campo">Refrão (antes e depois)<textarea data-campo="refraoRezado" rows="2">${esc(it.refraoRezado)}</textarea></label>` : ''}
+    <label class="campo">Texto (linha em branco = outro slide)<textarea data-campo="textoRezado" rows="6">${esc(it.textoRezado || '')}</textarea></label></details>`;
+}
+
 function opcoesCantos(momento, sel, soFav = false, rezado = false, termo = '') {
   if (String(termo).trim()) return opcoesCantosBusca(momento, sel, soFav, rezado, termo);
   let h = rezado ? '<option value="">— rezado (texto do folheto) —</option>' : '<option value="">— escolher canto —</option>';
@@ -1445,8 +1457,10 @@ function renderCabecalho() {
                <option value="">— qual ${it.momento === 'Ladainha' ? 'ladainha' : 'sequência'}? —</option>${oracoesDoMomento(it.momento).map(o => `<option value="${o.id}" ${o.id === it.oracaoId ? 'selected' : ''}>${esc(o.titulo)}</option>`).join('')}</select>` : ''}
              ${temFavoritos() ? `<label class="check" title="A lista mostra só os cantos favoritos, separados por momento"><input type="checkbox" data-sofav ${soFavoritosNoRoteiro() ? 'checked' : ''}> ⭐ só favoritos</label>` : ''}
              ${c ? `<button data-cmd="favoritarCanto" class="estrela-bt ${c.favorito ? 'on' : ''}" title="${c.favorito ? 'Tirar dos favoritos' : 'Marcar este canto como favorito'}">${c.favorito ? '★' : '☆'}</button>` : ''}
-             <button data-cmd="editarCanto" ${c ? '' : 'disabled'}>Editar</button>
+             ${c || !temTextoRezado(it) ? `<button data-cmd="editarCanto" ${c ? '' : 'disabled'}>Editar</button>`
+               : `<button data-cmd="editarRezado" title="Corrigir o texto rezado (vem do folheto; vale só para este roteiro)">Editar</button>`}
              <button data-cmd="novoCanto">Novo canto</button></div>
+           ${!c && temTextoRezado(it) ? htmlTextoRezado(it) : ''}
            ${htmlEscolhaCifra(it, c)}`
         : `<div class="cab-linha"><span class="tag t-canto">${esc(c?.momento || 'Canto')}</span>
              <h2>${esc(c?.titulo || '')}</h2><span class="sutil">${esc(c?.autor || '')}</span>
@@ -2790,6 +2804,8 @@ function ligarEventos() {
     else if (campo === 'ref') atualizarStatusRef();
   });
   $('#itemCab').addEventListener('click', e => {
+    const sm = e.target.closest('details.rezado-ed > summary');
+    if (sm) setTimeout(() => { RezadoAberto = sm.parentElement.open ? S.atual?.item.id : null; });
     const cmd = e.target.closest('[data-cmd]')?.dataset.cmd;
     if (!cmd || !S.atual) return;
     const it = S.atual.item;
@@ -2798,6 +2814,13 @@ function ligarEventos() {
     if (cmd === 'fundoEscolher') return $('#arqFundoItem').click();
     if (cmd === 'fundoTirar') { delete it.fundoImg; it.usarFundo = false; return aposMudarFundoItem(); }
     if (cmd === 'partituraTirar') return tirarPartituraDoItem(it);
+    if (cmd === 'editarRezado') {
+      const d = $('#itemCab details.rezado-ed');
+      if (!d) return;
+      d.open = !d.open; RezadoAberto = d.open ? it.id : null;
+      if (d.open) d.querySelector('textarea[data-campo=textoRezado]')?.focus();
+      return;
+    }
     if (cmd === 'editarCanto') {
       const c = S.cantos.find(c => c.id === it.cantoId);
       if (c) abrirEditorCanto(c);
@@ -3280,7 +3303,7 @@ async function iniciar() {
   renderCabecalho();
   renderEstadoProj();
   // a versão vem da entrada mais nova das Novidades (atualizada a cada versão), para o Sobre nunca ficar para trás
-  const versaoApp = (typeof NOVIDADES !== 'undefined' && NOVIDADES[0]?.versao) || '1.8.6';
+  const versaoApp = (typeof NOVIDADES !== 'undefined' && NOVIDADES[0]?.versao) || '1.8.7';
   $('#versaoApp').textContent = `Versão ${versaoApp} · ` + (NO_APP ? 'aplicativo para Windows' : 'no navegador');
   document.querySelectorAll('[data-versao]').forEach(e => e.textContent = 'Versão ' + versaoApp);
   // pede armazenamento permanente (o navegador não apaga os dados para liberar espaço)

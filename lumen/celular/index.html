@@ -153,9 +153,10 @@
   .links a:active { background: var(--acento-esc); border-color: var(--acento); }
   .mc { background: var(--painel); border: 1px solid var(--borda); border-radius: 12px; margin-bottom: 12px; overflow: hidden; }
   .mc.vivo { border: 2px solid var(--vivo); }
-  .mc-cab { display: flex; align-items: center; gap: 8px; padding: 10px 12px; background: var(--painel2); }
+  /* (1.8.7) quebra a linha no celular: com 🎸 Cifra | 🎼 Partitura e o tom, o título ficava espremido, uma palavra por linha */
+  .mc-cab { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px 12px; background: var(--painel2); }
   .mc-cab .mom { font-size: 11px; text-transform: uppercase; color: var(--acento); letter-spacing: .05em; }
-  .mc-cab .tt { font-weight: 600; flex: 1; min-width: 0; }
+  .mc-cab .tt { font-weight: 600; flex: 1 1 170px; min-width: 0; }
   .mc-cab .noar { font-size: 11px; background: var(--vivo); color: #fff; border-radius: 10px; padding: 2px 8px; flex: none; }
   .mc-tom { display: flex; align-items: center; gap: 4px; flex: none; }
   .mc-tom button { padding: 4px 10px; font-weight: 700; }
