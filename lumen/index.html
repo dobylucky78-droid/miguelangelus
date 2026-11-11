@@ -1,4 +1,4 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
@@ -21,7 +21,7 @@
     </div>
     <div class="splash-info">
       <div class="splash-gratis"><b>Gratuito · uso livre</b></div>
-      <div data-versao>Versão 1.8.5</div>
+      <div data-versao>Versão 1.8.6</div>
       <div>© 2026</div>
       <div><b>PASCOM</b></div>
       <div><b>São José Operário Ilha</b></div>
@@ -111,6 +111,7 @@
         <hr>
         <button data-menu="folhetoOnline">🌐 Baixar folheto da Arquidiocese…</button>
         <button data-menu="liturgiaDia">📖 Liturgia diária automática (Paulus)…</button>
+        <button data-menu="partiturasFolheto">🎼 Partituras do folheto (PDF do domingo)…</button>
         <hr>
         <button data-menu="celular">📱 Controle pelo celular…</button>
         <hr>
@@ -166,6 +167,7 @@
       </div>
       <button id="btnFolhetoOnline" class="euc-atalho" title="Baixar o folheto &quot;A Missa&quot; (versão Celular) direto do site da Arquidiocese e montar os roteiros">🌐 Baixar folheto da Arquidiocese</button>
       <button id="btnLiturgiaDia" class="euc-atalho" title="Monta os roteiros do dia com as leituras da Liturgia Diária (Paulus)">📖 Liturgia do dia (Missas de semana)</button>
+      <button id="btnPartFolheto" class="euc-atalho" title="Lê o PDF de partituras do domingo inteiro (ex.: Folheto Povo de Deus, São Paulo), separa as músicas e liga cada uma ao canto do roteiro aberto, para os músicos verem no celular">🎼 Partituras do folheto</button>
       <input type="file" id="arqFolheto" accept=".pdf,.docx,.txt,.doc" hidden>
 
       <div class="separador">Roteiro aberto</div>
@@ -1061,9 +1063,9 @@
     <p class="sutil"><b>Miguel</b> + <b>Angelus</b> ("anjo", em latim): uma homenagem ao Miguel, que idealizou e criou
       esse projeto, e a <b>São Miguel Arcanjo</b>, cuja festa foi na semana em que o programa nasceu. 😇</p>
     <div class="creditos">
-      <div class="credito"><img class="foto" src="img/foto-miguel.webp" alt="Miguel">
+      <div class="credito"><div class="foto">M</div>
         <div><span class="sutil pequeno">Criado por</span><b>Miguel Aurelio Dutra Martins</b></div></div>
-      <div class="credito"><img class="foto" src="img/foto-marcio.webp" alt="Marcio">
+      <div class="credito"><div class="foto">M</div>
         <div><span class="sutil pequeno">Desenvolvido por</span><b>Marcio Aurelio Rios Martins</b></div></div>
     </div>
     <div class="sobre-brasoes">
@@ -1082,7 +1084,7 @@
       <a href="mailto:contato.miguelangelus@gmail.com" target="_blank" rel="noopener" class="mail" title="E-mail do MiguelAngelus: dúvidas, sugestões e outras paróquias">
         <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M3.5 6.5 12 13l8.5-6.5" fill="none" stroke="currentColor" stroke-width="2"/></svg>contato.miguelangelus@gmail.com</a>
     </div>
-    <p class="sutil pequeno" id="versaoApp">Versão 1.8.5</p>
+    <p class="sutil pequeno" id="versaoApp">Versão 1.8.6</p>
     <div class="linha"><span class="espaco"></span><button value="ok" class="primario">OK</button></div>
   </form>
 </dialog>
@@ -1148,11 +1150,55 @@
       <div class="linha"><button type="button" id="btnLetraDaCifra" title="Monta o refrão e as estrofes (para o telão) a partir da letra que está na cifra">Montar a letra a partir da cifra</button>
         <span class="sutil pequeno">Use quando o canto ainda não tem letra, ou a letra cantada é diferente.</span></div>
     </details>
+    <details id="cxPartitura" class="cx-cifra">
+      <summary>🎼 Partitura para os músicos <small class="sutil">— PDF ou imagem; aparece no app dos músicos</small></summary>
+      <div class="linha">
+        <button type="button" id="btnPartCarregar" title="PDF do folheto (escolha as páginas deste canto), foto ou imagem da partitura. Também dá para arrastar o arquivo para cá.">Carregar PDF ou imagem…</button>
+        <button type="button" id="btnPartApagar" class="perigo" hidden>Tirar a partitura</button>
+        <input type="file" id="arqPartitura" accept=".pdf,application/pdf,image/*" multiple hidden>
+        <span class="sutil pequeno">No app dos músicos, cada um escolhe ver a cifra ou a partitura.</span>
+      </div>
+      <div id="partPaginas" class="part-paginas"></div>
+    </details>
     <div class="linha">
       <button type="button" id="btnExcluirCanto" class="perigo">Excluir</button>
       <span class="espaco"></span>
       <button value="cancelar" formnovalidate>Cancelar</button>
       <button value="salvar" class="primario">Salvar</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- ============ 🎼 Partitura: escolher as páginas do PDF (1.8.6) ============ -->
+<dialog id="dlgPartPdf" class="dlg-part-pdf">
+  <form method="dialog" class="form">
+    <h2>Páginas da partitura</h2>
+    <p class="sutil pequeno"><b id="partPdfNome"></b> — toque nas páginas deste canto (as que têm o título dele já vêm marcadas). As margens brancas saem sozinhas.</p>
+    <div id="partPdfGrade" class="part-pdf-grade"></div>
+    <div class="linha"><span class="espaco"></span>
+      <button value="cancelar" formnovalidate>Cancelar</button>
+      <button value="usar" id="partPdfUsar" class="primario" disabled>Marque as páginas</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="dlgPartFolheto" class="dlg-part-folheto">
+  <form method="dialog" class="form">
+    <h2>🎼 Partituras do folheto</h2>
+    <p class="sutil pequeno">O PDF com as partituras do domingo inteiro (por exemplo, “Partituras” do Folheto Povo de Deus, da Arquidiocese de São Paulo).
+      O MiguelAngelus separa as músicas pelo título e liga cada uma ao canto do roteiro aberto (<b id="partFolRoteiro"></b>) ou a um canto do acervo.
+      Confira as escolhas e clique em <b>Guardar</b>: os músicos passam a ver a partitura no celular (Cifra | Partitura).</p>
+    <div class="linha">
+      <button type="button" id="btnPartFolArq">📂 Abrir PDF…</button>
+      <button type="button" id="btnPartFolSite" title="Lista os PDFs de partituras publicados em arquisp.org.br/folheto-povo-de-deus">🌐 Baixar do site da Arquidiocese de SP</button>
+      <span class="espaco"></span>
+    </div>
+    <input type="file" id="arqPartFolheto" accept=".pdf,application/pdf" hidden>
+    <div id="partFolSiteLista" class="fol-lista" hidden></div>
+    <div id="partFolLista" class="part-fol-lista"></div>
+    <div class="linha"><span class="espaco"></span>
+      <button value="fechar" formnovalidate>Fechar</button>
+      <button type="button" id="btnPartFolGuardar" class="primario" disabled>Guardar</button>
     </div>
   </form>
 </dialog>
@@ -1395,6 +1441,7 @@
 <script src="js/formatacao.js"></script>
 <script src="js/cowabunga.js"></script>
 <script src="js/cifras.js"></script>
+<script src="js/partituras.js"></script>
 <script src="lib/qrcode/qrcode.min.js"></script>
 <script src="js/celular.js"></script>
 <script src="js/links.js"></script>

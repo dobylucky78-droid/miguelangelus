@@ -218,14 +218,23 @@ function musicaCelular() {
   const out = [];
   itens.forEach((it, i) => {
     const ehCanto = it.tipo === 'canto' || (it.tipo === 'salmo' && it.rotulo === 'Canto');
-    if (!ehCanto) return;
+    // 🎼 partitura própria do item (antífona, salmo… vinda do PDF de partituras do domingo)
+    const partItem = idsPartituraItem(it);
+    if (!ehCanto && !partItem.length) return;
+    if (!ehCanto) {
+      out.push({ i, momento: it.rotulo || it.titulo || 'Salmo', titulo: Partituras.lista.get(it.partituraId)?.titulo || it.titulo || 'Salmo', cifra: '', tom: '',
+        rezado: false, partitura: partItem, partMapa: mapaDosIds(partItem), deOutro: '', autor: '', letra: [it.refrao, it.texto].filter(Boolean).join('\n\n') });
+      return;
+    }
     const c = it.tipo === 'canto' ? S.cantos.find(x => x.id === it.cantoId) : null;
     const f = cifraDoItem(it);
-    const rezado = it.tipo === 'canto' && !c && it.textoRezado;
-    const titulo = c?.titulo || (rezado ? `${it.momento} (rezado)` : it.titulo) || 'Canto';
-    out.push({ i, momento: it.momento || it.titulo || 'Canto', titulo, cifra: f?.cifra || '', tom: f?.tom || c?.tom || '', rezado: !!rezado,
+    const rezado = it.tipo === 'canto' && !c && it.textoRezado && !partItem.length;
+    const titulo = c?.titulo || (rezado ? `${it.momento} (rezado)` : partItem.length && !it.titulo ? Partituras.lista.get(it.partituraId).titulo : it.titulo) || 'Canto';
+    // 🎼 partitura (1.8.6): a do item; senão a do canto; senão a do canto de onde veio a cifra
+    const partitura = partItem.length ? partItem : rezado ? [] : (idsPartitura(c).length ? idsPartitura(c) : idsPartitura(f));
+    out.push({ i, momento: it.momento || it.titulo || 'Canto', titulo, cifra: f?.cifra || '', tom: f?.tom || c?.tom || '', rezado: !!rezado, partitura, partMapa: mapaDosIds(partitura),
       deOutro: f && c && f.id !== c.id ? f.titulo : '', autor: fichaCanto(f || c),
-      letra: f ? '' : rezado ? [it.refraoRezado, it.textoRezado].filter(Boolean).join('\n\n') : (c ? letraNaOrdem(c) : [it.refrao, it.texto].filter(Boolean).join('\n\n')) });
+      letra: f ? '' : rezado || (!c && it.textoRezado) ? [it.refraoRezado, it.textoRezado].filter(Boolean).join('\n\n') : (c ? letraNaOrdem(c) : [it.refrao, it.texto].filter(Boolean).join('\n\n')) });
   });
   return out;
 }

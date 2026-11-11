@@ -63,7 +63,12 @@
   .mc-tom button { padding: 4px 10px; }
   .mc-tom b { display: inline-block; min-width: 34px; text-align: center; color: #f2d16b; }
   .noarm { float: right; color: #fff; background: #e0483e; font-size: 11px; padding: 1px 6px; border-radius: 8px; margin-left: 6px; }
-  pre.cifra, .letra { margin: 0; padding: 10px 12px; font: 15px/1.35 Menlo, Consolas, "Courier New", monospace; white-space: pre-wrap; word-wrap: break-word; }
+  .mc-ver { margin-top: 6px; } .mc-ver button { padding: 4px 9px; font-size: 13px; } .mc-ver button.sel { background: #f2d16b; color: #1b1503; font-weight: 700; }
+.part { background: #fff; overflow-x: auto; padding: 4px 0; } .part img { display: block; max-width: none; width: 100%; margin: 0; }
+.part .pg { display: block; position: relative; margin: 0 auto 6px; }
+.part .faixa { position: absolute; left: 0; right: 0; background: rgba(224, 70, 60, .10); border-left: 6px solid rgba(224, 70, 60, .9); }
+.part .faixa-l { position: absolute; left: 0; right: 0; background: rgba(255, 196, 0, .30); }
+pre.cifra, .letra { margin: 0; padding: 10px 12px; font: 15px/1.35 Menlo, Consolas, "Courier New", monospace; white-space: pre-wrap; word-wrap: break-word; }
   .letra { font-family: inherit; }
   pre.cifra .ac { color: #f2d16b; font-weight: 700; }
   pre.cifra .sec { color: #9aa3b2; }
@@ -178,6 +183,9 @@ var token = ler(CHAVE, ''), papel = ler('mgl.celular.papel', 'controle'), papelE
 var est = null, fonte = null, vivoEm = 0, tToast = 0, aba = 'controle', musica = [], ultimoVivo = null;
 var transp = {}; try { transp = JSON.parse(ler('mgl.celular.transp', '{}')) || {}; } catch (e) {}
 var tamCifra = +ler('mgl.celular.tamCifra', 15) || 15;
+// (1.8.6) cifra ou partitura: a última escolha vale para os outros cantos; cada canto lembra a sua
+var verPref = ler('mgl.celular.ver', 'cifra'), verCanto = {}; try { verCanto = JSON.parse(ler('mgl.celular.verCanto', '{}')) || {}; } catch (e) {}
+function verDe(m) { if (!(m.partitura && m.partitura.length)) return 'cifra'; if (!m.cifra) return 'partitura'; return verCanto[m.titulo] || verPref; }
 var INSTR = { c: 0, bb: 2, eb: -3, f: 7 }, instr = ler('mgl.celular.instr', 'c');
 if (!(instr in INSTR)) instr = 'c';
 
@@ -247,23 +255,76 @@ function htmlCifra(cifra, p) {
     return esc(l);
   }).join('\n');
 }
+// 🎼 etapa 3: a pauta onde começa o slide do telão (mapa da letra que veio do PDF)
+var ultimaPart = {};
+function soLetrasCel(s) { s = (s || '').toLowerCase(); if (s.normalize) s = s.normalize('NFD'); return s.replace(/[\u0300-\u036f]/g, '').replace(RX_MARCA_CRUA, '').replace(/^\s*([a-z]\.|r\/|—|-)\s*/, '').replace(/[^a-z]/g, ''); }
+function notaTrecho(slide, trecho) {
+  var g = {}, i, ok = 0, tot = 0;
+  for (i = 0; i + 5 <= trecho.length; i++) g[trecho.slice(i, i + 5)] = 1;
+  for (i = 0; i + 5 <= slide.length; i++) { tot++; if (g[slide.slice(i, i + 5)]) ok++; }
+  return tot ? ok / tot : 0;
+}
+function acharNaPartitura(mapa, texto, antes) {
+  var ls = (texto || '').split('\n'), sl = '', i, j, n, k;
+  for (i = 0; i < ls.length; i++) { var x = soLetrasCel(ls[i]); if (x.length >= 3) sl += x; }
+  if (sl.length < 6) return null;
+  var todas = [];
+  for (n = 0; n < mapa.length; n++) for (k = 0; mapa[n] && k < mapa[n].length; k++) todas.push({ n: n, k: k, l: mapa[n][k] });
+  var tams = [16, 10];
+  for (i = 0; i < tams.length; i++) {
+    var alvo = sl.slice(0, tams[i]), cands = [];
+    for (j = 0; j < todas.length; j++) {
+      var s = todas[j].l.t + (todas[j + 1] ? todas[j + 1].l.t : '') + (todas[j + 2] ? todas[j + 2].l.t : '');
+      var p = s.indexOf(alvo);
+      if (p >= 0 && p < todas[j].l.t.length) cands.push({ n: todas[j].n, k: todas[j].k, j: j, nota: notaTrecho(sl.slice(0, 80), s.slice(p)) });
+    }
+    if (!cands.length) continue;
+    // estrofes que começam igual: vale a que mais combina com o resto do slide; empate (refrão repetido) segue em frente
+    var melhor = 0, bons = [];
+    for (j = 0; j < cands.length; j++) if (cands[j].nota > melhor) melhor = cands[j].nota;
+    for (j = 0; j < cands.length; j++) if (cands[j].nota >= melhor - 0.04) bons.push(cands[j]);
+    if (antes) for (j = 0; j < bons.length; j++) if (bons[j].j > antes.j) return bons[j];
+    return bons[0];
+  }
+  return null;
+}
+var chavePart = '', tFaixa = 0;
+function centralizarFaixa() { var fp = $('faixaPart'); if (!fp) return; var r = fp.getBoundingClientRect(); window.scrollBy(0, r.top - (window.innerHeight || 600) / 2 + r.height / 2); }
 function renderCifras(rolar) {
   var vivo = est && est.vivoIdx != null ? est.vivoIdx : -1;
+  var slide = est && est.noAr ? est.noAr.slide : null, achado = null, mv = null;
+  for (var q = 0; q < musica.length; q++) if (musica[q].i === vivo) mv = musica[q];
+  if (mv && mv.partMapa && verDe(mv) === 'partitura') {
+    var ch = vivo + '|' + (est.noAr.idx != null ? est.noAr.idx : '') + '|' + ((slide && slide.texto) || '');
+    if (ch !== chavePart) { chavePart = ch; var a = acharNaPartitura(mv.partMapa, slide && slide.texto, ultimaPart[vivo]); if (a) ultimaPart[vivo] = a; else delete ultimaPart[vivo]; var novoPart = true; }
+    achado = ultimaPart[vivo] || null;
+  }
   document.documentElement.style.fontSize = '';
   $('mCantos').innerHTML = musica.length ? musica.map(function (m) {
     var pM = transp[m.titulo] || 0, p = pM + INSTR[instr];
     var tom = m.tom ? transpAcorde(m.tom, p) : (p ? (p > 0 ? '+' : '') + p : '—');
-    var soa = INSTR[instr] && m.cifra && m.tom ? '<div class="sutil">o grupo toca em ' + esc(transpAcorde(m.tom, pM)) + '</div>' : '';
+    var ver = verDe(m), temP = !!(m.partitura && m.partitura.length), largP = Math.round(100 * Math.max(1, tamCifra / 15)) + '%';
+    var soa = INSTR[instr] && m.cifra && m.tom && ver === 'cifra' ?'<div class="sutil">o grupo toca em ' + esc(transpAcorde(m.tom, pM)) + '</div>' : '';
     return '<div class="mc' + (m.i === vivo ? ' vivo' : '') + '" id="mc' + m.i + '"><div class="mc-cab">' +
-      (m.cifra ? '<span class="mc-tom"><button data-tr="' + esc(m.titulo) + '" data-p="-1">−</button><b>' + esc(tom) + '</b><button data-tr="' + esc(m.titulo) + '" data-p="1">+</button></span>' : '') +
+      (m.cifra && ver === 'cifra' ? '<span class="mc-tom"><button data-tr="' + esc(m.titulo) + '" data-p="-1">−</button><b>' + esc(tom) + '</b><button data-tr="' + esc(m.titulo) + '" data-p="1">+</button></span>' : '') +
       (m.i === vivo ? '<span class="noarm">no telão</span>' : '') +
       '<div class="mom">' + esc(m.momento) + '</div><div class="tt">' + esc(m.titulo) + '</div>' +
-      (m.autor ? '<div class="sutil">' + esc(m.autor) + '</div>' : '') + (m.deOutro ? '<div class="sutil">cifra de: ' + esc(m.deOutro) + '</div>' : '') + soa + '</div>' +
-      (m.cifra ? '<pre class="cifra" style="font-size:' + tamCifra + 'px">' + htmlCifra(m.cifra, p) + '</pre>'
+      (m.autor ? '<div class="sutil">' + esc(m.autor) + '</div>' : '') + (m.deOutro && ver === 'cifra' ? '<div class="sutil">cifra de: ' + esc(m.deOutro) + '</div>' : '') + soa +
+      (temP && m.cifra ? '<div class="mc-ver"><button data-ver="cifra" data-vt="' + esc(m.titulo) + '"' + (ver === 'cifra' ? ' class="sel"' : '') + '>🎸 Cifra</button> <button data-ver="partitura" data-vt="' + esc(m.titulo) + '"' + (ver === 'partitura' ? ' class="sel"' : '') + '>🎼 Partitura</button></div>' : '') + '</div>' +
+      (ver === 'partitura' ? '<div class="part">' + m.partitura.map(function (id, n) {
+        var fx = '', l = m.i === vivo && achado && achado.n === n && m.partMapa && m.partMapa[n] && m.partMapa[n][achado.k];
+        if (l) fx = '<div class="faixa" id="faixaPart" style="top:' + (l.a * 100) + '%;height:' + ((l.b - l.a) * 100) + '%"></div><div class="faixa-l" style="top:' + (l.la * 100) + '%;height:' + ((l.lb - l.la) * 100) + '%"></div>';
+        return '<span class="pg" style="width:' + largP + '"><img src="/api/partitura?t=' + encodeURIComponent(token) + '&id=' + encodeURIComponent(id) + '" alt="Partitura">' + fx + '</span>'; }).join('') + '</div>' :
+      m.cifra ? '<pre class="cifra" style="font-size:' + tamCifra + 'px">' + htmlCifra(m.cifra, p) + '</pre>'
         : '<div class="letra" style="font-size:' + tamCifra + 'px">' + esc(m.letra || 'Sem letra.').replace(RX_MARCA, trocaMarca).replace(/\n/g, '<br>') + '</div>') + '</div>';
   }).join('') : '<span class="vazia">Nenhum canto no roteiro aberto.</span>';
   // o canto que entrou no telão: a tela rola até ele
   if (rolar && vivo !== ultimoVivo) { ultimoVivo = vivo; var c = $('mc' + vivo); if (c) c.scrollIntoView(true); }
+  // partitura: a pauta nova entra no meio da tela
+  if (rolar && novoPart) { tFaixa = new Date().getTime(); centralizarFaixa(); }
+  // as páginas chegam depois e empurram a tela: quando uma carrega, a faixa volta para o meio (até 20 s depois)
+  var ims = document.querySelectorAll('.part img');
+  for (var u = 0; u < ims.length; u++) ims[u].onload = function () { if (new Date().getTime() - tFaixa < 20000) centralizarFaixa(); };
 }
 
 // ---------- controle ----------
@@ -426,6 +487,7 @@ document.addEventListener('click', function (e) {
     return;
   }
   if (b.id === 'mMenor' || b.id === 'mMaior') { tamCifra = Math.max(10, Math.min(28, tamCifra + (b.id === 'mMaior' ? 1 : -1))); gravar('mgl.celular.tamCifra', tamCifra); return renderCifras(false); }
+  if (b.getAttribute('data-ver')) { verPref = verCanto[b.getAttribute('data-vt')] = b.getAttribute('data-ver'); gravar('mgl.celular.ver', verPref); gravar('mgl.celular.verCanto', JSON.stringify(verCanto)); return renderCifras(false); }
   if (b.getAttribute('data-tr')) { var t = b.getAttribute('data-tr'); transp[t] = (transp[t] || 0) + +b.getAttribute('data-p'); gravar('mgl.celular.transp', JSON.stringify(transp)); return renderCifras(false); }
   if (b.getAttribute('data-cmd')) return cmd(b.getAttribute('data-cmd'));
   if (b.getAttribute('data-slide') !== null) return cmd('slide', { i: +b.getAttribute('data-slide') });

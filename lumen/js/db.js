@@ -4,8 +4,9 @@
 const DB = (() => {
   // v2: + 'midias' (vídeos e áudios, guardados como arquivo dentro do navegador)
   // v3: + 'oracoes'
-  const NOME = 'lumen', VERSAO = 3;
-  const STORES = ['biblias', 'cantos', 'roteiros', 'config', 'midias', 'oracoes'];
+  // v4: + 'partituras' (1.8.6: as páginas da partitura de cada canto, id = id do canto; separadas para os cantos ficarem leves)
+  const NOME = 'lumen', VERSAO = 4;
+  const STORES = ['biblias', 'cantos', 'roteiros', 'config', 'midias', 'oracoes', 'partituras'];
   let conexao;
 
   // Se o banco não responder (já aconteceu logo depois de o Windows atualizar o WebView2), não fica
@@ -37,7 +38,7 @@ const DB = (() => {
 
   // O que vai para a nuvem ganha a data da última mudança ("atualizado"); a sincronização usa isso para saber o mais novo.
   // { daNuvem: true } = gravação vinda da própria sincronização (não carimba nem marca como pendente).
-  const carimbar = (store, obj) => ['roteiros', 'cantos', 'oracoes', 'biblias'].includes(store)
+  const carimbar = (store, obj) => ['roteiros', 'cantos', 'oracoes', 'biblias', 'partituras'].includes(store)
     || (store === 'midias' && obj?.tipo === 'apresentacao')
     // (1.6.5) avisos, perfis e Pix também: sem a data da mudança, só a 1ª versão subia e as mudanças não chegavam aos outros computadores
     || (store === 'config' && ['agenda', 'eucaristia', 'avisos', 'perfis', 'pix', 'ordinario', 'links', 'joyPerfis', 'classificacoes', 'tercos'].includes(obj?.id));

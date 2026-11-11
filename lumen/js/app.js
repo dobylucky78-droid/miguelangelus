@@ -1,4 +1,4 @@
-﻿'use strict';
+'use strict';
 /* MiguelAngelus — painel do operador. Controla a prévia e a janela de projeção via postMessage. */
 
 const $ = (s, r = document) => r.querySelector(s);
@@ -1599,6 +1599,7 @@ function renderCabecalho() {
       break;
     }
   }
+  if (noRoteiro && it.partituraId) h += htmlPartituraDoItem(it);
   if (noRoteiro && !['imagem', 'midia', 'avisos'].includes(it.tipo)) h += htmlFundoItem(it);
   el.innerHTML = h;
   atualizarStatusRef();
@@ -1913,6 +1914,7 @@ function abrirEditorCanto(canto, momento, aoSalvar) {
   f.cifra.value = c.cifra || '';
   travarFavoritoSemCifra();
   $('#cxCifra').open = !!c.cifra;
+  abrirPartituraNoEditor(c);            // partituras.js
   $('#btnExcluirCanto').hidden = !c.id;
   aoSalvarCanto = aoSalvar || null;
   const dlg = $('#dlgCanto');
@@ -1949,6 +1951,7 @@ async function salvarCantoDoEditor() {
     cifra: f.cifra.value.replace(/\r/g, '').replace(/\s+$/, ''),
   };
   await DB.salvar('cantos', c);
+  await salvarPartituraDoCanto(c);      // partituras.js: só se mexeu na partitura
   const i = S.cantos.findIndex(x => x.id === c.id);
   if (i < 0) S.cantos.push(c); else S.cantos[i] = c;
   if (aoSalvarCanto) aoSalvarCanto(c);
@@ -2657,7 +2660,7 @@ function baixar(nome, texto) {
 
 function exportarBackup() {
   const dados = { app: 'lumen', versao: 1, exportado: new Date().toISOString(), config: S.config, cantos: S.cantos, roteiros: S.roteiros, oracoes: Oracoes.lista, agenda: Agenda.dados, eucaristia: Euc.dados,
-    apresentacoes: Midia.lista.filter(m => m.tipo === 'apresentacao') };
+    apresentacoes: Midia.lista.filter(m => m.tipo === 'apresentacao'), partituras: [...Partituras.lista.values()] };
   baixar(`miguelangelus-backup-${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify(dados, null, 1));
 }
 
@@ -2676,6 +2679,7 @@ async function importarBackup(arquivo) {
     }
     for (const r of d.roteiros || []) await DB.salvar('roteiros', r);
     for (const a of d.apresentacoes || []) if (a.tipo === 'apresentacao') await DB.salvar('midias', a);
+    for (const p of d.partituras || []) if (p?.id && p.paginas?.length) await DB.salvar('partituras', p);   // (1.8.6)
     if (d.config) { Object.assign(S.config, d.config); await DB.salvar('config', { id: 'geral', valor: S.config }); }
     location.reload();
   } catch (err) {
@@ -2793,6 +2797,7 @@ function ligarEventos() {
     if (cmd === 'editarOrdinario') return abrirEditorOrdinario(it.parte);
     if (cmd === 'fundoEscolher') return $('#arqFundoItem').click();
     if (cmd === 'fundoTirar') { delete it.fundoImg; it.usarFundo = false; return aposMudarFundoItem(); }
+    if (cmd === 'partituraTirar') return tirarPartituraDoItem(it);
     if (cmd === 'editarCanto') {
       const c = S.cantos.find(c => c.id === it.cantoId);
       if (c) abrirEditorCanto(c);
@@ -3065,9 +3070,12 @@ function ligarEventos() {
         'OK = abrir esse canto (não cria outro)\nCancelar = salvar este como um canto novo')) {
         e.preventDefault();
         const digitado = { cifra: f.cifra.value.trim(), tom: f.tom.value.trim(), autor: f.autor.value.trim(), cd: f.cd.value.trim(), favorito: f.favorito.checked };
+        const partNova = Partituras.mudou && Partituras.editando?.length ? Partituras.editando : null;
         const depois = aoSalvarCanto;
         $('#dlgCanto').close();
         abrirEditorCanto(p, null, depois);
+        // a partitura carregada no novo vai para o existente, se ele não tiver
+        if (partNova && !Partituras.editando.length) { Partituras.editando = partNova; Partituras.mudou = true; $('#cxPartitura').open = true; renderPartituraEditor(); }
         // o que foi digitado no novo (cifra, tom, ficha, favorito) vai para os campos vazios do existente
         let levou = false;
         for (const k of ['cifra', 'tom', 'autor', 'cd']) if (digitado[k] && !f[k].value.trim()) { f[k].value = digitado[k]; levou = true; }
@@ -3083,6 +3091,7 @@ function ligarEventos() {
     const id = $('#formCanto').dataset.id;
     if (!id || !confirm('Excluir este canto? Os roteiros que o usam ficarão com o espaço vazio.')) return;
     await DB.remover('cantos', id);
+    await apagarPartituraDoCanto(id);
     S.cantos = S.cantos.filter(c => c.id !== id);
     $('#dlgCanto').close('');
     if (S.atual?.rIdx < 0 && S.atual.item.cantoId === id) S.atual = null;
@@ -3190,6 +3199,7 @@ async function iniciar() {
 
   statusAbertura('Carregando cantos e roteiros…');
   S.cantos = await DB.todos('cantos');
+  await carregarPartituras();           // partituras.js (1.8.6)
   S.roteiros = await DB.todos('roteiros');
   Midia.lista = await DB.todos('midias');
   statusAbertura('Carregando orações, Agenda e Bíblia…');
@@ -3248,6 +3258,7 @@ async function iniciar() {
   ligarFormatacao();
   ligarCowabunga();
   ligarCifras();
+  ligarPartituras();
   ligarCelular();
   ligarLinks();                          // links.js: botões de links no celular (mesa de som…)
   ligarJoystick();                       // joystick.js: até 2 joysticks (câmeras PTZ e telão), Ajustes → 🎮 Joysticks
@@ -3269,7 +3280,7 @@ async function iniciar() {
   renderCabecalho();
   renderEstadoProj();
   // a versão vem da entrada mais nova das Novidades (atualizada a cada versão), para o Sobre nunca ficar para trás
-  const versaoApp = (typeof NOVIDADES !== 'undefined' && NOVIDADES[0]?.versao) || '1.8.5';
+  const versaoApp = (typeof NOVIDADES !== 'undefined' && NOVIDADES[0]?.versao) || '1.8.6';
   $('#versaoApp').textContent = `Versão ${versaoApp} · ` + (NO_APP ? 'aplicativo para Windows' : 'no navegador');
   document.querySelectorAll('[data-versao]').forEach(e => e.textContent = 'Versão ' + versaoApp);
   // pede armazenamento permanente (o navegador não apaga os dados para liberar espaço)

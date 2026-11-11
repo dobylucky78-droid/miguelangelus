@@ -104,6 +104,7 @@ function acaoMenu(acao) {
     case 'ajustes': return abrirAjustes();
     case 'celular': return abrirAjustes('celular');
     case 'folhetoOnline': return abrirFolhetosOnline();
+    case 'partiturasFolheto': return abrirPartiturasFolheto();
     case 'liturgiaDia': return abrirLiturgiaDoDia();
     case 'agenda-calendario': return abrirAgenda('calendario');
     case 'agenda-celebracoes': return abrirAgenda('celebracoes');

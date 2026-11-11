@@ -19,6 +19,7 @@ const GRUPOS_SYNC = [
   { sub: 'oracoes', store: 'oracoes' },
   { sub: 'apresentacoes', store: 'midias', filtro: r => r.tipo === 'apresentacao' },
   { sub: 'biblias', store: 'biblias', filtro: r => !r.junto },   // a Bíblia que vem com o programa não sobe (todos já a têm)
+  { sub: 'partituras', store: 'partituras' },                   // (1.8.6) páginas da partitura de cada canto (JPEG)
 ];
 const ligadaSync = () => NO_APP && (S.config.syncModo === 'google' || (S.config.syncModo === 'pasta' && S.config.syncPasta));
 
@@ -157,7 +158,7 @@ async function puxarSync() {
 }
 
 // ---------- enviar (ao fechar e de tempos em tempos) ----------
-const NOME_GRUPO = { config: 'agenda e ajustes', roteiros: 'roteiros', cantos: 'cantos', oracoes: 'orações', apresentacoes: 'apresentações', biblias: 'Bíblias' };
+const NOME_GRUPO = { config: 'agenda e ajustes', roteiros: 'roteiros', cantos: 'cantos', oracoes: 'orações', apresentacoes: 'apresentações', biblias: 'Bíblias', partituras: 'partituras' };
 const mudadosDe = async g => (await DB.todos(g.store)).filter(r => !g.filtro || g.filtro(r))
   .filter(r => { const k = `${g.store}:${r.id}`; return !(k in Sync.estado.enviados) || (r.atualizado || 0) > Sync.estado.enviados[k]; });
 
@@ -227,6 +228,7 @@ async function sincronizarAgora({ silencioso = false } = {}) {
 // Depois de receber coisas de outro computador com o programa já aberto
 async function recarregarDadosDaNuvem() {
   S.cantos = await DB.todos('cantos');
+  if (typeof carregarPartituras === 'function') await carregarPartituras();   // (1.8.6)
   const roteiros = await DB.todos('roteiros');
   if (roteiros.length) {
     const ativo = S.roteiro?.id;
@@ -487,7 +489,7 @@ function ligarSincronia() {
   DB.aoMudar = () => { Sync.sujo = true; renderSync(); };
   DB.aoRemover = (store, id) => {
     const apresentacao = store === 'midias' && Midia.lista.find(m => m.id === id)?.tipo === 'apresentacao';
-    if (!['roteiros', 'cantos', 'oracoes', 'biblias'].includes(store) && !apresentacao) return;
+    if (!['roteiros', 'cantos', 'oracoes', 'biblias', 'partituras'].includes(store) && !apresentacao) return;
     Sync.estado.removidos.push({ store, id, quando: Date.now(), apresentacao });
     Sync.sujo = true; salvarEstadoSync(); renderSync();
   };

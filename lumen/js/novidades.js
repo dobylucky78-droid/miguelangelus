@@ -5,6 +5,13 @@
  * A versão mais nova fica em cima. Ao gerar uma versão nova, acrescente a entrada dela aqui.
  */
 const NOVIDADES = [
+  { versao: '1.8.6', data: '2026-11-11', itens: [
+    '🎼 Partitura dos cantos: no cadastro do canto, abaixo da cifra, "🎼 Partitura para os músicos" → Carregar PDF ou imagem. No PDF do folheto (como o "Povo de Deus" de São Paulo, com várias músicas), você toca nas páginas daquele canto — as que têm o título dele já vêm marcadas — e as margens brancas saem sozinhas. Também aceita foto ou imagem da partitura. Sincroniza com a nuvem junto com os cantos.',
+    '🎸🎼 No app dos músicos, o canto que tem as duas mostra os botões "Cifra | Partitura": cada músico escolhe o que quer ver (quem toca violão fica na cifra; sopro e teclado, na partitura). A escolha fica guardada no aparelho e vale para os próximos cantos. A− e A+ ampliam a partitura. Só aparelhos pareados recebem as partituras.',
+    '🎼 Partituras do folheto (Roteiros → "🎼 Partituras do folheto", ou Ferramentas): abra o PDF de partituras do domingo inteiro — ou baixe direto do site da Arquidiocese de São Paulo (Folheto Povo de Deus) — e o MiguelAngelus separa as músicas pelo título e liga cada uma ao canto do roteiro aberto: pela letra, mesmo que o nome seja um pouco diferente. A antífona e o salmo vão para o item deles no roteiro; canto que ainda não existe vira canto novo, no lugar vazio do momento (confira a letra, que vem da partitura). Você confere tudo antes de guardar.',
+    '🎯 Na partitura, o celular mostra onde o telão está: a pauta do slide no ar ganha uma faixa vermelha clara e a linha da letra fica marcada em amarelo, e a tela rola até ela. Separa as estrofes que começam igual e segue em frente no refrão repetido. Vale para partitura de PDF digital (o caderno de São Paulo, por exemplo).',
+    '🙏 Ideia do Luciano, da Paróquia Santa Marina (Vila Carrão, São Paulo).',
+  ] },
   { versao: '1.8.5', data: '2026-11-10', itens: [
     '📡 O telão inteiro por NDI: em Ajustes → Transmissão (NDI → OBS), marque "Transmitir também o telão inteiro". Vai a mesma imagem da janela de projeção — fundo, imagens, vídeos, Pix — com o nome "MiguelAngelus Telão". No MiguelAngelus Cast de outro computador da rede ele aparece sozinho, em primeiro, no "+ Cena". Só pesa enquanto algum programa está recebendo. A projeção precisa estar aberta (pode ficar atrás de outras janelas, mas não minimizada).',
     '🔗 O roteiro do MiguelAngelus Cast acompanha o telão: a cada troca de slide, o MiguelAngelus avisa o Cast da rede (só o nome do item e o número do slide). Perto do fim de cada item, o Cast já prepara a cena e a câmera do próximo momento. Precisa do Controle pelo celular ligado.',

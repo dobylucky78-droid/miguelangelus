@@ -198,7 +198,11 @@ function agendarEstadoCelular() {
     // cantos com cifra do roteiro (app dos músicos): separado e só quando muda
     try {
       const mu = musicaCelular(), jm = JSON.stringify(mu);
-      if (jm !== Cel.ultimaMusica) { Cel.ultimaMusica = jm; postarApp({ tipo: 'celular', acao: 'musica', musica: mu }); }
+      if (jm !== Cel.ultimaMusica) {
+        Cel.ultimaMusica = jm;
+        enviarPartiturasCelular(mu);          // partituras.js: as páginas (uma vez cada) antes da lista
+        postarApp({ tipo: 'celular', acao: 'musica', musica: mu });
+      }
     } catch (err) { console.warn('cifras do celular', err); }
     enviarAgendaCast();
     try {
@@ -355,7 +359,7 @@ function ligarCelular() {
   $('#celLigado').addEventListener('change', e => {
     S.config.celularLigado = e.target.checked;
     salvarConfig();
-    Cel.info = null; Cel.ultimo = ''; Cel.ultimaMusica = '';
+    Cel.info = null; Cel.ultimo = ''; Cel.ultimaMusica = ''; Partituras.enviadas.clear();
     postarApp({ tipo: 'celular', acao: e.target.checked ? 'ligar' : 'desligar' });
     renderCelular();
   });
@@ -383,7 +387,7 @@ function ligarCelular() {
         const ligouAgora = m.ligado && !Cel.info?.ligado;
         Cel.info = m;
         renderCelular();
-        if (ligouAgora) Cel.ultimaMusica = '';
+        if (ligouAgora) { Cel.ultimaMusica = ''; Partituras.enviadas.clear(); }   // o servidor do celular começa sem as partituras
         if (ligouAgora || m.aparelhos?.some(p => p.online)) { Cel.ultimo = ''; agendarEstadoCelular(); }   // quem acabou de entrar recebe o estado
       } else if (m?.tipo === 'celularComando' && m.comando) {
         try { comandoCelular(m.comando); } catch (err) { console.warn('comando do celular', err); }

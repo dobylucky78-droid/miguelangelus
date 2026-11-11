@@ -167,6 +167,17 @@
   .cifra .agora { background: rgba(224, 70, 60, .22); border-radius: 4px; }
   .mc .sem { padding: 10px 12px 14px; font-size: var(--tam-cifra, 15px); white-space: pre-wrap; color: #c9d1de; }
   .mc .sem .agora { background: rgba(224, 70, 60, .22); }
+  /* 🎼 partitura (1.8.6): páginas em fundo branco; A−/A+ ampliam (rola para o lado) */
+  .mc-ver { display: flex; flex: none; border: 1px solid var(--borda); border-radius: 8px; overflow: hidden; }
+  .mc-ver button { border: 0; border-radius: 0; padding: 5px 9px; font-size: 13px; background: transparent; }
+  .mc-ver button.sel { background: var(--acento); color: #1b1503; font-weight: 700; }
+  .part { background: #fff; overflow-x: auto; padding: 4px 0; }
+  .part .pg { display: block; position: relative; width: calc(var(--zoom-part, 1) * 100%); margin: 0 auto 6px; }
+  .part img { display: block; width: 100%; max-width: none; height: auto; margin: 0; }
+  /* 🎼 etapa 3: a pauta do que está no telão (faixa) e a linha da letra (marca-texto) */
+  .part .faixa { position: absolute; left: 0; right: 0; background: rgba(224, 70, 60, .10); border-left: 6px solid rgba(224, 70, 60, .9); border-radius: 3px; pointer-events: none; }
+  .part .faixa-l { position: absolute; left: 0; right: 0; background: rgba(255, 196, 0, .30); pointer-events: none; }
+  .part .falta { color: #555; padding: 14px; font-size: 14px; }
   .mc .cc { margin: 0 12px 12px; display: inline-block; text-decoration: none; color: #1b1503; background: var(--acento); padding: 9px 12px; border-radius: 10px; font-weight: 600; font-size: 14px; }
   .ptz-pos { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
   .ptz-pos button { padding: 10px 12px; font-size: 14px; }
@@ -210,7 +221,7 @@
     <input id="parNome" maxlength="40" placeholder="Celular da PASCOM"></div>
   <div class="campo"><label>Este aparelho é para</label>
     <div class="papeis tres"><button id="papelControle" class="sel" type="button">📱 Controle<small>PASCOM</small></button>
-      <button id="papelMusico" type="button">🎸 Músico<small>só as cifras</small></button>
+      <button id="papelMusico" type="button">🎸 Músico<small>cifras e partituras</small></button>
       <button id="papelTelao" type="button">📺 Telão<small>só ver o slide</small></button></div></div>
   <button id="parOk" class="acao">Conectar</button>
   <div id="parErro" class="erro"></div>
@@ -514,8 +525,18 @@ function render() {
 let papel = ''; try { papel = localStorage.getItem('mgl.celular.papel') || ''; } catch (_) {}
 let papelEscolhido = 'controle', musica = [], chaveMusica = '';
 const ultimaLinha = {};                               // por canto: última linha destacada (o refrão se repete; segue em frente)
+const ultimaPart = {};                                // 🎼 por canto: último lugar destacado na partitura
 let transp = {}; try { transp = JSON.parse(localStorage.getItem('mgl.celular.transp') || '{}'); } catch (_) {}
 let tamCifra = 15; try { tamCifra = +localStorage.getItem('mgl.celular.tamCifra') || 15; } catch (_) {}
+// 🎼 (1.8.6) cifra ou partitura: a última escolha vale para os outros cantos; cada canto lembra a sua (só neste aparelho)
+let verPref = 'cifra', verCanto = {};
+try { verPref = localStorage.getItem('mgl.celular.ver') || 'cifra'; verCanto = JSON.parse(localStorage.getItem('mgl.celular.verCanto') || '{}'); } catch (_) {}
+const urlPartitura = id => '/api/partitura?t=' + encodeURIComponent(token) + '&id=' + encodeURIComponent(id);
+function verDe(m) {
+  if (!(m.partitura && m.partitura.length)) return 'cifra';
+  if (!m.cifra) return 'partitura';
+  return verCanto[m.titulo] || verPref;
+}
 // Meu instrumento (instrumentos transpositores): o músico lê no tom do instrumento, que soa junto com os outros.
 // Si♭ lê 1 tom acima do som real; Mi♭ lê 1 tom e meio abaixo; Fá lê uma quinta acima. Só neste aparelho.
 const INSTR = { c: 0, bb: 2, eb: -3, f: 7 };
@@ -557,8 +578,9 @@ function htmlCifra(m, passos) {
 function renderMusico(refazer) {
   if (papel !== 'musico' && aba !== 'musico') return;    // controle: só quando a aba 🎸 Cifras está aberta
   document.documentElement.style.setProperty('--tam-cifra', tamCifra + 'px');
+  document.documentElement.style.setProperty('--zoom-part', Math.max(1, tamCifra / 15).toFixed(2));
   const vivo = est && est.vivoIdx != null ? est.vivoIdx : -1;
-  const chave = JSON.stringify(musica) + JSON.stringify(transp) + instr;
+  const chave = JSON.stringify(musica) + JSON.stringify(transp) + instr + verPref + JSON.stringify(verCanto);
   if (refazer || chave !== chaveMusica) {
     chaveMusica = chave;
     $('#mCantos').innerHTML = musica.length ? musica.map(m => {
@@ -566,11 +588,15 @@ function renderMusico(refazer) {
       const tom = m.tom ? transpAcorde(m.tom, p) : (p ? (p > 0 ? '+' : '') + p : '—');
       // instrumento transpositor: lembra o tom em que a música soa (o dos outros músicos)
       const soa = INSTR[instr] && m.cifra && m.tom ? `<div class="sutil">o grupo toca em ${esc(transpAcorde(m.tom, pMusica))}</div>` : '';
+      const ver = verDe(m), temP = !!(m.partitura && m.partitura.length);
+      const troca = temP && m.cifra ? `<div class="mc-ver"><button data-ver="cifra" data-vt="${esc(m.titulo)}" class="${ver === 'cifra' ? 'sel' : ''}">🎸 Cifra</button><button data-ver="partitura" data-vt="${esc(m.titulo)}" class="${ver === 'partitura' ? 'sel' : ''}">🎼 Partitura</button></div>` : '';
       return `<div class="mc" data-i="${m.i}">
-        <div class="mc-cab"><div class="tt"><div class="mom">${esc(m.momento)}</div>${esc(m.titulo)}${m.autor ? `<div class="sutil">${esc(m.autor)}</div>` : ''}${m.deOutro ? `<div class="sutil">cifra de: ${esc(m.deOutro)}</div>` : ''}${soa}</div>
+        <div class="mc-cab"><div class="tt"><div class="mom">${esc(m.momento)}</div>${esc(m.titulo)}${m.autor ? `<div class="sutil">${esc(m.autor)}</div>` : ''}${m.deOutro && ver === 'cifra' ? `<div class="sutil">cifra de: ${esc(m.deOutro)}</div>` : ''}${ver === 'cifra' ? soa : ''}</div>
           <span class="noar" hidden>no telão</span>
-          ${m.cifra ? `<div class="mc-tom"><button data-tr="${esc(m.titulo)}" data-p="-1">−</button><b title="Tom">${esc(tom)}</b><button data-tr="${esc(m.titulo)}" data-p="1">+</button></div>` : ''}</div>
-        ${m.cifra ? `<pre class="cifra">${htmlCifra(m, p)}</pre>`
+          ${troca}
+          ${m.cifra && ver === 'cifra' ? `<div class="mc-tom"><button data-tr="${esc(m.titulo)}" data-p="-1">−</button><b title="Tom">${esc(tom)}</b><button data-tr="${esc(m.titulo)}" data-p="1">+</button></div>` : ''}</div>
+        ${ver === 'partitura' ? `<div class="part">${m.partitura.map((id, n) => `<span class="pg" data-n="${n}"><img src="${urlPartitura(id)}" alt="Partitura, página ${n + 1}" data-tent="0"></span>`).join('')}</div>`
+        : m.cifra ? `<pre class="cifra">${htmlCifra(m, p)}</pre>`
           : `<div class="sem">${(m.letra || 'Sem letra.').split('\n').map((l, k) => `<span class="l" data-k="${k}">${esc(l).replace(RX_MARCA, trocaMarca) || ' '}</span>`).join('\n')}</div>
              ${m.rezado ? '' : `<a class="cc" href="https://www.cifraclub.com.br/?q=${encodeURIComponent(m.titulo)}" target="_blank" rel="noopener">🔎 Abrir no Cifra Club</a>`}`}
       </div>`;
@@ -579,6 +605,7 @@ function renderMusico(refazer) {
   // o canto que está no telão: borda vermelha e a linha cantada agora destacada
   $$('#mCantos .mc').forEach(c => { const v = +c.dataset.i === vivo; c.classList.toggle('vivo', v); c.querySelector('.noar').hidden = !v; });
   $$('#mCantos .agora').forEach(x => x.classList.remove('agora'));
+  $$('#mCantos .faixa, #mCantos .faixa-l').forEach(x => x.remove());
   const card = $(`#mCantos .mc[data-i="${vivo}"]`);
   if (!card) return;
   const slide = est && est.noAr ? est.noAr.slide : null;
@@ -587,6 +614,7 @@ function renderMusico(refazer) {
   if (chaveSlide === renderMusico.ultimo) {
     const el = card.querySelector(`.l[data-k="${ultimaLinha[vivo]}"]`);
     if (el) { el.classList.add('agora'); const a = el.previousElementSibling; if (a && a.classList.contains('ac')) a.classList.add('agora'); }
+    if (ultimaPart[vivo]) desenharFaixa(card, ultimaPart[vivo]);
     return;
   }
   const mudou = chaveSlide !== renderMusico.ultimo;
@@ -594,7 +622,13 @@ function renderMusico(refazer) {
   // começo da 1ª linha do slide (no slide a frase pode vir inteira; na cifra, quebrada em linhas curtas)
   const alvo = palavras(((slide && slide.texto) || '').split('\n').find(l => palavras(l).length) || '').slice(0, 6);
   let marcada = null;
-  if (alvo.length) {
+  // 🎼 partitura: a pauta onde começa o slide (pelo mapa da letra que veio do PDF)
+  const mv = musica.find(x => x.i === vivo);
+  if (mv && verDe(mv) === 'partitura' && mv.partMapa) {
+    const achado = acharNaPartitura(mv.partMapa, slide && slide.texto, ultimaPart[vivo]);
+    if (achado) { ultimaPart[vivo] = achado; marcada = desenharFaixa(card, achado); }
+  }
+  if (alvo.length && !marcada) {
     const linhas = [...card.querySelectorAll('.l:not(.ac):not(.tb):not(.sec)')];
     const cand = linhas.map(el => {
       const w = palavras(el.textContent).slice(0, 6);
@@ -614,6 +648,56 @@ function renderMusico(refazer) {
     }
   }
   if (mudou && $('#mSeguir').checked) (marcada || card).scrollIntoView({ block: marcada ? 'center' : 'start', behavior: 'smooth' });
+}
+
+// 🎼 etapa 3: acha o começo do slide na letra da partitura (só as letras: o PDF separa as sílabas) e desenha a faixa
+const soLetrasCel = s => (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(RX_MARCA_CRUA, '').replace(/^\s*([a-z]\.|r\/|—|-)\s*/, '').replace(/[^a-z]/g, '');
+// quanto do começo do slide aparece neste trecho da letra (pedaços de 5 letras)
+function notaTrecho(slide, trecho) {
+  const g = new Set(); for (let i = 0; i + 5 <= trecho.length; i++) g.add(trecho.slice(i, i + 5));
+  let ok = 0, tot = 0; for (let i = 0; i + 5 <= slide.length; i++) { tot++; if (g.has(slide.slice(i, i + 5))) ok++; }
+  return tot ? ok / tot : 0;
+}
+function acharNaPartitura(mapa, texto, antes) {
+  const sl = (texto || '').split('\n').map(soLetrasCel).filter(x => x.length >= 3).join('');
+  if (sl.length < 6) return null;
+  const todas = [];
+  mapa.forEach((pg, n) => (pg || []).forEach((l, k) => todas.push({ n, k, l })));
+  for (const tam of [16, 10]) {
+    const alvo = sl.slice(0, tam);
+    const cands = [];
+    todas.forEach((x, j) => {
+      const s = x.l.t + (todas[j + 1] ? todas[j + 1].l.t : '') + (todas[j + 2] ? todas[j + 2].l.t : '');
+      const p = s.indexOf(alvo);
+      if (p >= 0 && p < x.l.t.length) cands.push({ n: x.n, k: x.k, j, nota: notaTrecho(sl.slice(0, 80), s.slice(p)) });
+    });
+    if (!cands.length) continue;
+    // estrofes que começam igual: vale a que mais combina com o resto do slide; empate (refrão repetido) segue em frente
+    const melhor = Math.max(...cands.map(c => c.nota));
+    const bons = cands.filter(c => c.nota >= melhor - 0.04);
+    return (antes && bons.find(c => c.j > antes.j)) || bons[0];
+  }
+  return null;
+}
+// as páginas da partitura chegam depois e empurram a tela: quando uma carrega, a faixa volta para o meio (até 20 s depois)
+let rolouFaixa = 0;
+document.addEventListener('load', e => {
+  if (e.target.tagName !== 'IMG' || !e.target.closest('.part') || Date.now() - rolouFaixa > 20000 || !$('#mSeguir').checked) return;
+  clearTimeout(desenharFaixa.t);
+  desenharFaixa.t = setTimeout(() => { const f = $('#mCantos .part .faixa'); if (f) f.scrollIntoView({ block: 'center' }); }, 150);
+}, true);
+function desenharFaixa(card, a) {
+  rolouFaixa = Date.now();
+  const pg = card.querySelector('.pg[data-n="' + a.n + '"]');
+  const mv = musica.find(x => String(x.i) === card.dataset.i);
+  const l = mv && mv.partMapa && mv.partMapa[a.n] && mv.partMapa[a.n][a.k];
+  if (!pg || !l) return null;
+  const f = document.createElement('div');
+  f.className = 'faixa'; f.style.top = (l.a * 100) + '%'; f.style.height = ((l.b - l.a) * 100) + '%';
+  const m = document.createElement('div');
+  m.className = 'faixa-l'; m.style.top = (l.la * 100) + '%'; m.style.height = ((l.lb - l.la) * 100) + '%';
+  pg.appendChild(f); pg.appendChild(m);
+  return f;
 }
 
 function aplicarPapel() {
@@ -824,6 +908,11 @@ document.addEventListener('click', e => {
   if (b.dataset.camera !== undefined) return cmd('camera', { id: b.dataset.camera });
   if (b.dataset.tema) return cmd('tema', { id: b.dataset.tema });
   if (b.id === 'papelControle' || b.id === 'papelMusico' || b.id === 'papelTelao') return escolherPapel(b.id === 'papelMusico' ? 'musico' : b.id === 'papelTelao' ? 'telao' : 'controle');
+  if (b.dataset.ver) {     // 🎼 cifra ou partitura neste canto; vira o padrão dos outros
+    verCanto[b.dataset.vt] = verPref = b.dataset.ver;
+    try { localStorage.setItem('mgl.celular.ver', verPref); localStorage.setItem('mgl.celular.verCanto', JSON.stringify(verCanto)); } catch (_) {}
+    return renderMusico(true);
+  }
   if (b.dataset.tr) { transp[b.dataset.tr] = (transp[b.dataset.tr] || 0) + +b.dataset.p; try { localStorage.setItem('mgl.celular.transp', JSON.stringify(transp)); } catch (_) {} return renderMusico(true); }
   if (b.id === 'mMenor' || b.id === 'mMaior') { tamCifra = Math.max(10, Math.min(28, tamCifra + (b.id === 'mMaior' ? 1 : -1))); try { localStorage.setItem('mgl.celular.tamCifra', tamCifra); } catch (_) {} return renderMusico(); }
   if (b.id === 'btTrocar') { trocando = !trocando; renderRoteiros(); $('main').scrollTop = 0; return; }
@@ -837,6 +926,14 @@ document.addEventListener('click', e => {
   if (b.dataset.salvo) { cmd('avisoSalvo', { i: +b.dataset.salvo }); $('#folhaAviso').hidden = true; return toast('Aviso no telão'); }
   if (b.dataset.rec) { cmd('avisoRecente', { i: +b.dataset.rec }); $('#folhaAviso').hidden = true; return toast('Aviso no telão'); }
 });
+// página da partitura que ainda não chegou ao computador (acabou de ser enviada): tenta de novo algumas vezes
+$('#mCantos').addEventListener('error', e => {
+  const img = e.target; if (!img || img.tagName !== 'IMG') return;
+  const n = +img.dataset.tent || 0;
+  if (n >= 6) { img.outerHTML = '<div class="falta">Página da partitura não chegou. Feche e abra o app.</div>'; return; }
+  img.dataset.tent = n + 1;
+  setTimeout(() => { img.src = img.src.replace(/&_=\d+$/, '') + '&_=' + Date.now(); }, 1500);
+}, true);
 $('#btAviso').addEventListener('click', () => { $('#folhaAviso').hidden = false; $('#avTexto').value = ''; });
 $('#avFechar').addEventListener('click', () => $('#folhaAviso').hidden = true);
 $('#folhaAviso').addEventListener('click', e => { if (e.target.id === 'folhaAviso') $('#folhaAviso').hidden = true; });

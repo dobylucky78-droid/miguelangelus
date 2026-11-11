@@ -385,6 +385,10 @@ namespace MiguelAngelus
                 case "musica": if (celular != null && celular.Ligado && m.TryGetValue("musica", out var mu)) celular.AtualizarMusica(json.Serialize(mu)); break;
                 case "agendaCast": if (celular != null && m.TryGetValue("agenda", out var ag)) celular.AgendaCast = json.Serialize(ag); break;   // (1.8.1)
                 case "aoVivoCast": if (celular != null && m.TryGetValue("dados", out var av)) celular.AoVivoCast = json.Serialize(av); break;   // (1.8.5)
+                case "partitura":   // (1.8.6) página de partitura (JPEG, data URL) para o app dos músicos
+                    if (celular != null && m.TryGetValue("id", out var pid) && m.TryGetValue("jpeg", out var pj) && pj is string pdu && pdu.StartsWith("data:image/jpeg;base64,"))
+                        try { celular.GuardarPartitura(Convert.ToString(pid), Convert.FromBase64String(pdu.Substring(23))); } catch { }
+                    break;
                 case "capaCast":   // (1.8.2) ilustração do folheto em JPEG (data URL) para o Cast
                     if (celular != null && m.TryGetValue("id", out var cid) && m.TryGetValue("jpeg", out var cj) && cj is string du)
                     {

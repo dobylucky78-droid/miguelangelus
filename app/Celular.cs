@@ -57,6 +57,25 @@ namespace MiguelAngelus
                 while (ordemCapas.Count > 12) capasCast.Remove(ordemCapas.Dequeue());
             }
         }
+        // (1.8.6) páginas de partitura (JPEG) dos cantos do roteiro, por id "canto.versão.n"; só na memória, até ~80 MB.
+        // Só aparelhos pareados (token) recebem: partitura tem direito autoral.
+        readonly Dictionary<string, byte[]> partituras = new Dictionary<string, byte[]>();
+        readonly Queue<string> ordemPartituras = new Queue<string>();
+        long bytesPartituras;
+        internal void GuardarPartitura(string id, byte[] jpeg)
+        {
+            if (string.IsNullOrEmpty(id) || id.Length > 80 || jpeg.Length > 12 * 1024 * 1024) return;
+            lock (trava)
+            {
+                if (partituras.TryGetValue(id, out var velho)) bytesPartituras -= velho.Length; else ordemPartituras.Enqueue(id);
+                partituras[id] = jpeg; bytesPartituras += jpeg.Length;
+                while (bytesPartituras > 80L * 1024 * 1024 && ordemPartituras.Count > 1)
+                {
+                    var sai = ordemPartituras.Dequeue();
+                    if (partituras.TryGetValue(sai, out var b)) { bytesPartituras -= b.Length; partituras.Remove(sai); }
+                }
+            }
+        }
         internal bool Ligado => escuta != null;
         internal string Erro { get; private set; }
 
@@ -374,6 +393,15 @@ namespace MiguelAngelus
                     lock (trava) capasCast.TryGetValue(id, out img);
                     if (img == null) await Responder(fluxo, 404, "text/plain", "-");
                     else await Responder(fluxo, 200, img.Length > 4 && img[0] == 0x89 && img[1] == 0x50 ? "image/png" : "image/jpeg", img);
+                    return;
+                }
+                if (caminho == "/api/partitura" && metodo == "GET")
+                {
+                    if (!Valido(token)) { await Responder(fluxo, 401, "text/plain", "pareamento"); return; }
+                    byte[] img = null; var id = Parametro(consulta, "id") ?? "";
+                    lock (trava) partituras.TryGetValue(id, out img);
+                    if (img == null) await Responder(fluxo, 404, "text/plain", "-");
+                    else await Responder(fluxo, 200, "image/jpeg", img);
                     return;
                 }
                 if (caminho == "/api/ping")
