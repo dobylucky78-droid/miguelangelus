@@ -3268,7 +3268,10 @@ async function iniciar() {
   renderBiblia();
   renderCabecalho();
   renderEstadoProj();
-  $('#versaoApp').textContent = NO_APP ? 'Versão 1.8.4 · aplicativo para Windows' : 'Versão 1.8.4 · no navegador';
+  // a versão vem da entrada mais nova das Novidades (atualizada a cada versão), para o Sobre nunca ficar para trás
+  const versaoApp = (typeof NOVIDADES !== 'undefined' && NOVIDADES[0]?.versao) || '1.8.5';
+  $('#versaoApp').textContent = `Versão ${versaoApp} · ` + (NO_APP ? 'aplicativo para Windows' : 'no navegador');
+  document.querySelectorAll('[data-versao]').forEach(e => e.textContent = 'Versão ' + versaoApp);
   // pede armazenamento permanente (o navegador não apaga os dados para liberar espaço)
   try { navigator.storage?.persist?.(); } catch (_) {}
   enviarConfigTelao(); renderTemasRapidos();
