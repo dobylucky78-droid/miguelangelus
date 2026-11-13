@@ -5,6 +5,10 @@
  * A versão mais nova fica em cima. Ao gerar uma versão nova, acrescente a entrada dela aqui.
  */
 const NOVIDADES = [
+  { versao: '1.8.8', data: '2026-11-13', itens: [
+    '☁ Botão "Atualizar" nas abas Roteiros, Cantos, Bíblia, Orações e Apresentações: busca na hora o que os outros computadores mudaram na nuvem (um canto novo, um roteiro preparado em casa), sem esperar a sincronização automática nem fechar e abrir o programa. Aproveita e manda para a nuvem o que mudou aqui. No fim, mostra quantos itens chegaram. Aparece só com a sincronização ligada (Ajustes → Sincronização).',
+    '▶ Ajuda → Sobre: link para o canal "MiguelAngelus" no YouTube, com os vídeos tutoriais (primeiros passos, roteiro, telão, músicos).',
+  ] },
   { versao: '1.8.7', data: '2026-11-11', itens: [
     '✎ Ato Penitencial, Glória, Santo, Cordeiro e Aclamação rezados (o texto que veio do folheto): o botão Editar do item agora abre o texto para corrigir ali mesmo — antes ficava cinza. O ✎ no canto do slide também leva direto ao trecho. A correção vale só para aquele roteiro.',
     '📱 No app dos músicos, o título do canto não fica mais espremido ao lado dos botões "Cifra | Partitura" em celular estreito.',

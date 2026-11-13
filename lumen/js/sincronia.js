@@ -239,7 +239,16 @@ async function recarregarDadosDaNuvem() {
   Oracoes.lista = await DB.todos('oracoes');
   if (typeof juntarOracoesRepetidas === 'function') await juntarOracoesRepetidas();   // a nuvem trouxe cópias de outro computador
   Midia.lista = await DB.todos('midias');
-  const ag = await DB.obter('config', 'agenda'); if (ag?.valor) Object.assign(Agenda.dados, ag.valor);
+  // (1.8.8) Bíblias que chegaram (só reindexa se mudou alguma)
+  const bs = await DB.todos('biblias');
+  const marca = l => l.map(b => b.id + ':' + (b.atualizado || 0) + ':' + (b.livros?.length || 0)).sort().join('|');
+  if (marca(bs) !== marca(S.biblias || [])) {
+    const ativa = S.biblia?.id;
+    S.biblias = bs.map(Biblia.indexar);
+    S.biblia = S.biblias.find(b => b.id === ativa) || S.biblias[0] || null;
+    try { renderBiblia(); renderNavBiblia(); } catch (_) {}
+  }
+  const ag =await DB.obter('config', 'agenda'); if (ag?.valor) Object.assign(Agenda.dados, ag.valor);
   if (typeof carregarPix === 'function') await carregarPix();
   if (typeof carregarAvisosPar === 'function') await carregarAvisosPar();
   if (typeof carregarPerfis === 'function') await carregarPerfis();
@@ -401,7 +410,36 @@ function renderSync(trabalhando) {
   }
   const modo = S.config.syncModo || '';
   $$('[data-syncmodo]').forEach(el => { el.hidden = el.dataset.syncmodo !== modo; });
+  // (1.8.8) ☁ Atualizar nas abas: só com a sincronização ligada; gira enquanto trabalha
+  $$('[data-nuvem]').forEach(b => { b.hidden = !lig; b.classList.toggle('girando', !!trabalhando || Sync.ocupado); });
 }
+
+// (1.8.8) ☁ Atualizar (Roteiros, Cantos, Bíblia, Orações e Apresentações): busca na nuvem o que os outros computadores
+// mudaram, sem esperar a sincronização automática nem reabrir o programa; aproveita e manda o que mudou aqui.
+async function atualizarDaNuvem() {
+  if (!ligadaSync()) { toast('☁ A sincronização está desligada (Ajustes › Sincronização).'); return; }
+  if (Sync.ocupado) { toast('☁ Já está sincronizando… espere um pouco.'); return; }
+  const botoes = $$('[data-nuvem]');
+  botoes.forEach(b => { b.disabled = true; });
+  Sync.ocupado = true; Sync.erro = null; renderSync('Buscando na nuvem…');
+  try {
+    await conectarArmazem();
+    const baixados = await puxarSync();
+    const enviados = await enviarSync();
+    Sync.ultimo = Date.now(); Sync.sujo = false;
+    if (baixados) await recarregarDadosDaNuvem();
+    const env = enviados ? ` · ${enviados} enviado(s) daqui` : '';
+    toast(baixados ? `☁ ${baixados} ${baixados === 1 ? 'item novo veio' : 'itens novos vieram'} da nuvem${env}.` : `☁ Já estava tudo em dia${env}.`);
+  } catch (e) {
+    Sync.erro = e.message;
+    toast('☁ Não atualizou: ' + e.message + ' (sem internet?)');
+  } finally {
+    Sync.ocupado = false; progresso('');
+    botoes.forEach(b => { b.disabled = false; });
+    renderSync();
+  }
+}
+document.addEventListener('click', e => { if (e.target.closest('[data-nuvem]')) atualizarDaNuvem(); });
 
 async function atualizarStatusGoogle() {
   if (!NO_APP) return;
