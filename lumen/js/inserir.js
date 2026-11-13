@@ -24,6 +24,7 @@ function opcoesInserir() {
   add('Item', 'Preces (Oração dos Fiéis)', 'preces');
   add('Item', 'Homilia', 'homilia');
   add('Item', 'Texto', 'texto');
+  add('Item', 'Imagem (banner, flyer…)', 'imagem', {}, 'só a imagem, ou com texto');
   add('Item', 'Avisos', 'avisos');
   add('Item', 'Mídia (vídeo, áudio, câmera)', 'midia');
   add('Item', 'Momento (slide só com o nome)', 'momento');

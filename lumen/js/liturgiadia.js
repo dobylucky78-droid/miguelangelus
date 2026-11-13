@@ -104,13 +104,119 @@ function dataDaLiturgia(r) {
   return candidatas[0] || new Date(hoje.getFullYear(), hoje.getMonth(), r.dia);
 }
 
+// ---------- (1.8.10, ideia do Luciano) Orações do dia de uma API pública ----------
+// As leituras continuam vindo da Paulus; desta API vêm a Coleta, a Oração sobre as Oferendas, a Oração depois da
+// Comunhão e as antífonas (a de entrada só se a Paulus não trouxer). Buscado na hora, nada fica guardado no programa.
+// Crédito (na tela da Liturgia do dia, nas Novidades e no README): API Liturgia Diária, de Dancrf —
+// https://github.com/Dancrf/liturgia-diaria (endereço da API: liturgia.up.railway.app/v2/).
+const URL_LIT_API = 'https://liturgia.up.railway.app/v2/';
+const NOME_FONTE = { paulus: 'Paulus', api: 'API Liturgia Diária (Dancrf)' };
+const tLimpo = s => String(s || '').replace(/\s+/g, ' ').trim();
+
+// O dia inteiro da API (uma busca por data; fica guardado enquanto o programa está aberto)
+function buscarApiDia(d) {
+  const iso = isoData(d);
+  LitDia.api ||= {};
+  return LitDia.api[iso] ||= (async () => {
+    const url = `${URL_LIT_API}?dia=${d.getDate()}&mes=${d.getMonth() + 1}&ano=${d.getFullYear()}`;
+    let txt;
+    try { txt = NO_APP ? (await httpApp(url)).texto : await (await fetch(url)).text(); }
+    catch (e) { throw new Error(/404/.test(e.message) ? 'a API não tem a liturgia desse dia' : e.message); }
+    let j;
+    try { j = JSON.parse(txt); } catch { throw new Error('resposta em formato inesperado'); }
+    if (j.erro) throw new Error(j.erro);
+    if (deDataBR(j.data) !== iso) throw new Error('veio a liturgia de outro dia');
+    return j;
+  })().catch(e => { delete LitDia.api[iso]; throw e; });
+}
+
+// (1.8.10) Leituras pela API, no mesmo formato da leitura da Paulus (lerLiturgiaColada). A API não traz a aclamação
+// ao Evangelho nem as marcas de Glória/Creio: Glória nas festas, nas solenidades e nos domingos fora do Advento e da
+// Quaresma (cor roxa); Creio aos domingos e nas solenidades.
+function lerLiturgiaApi(j, d) {
+  const L = j.leituras || {}, nome = tLimpo(j.liturgia), cor = tLimpo(j.cor).toLowerCase(), dom = d.getDay() === 0;
+  const r = { dia: d.getDate(), diaSemana: d.getDay(), titulo: nome, cor, fonte: 'api',
+    gloria: /\b(festa|solenidade)\b/i.test(nome) || (dom && !/roxo|rosa/.test(cor) && !/advento|quaresma/i.test(nome)),
+    creio: dom || /\bsolenidade\b/i.test(nome),
+    antifona: tLimpo(j.antifonas?.entrada), leituras: [], salmo: null, aclamacao: null };
+  const ler = (lista, nomeL, extra) => {
+    const x = (lista || [])[0];
+    if (!x?.texto) return;
+    const bruto = tLimpo(x.texto);
+    r.leituras.push(leituraComFormas(nomeL, tLimpo(x.referencia), tLimpo(x.titulo), bruto, bruto.includes('['), extra));
+  };
+  ler(L.primeiraLeitura, 'Primeira Leitura');
+  ler(L.segundaLeitura, 'Segunda Leitura');
+  ler(L.evangelho, 'Evangelho', { evangelho: true });
+  const s = (L.salmo || [])[0];
+  if (s?.texto) r.salmo = { ref: tLimpo(s.referencia).replace(/^Sl\s*/, 'Sl '), refrao: tLimpo(s.refrao),
+    estrofes: String(s.texto).split(/\n+/).map(e => e.replace(/^\s*[–-]\s*/, '').trim()).filter(Boolean) };
+  if (!r.leituras.length) throw new Error('a API não trouxe as leituras desse dia');
+  return r;
+}
+
+async function buscarOracoesDoDia(d) {
+  const j = await buscarApiDia(d);
+  const o = j.oracoes || {}, a = j.antifonas || {}, t = tLimpo;
+  const r = { coleta: t(o.coleta), oferendas: t(o.oferendas), depois: t(o.comunhao), antEntrada: t(a.entrada), antComunhao: t(a.comunhao) };
+  if (!r.coleta && !r.oferendas && !r.depois) throw new Error('não há orações para esse dia');
+  return r;
+}
+
+// "… vosso serviço. Por nosso Senhor Jesus Cristo…" → "P. … vosso serviço.\nPor nosso Senhor Jesus Cristo…\nT. Amém."
+function textoOracao(t) {
+  const fins = [...t.matchAll(/\s(Por nosso Senhor|Por Cristo|Vós que viveis|Que vive|Ele que vive|Que viveis)\b/g)];
+  const k = fins.length ? fins[fins.length - 1].index : -1;
+  const corpo = k > 0 ? t.slice(0, k).trim() : t, fim = k > 0 ? t.slice(k).trim() : '';
+  return `P. ${corpo}${fim ? '\n' + fim : ''}\nT. Amém.`;
+}
+// a referência do fim da antífona vai para o título, como nas antífonas do folheto
+function itemAntifona(titulo, t) {
+  const m = t.match(/\s*\(([^()]*\d[^()]*)\)\s*\.?\s*$/);
+  return { id: uid(), tipo: 'texto', antifona: true, titulo: m ? `${titulo} (${m[1].trim()})` : titulo, texto: m ? t.slice(0, m.index).trim() : t };
+}
+const itemOracao = (titulo, t) => ({ id: uid(), tipo: 'texto', titulo, texto: textoOracao(t) });
+
+function comOracoesDoDia(itens, ora, temAntEntrada) {
+  if (!ora) return itens;
+  const achar = f => itens.findIndex(f);
+  if (!temAntEntrada && ora.antEntrada) {
+    const e = achar(i => i.momento === 'Entrada');
+    itens.splice(e + 1, 0, itemAntifona('Antífona de Entrada', ora.antEntrada));
+  }
+  if (ora.coleta) {
+    const c = achar(i => i.tipo === 'ordinario' && i.parte === 'coleta');
+    const item = itemOracao('Oração da Coleta', ora.coleta);
+    if (c >= 0) itens[c] = item;
+    else {
+      const g = achar(i => i.momento === 'Glória'), k = achar(i => i.parte === 'kyrie');
+      itens.splice((g >= 0 ? g : k) + 1, 0, item);
+    }
+  }
+  if (ora.oferendas) {
+    const o = achar(i => i.parte === 'orai-irmaos'), p = achar(i => i.parte === 'prefacio');
+    itens.splice(o >= 0 ? o + 1 : p >= 0 ? p : itens.length, 0, itemOracao('Oração sobre as Oferendas', ora.oferendas));
+  }
+  if (ora.antComunhao) {
+    const c = achar(i => i.momento === 'Comunhão');
+    if (c >= 0) itens.splice(c + 1, 0, itemAntifona('Antífona da Comunhão', ora.antComunhao));
+  }
+  if (ora.depois) {
+    const b = achar(i => i.parte === 'bencao-final');
+    itens.splice(b >= 0 ? b : itens.length, 0, itemOracao('Oração depois da Comunhão', ora.depois));
+  }
+  return itens;
+}
+
 // Itens do roteiro montados com os textos da liturgia
-function itensDaLiturgia(r, domingo, comOE2) {
+function itensDaLiturgia(r, domingo, comOE2, ora) {
   const itens = Ordinario.modelos[domingo ? 'dominical' : 'semanal'].map(x => ({ id: uid(), ...structuredClone(x) }));
   const achar = f => itens.findIndex(f);
   // Glória e Creio conforme a página (ex.: festas na semana)
   if (!domingo && r.gloria && achar(i => i.momento === 'Glória') < 0) itens.splice(achar(i => i.parte === 'kyrie') + 1, 0, { id: uid(), tipo: 'canto', momento: 'Glória', cantoId: '' });
   if (domingo && !r.creio) { const c = achar(i => i.parte === 'creio-niceno'); if (c >= 0) itens.splice(c, 1); }
+  // (1.8.10) domingos do Advento e da Quaresma: sem Glória (a Paulus não marca "glória" neles)
+  if (domingo && !r.gloria) { const g = achar(i => i.momento === 'Glória'); if (g >= 0) itens.splice(g, 1); }
 
   // antífona de entrada logo depois do canto de entrada
   if (r.antifona) itens.splice(achar(i => i.momento === 'Entrada') + 1, 0,
@@ -146,7 +252,7 @@ function itensDaLiturgia(r, domingo, comOE2) {
     if (s >= 0) itens[s] = item;
   }
   if (comOE2) inserirEucaristia(itens, 'oe2', 'p-oe2');
-  return itens;
+  return comOracoesDoDia(itens, ora, !!r.antifona);
 }
 
 // ---------- Diálogo ----------
@@ -191,11 +297,14 @@ function dataDoDia(dia, perto) {
 async function buscarPaulus(alvo) {
   let url = URL_PAULUS;
   const vistos = new Set();
+  // (1.8.10) A página principal é o dia de hoje no site: a data dela se acha perto de HOJE (não da data pedida),
+  // senão um 20/12 pedido em novembro "achava" o 20/11. As seguintes ficam a um dia da anterior.
+  let perto = new Date();
   for (let passo = 0; passo < 12; passo++) {
     if (vistos.has(url)) break;
     vistos.add(url);
     const pg = lerPaginaPaulus((await httpApp(url)).texto);
-    const dataPg = dataDoDia(pg.dia, alvo);
+    const dataPg = dataDoDia(pg.dia, perto);
     if (!dataPg) throw new Error('não reconheci o dia na página da Paulus');
     if (isoData(dataPg) === isoData(alvo)) return pg.texto;
     const vizinho = new Date(dataPg.getFullYear(), dataPg.getMonth(), dataPg.getDate() + (dataPg < alvo ? 1 : -1));
@@ -204,23 +313,54 @@ async function buscarPaulus(alvo) {
       ? `a Paulus ainda não publicou a liturgia desse dia (o mais adiantado é ${dataCurta(dataPg)})`
       : `esse dia já saiu do site da Paulus (o mais antigo é ${dataCurta(dataPg)})`);
     url = link.url;
+    perto = vizinho;
   }
-  throw new Error('não consegui chegar a esse dia no site da Paulus');
+  throw new Error(alvo > new Date() ? 'a Paulus ainda não publicou a liturgia desse dia' : 'esse dia já saiu do site da Paulus');
+}
+
+// (1.8.10) Fonte principal das leituras escolhida nos Ajustes (Paulus, padrão; ou a API). Se a principal falhar,
+// tenta a outra (reserva) e avisa de onde vieram as leituras.
+async function lerDaFonte(fonte, d) {
+  if (fonte === 'api') return lerLiturgiaApi(await buscarApiDia(d), d);
+  const texto = await buscarPaulus(d);
+  const r = lerLiturgiaColada(texto);
+  r.fonte = 'paulus';
+  return { r, texto };
 }
 
 async function buscarLiturgiaAutomatica() {
   const v = $('#litBuscaData').value;
   if (!v) return;
+  const d = deIso(v);
   const b = $('#btnBuscarPaulus');
+  const principal = S.config.fonteLeituras === 'api' ? 'api' : 'paulus', reserva = principal === 'api' ? 'paulus' : 'api';
   b.disabled = true; b.textContent = 'Buscando…';
-  $('#litResumo').innerHTML = '<span class="sutil">Buscando a liturgia no site da Paulus…</span>';
+  const aviso = t => { $('#litResumo').innerHTML = `<span class="sutil">${esc(t)}</span>`; };
+  let res = null, fonte = principal, falha = '';
   try {
-    $('#litTexto').value = await buscarPaulus(deIso(v));
-    processarColagem();
-    if (LitDia.lida) { $('#litData').value = v; renderLiturgiaReconhecida(); }
+    aviso(`Buscando as leituras (${NOME_FONTE[principal]})…`);
+    try { res = await lerDaFonte(principal, d); }
+    catch (e) {
+      falha = `${NOME_FONTE[principal]}: ${e.message}`;
+      aviso(`${falha}. Tentando a reserva (${NOME_FONTE[reserva]})…`);
+      fonte = reserva;
+      try { res = await lerDaFonte(reserva, d); }
+      catch (e2) { throw new Error(`${falha}; ${NOME_FONTE[reserva]}: ${e2.message}`); }
+    }
+    const r = res.r || res;
+    $('#litTexto').value = res.texto || '';
+    LitDia.lida = r;
+    $('#litData').value = v;
+    renderLiturgiaReconhecida();
+    const li = document.createElement('li');
+    li.className = fonte === principal ? 'sutil' : 'status';
+    li.textContent = fonte === principal ? `Leituras: ${NOME_FONTE[fonte]}`
+      : `Leituras: ${NOME_FONTE[fonte]} (reserva — ${falha})`;
+    if (fonte === 'api') li.textContent += '. A API não traz a aclamação ao Evangelho: confira no roteiro.';
+    $('#litResumo .lit-lista')?.prepend(li);
   } catch (e) {
-    $('#litResumo').innerHTML = `<span class="status erro">Não deu para buscar: ${esc(e.message)}. Dá para copiar e colar a página, como antes.</span>`;
-  } finally { b.disabled = false; b.textContent = '🌐 Buscar na Paulus'; }
+    $('#litResumo').innerHTML = `<span class="status erro">Não deu para buscar: ${esc(e.message)}. Dá para copiar e colar a página da Paulus, como antes.</span>`;
+  } finally { b.disabled = false; b.textContent = '🌐 Buscar a liturgia'; }
 }
 
 function abrirLiturgiaDoDia() {
@@ -266,7 +406,9 @@ function renderLiturgiaReconhecida() {
       ${r.leituras.map(l => `<li>✓ ${esc(l.nome)}: ${esc(l.ref)}${l.breve ? ` <span class="sutil">(forma breve: ${esc(l.breve.ref)} — escolha na hora)</span>` : ''}</li>`).join('')}
       ${r.salmo ? `<li>✓ Salmo ${esc(r.salmo.ref.replace(/^Sl /, ''))} (refrão + ${r.salmo.estrofes.length} estrofes)</li>` : ''}
       ${r.aclamacao ? '<li>✓ Aclamação ao Evangelho</li>' : ''}
+      <li id="litOraStatus" class="sutil">Orações do dia: buscando…</li>
     </ul>`;
+  pedirOracoesDoDia(d);
   const ocs = ocorrencias(d).filter(o => !o.cancelada);
   $('#litCelebracoes').innerHTML = ocs.length
     ? ocs.map((o, i) => {
@@ -280,23 +422,45 @@ function renderLiturgiaReconhecida() {
   $('#btnLitMontar').disabled = false;
 }
 
+// Orações do dia da data escolhida (uma busca por data; a resposta fica guardada enquanto o programa está aberto)
+function pedirOracoesDoDia(d) {
+  const iso = isoData(d);
+  LitDia.oracoes ||= {};
+  const p = LitDia.oracoes[iso] ||= buscarOracoesDoDia(d).catch(e => { delete LitDia.oracoes[iso]; throw e; });
+  p.then(o => {
+    const el = $('#litOraStatus');
+    if (!el || $('#litData').value !== iso) return;
+    el.className = '';
+    el.textContent = '✓ Orações do dia (API Liturgia Diária, de Dancrf): ' + [o.coleta && 'Coleta', o.oferendas && 'sobre as Oferendas', o.depois && 'depois da Comunhão',
+      o.antComunhao && 'Antífona da Comunhão'].filter(Boolean).join(', ');
+  }, e => {
+    const el = $('#litOraStatus');
+    if (!el || $('#litData').value !== iso) return;
+    el.className = 'sutil';
+    el.textContent = `Orações do dia: não deu para buscar (${e.message}). O roteiro sai com a Coleta padrão.`;
+  });
+  return p;
+}
+
 async function montarRoteirosDaLiturgia() {
   const r = LitDia.lida;
   const d = deIso($('#litData').value);
   const domingo = d.getDay() === 0;
   const comOE2 = $('#litOE2').checked;
+  let ora = null;
+  try { ora = await pedirOracoesDoDia(d); } catch { /* sem as orações do dia: fica a Coleta padrão */ }
   const marcadas = $$('#litCelebracoes input:checked').map(el => LitDia.ocs[+el.dataset.i]);
   let primeiro = null, n = 0;
   if (!LitDia.ocs.length) {
     const rot = novoRoteiro(`${DIAS_CURTOS[d.getDay()]} ${dataCurta(d)} — ${cap1(r.titulo)}`);
     rot.data = isoData(d);
-    rot.itens = itensDaLiturgia(r, domingo, comOE2);
+    rot.itens = itensDaLiturgia(r, domingo, comOE2, ora);
     marcarLiturgia(rot, r);
     S.roteiros.push(rot); await DB.salvar('roteiros', rot);
     primeiro = rot; n = 1;
   }
   for (const o of marcadas) {
-    const itens = itensDaLiturgia(r, domingo, comOE2);
+    const itens = itensDaLiturgia(r, domingo, comOE2, ora);
     let rot = roteiroDaCelebracao(o);
     if (rot) { rot.itens = itens; rot.atualizado = Date.now(); }
     else rot = await criarRoteiroDaCelebracao(o, itens);
@@ -309,7 +473,8 @@ async function montarRoteirosDaLiturgia() {
   toast(`${n} roteiro(s) montado(s) com a liturgia de ${dataCurta(d)}.` + (faltaOE ? ' Cadastre o texto da Oração Eucarística II no catálogo (✝).' : ''));
 }
 
-const cap1 = s => s ? s.charAt(0) + s.slice(1).toLowerCase() : s;
+// Título em CAIXA ALTA (Paulus) vira "Só a primeira maiúscula"; o da API já vem escrito normalmente
+const cap1 = s => s && s === s.toUpperCase() ? s.charAt(0) + s.slice(1).toLowerCase() : s;
 
 // Nome e cor da celebração vindos da Paulus ("ASSUNÇÃO…", "(branco, glória, creio)") vão para o card do roteiro
 function marcarLiturgia(rot, r) {

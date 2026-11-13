@@ -5,6 +5,17 @@
  * A versão mais nova fica em cima. Ao gerar uma versão nova, acrescente a entrada dela aqui.
  */
 const NOVIDADES = [
+  { versao: '1.8.10', data: '2026-11-13', itens: [
+    '📖 Liturgia do dia (Missas de semana): além das leituras da Paulus, o roteiro agora traz as orações próprias do dia — a Oração da Coleta (no lugar da Coleta fixa), a Oração sobre as Oferendas (depois do Orai, irmãos), a Antífona da Comunhão e a Oração depois da Comunhão (antes da bênção). Essas orações vêm da API Liturgia Diária, projeto livre e gratuito de Dancrf (github.com/Dancrf/liturgia-diaria) — ideia do Luciano —, buscadas na hora de montar; sem internet, fica como antes. O crédito das fontes aparece na tela da Liturgia do dia.',
+    '📖 Fonte das leituras: em Ajustes → 📖 Bíblia → "Liturgia do dia" escolha a fonte principal — Paulus (padrão, a mesma editora do Missal) ou a API Liturgia Diária. Se a principal não responder (sem o dia publicado, site fora do ar), o botão "🌐 Buscar a liturgia" tenta a outra e avisa de onde vieram as leituras. A API não traz a aclamação ao Evangelho: confira no roteiro.',
+    '✝ Orações Eucarísticas e Prefácios: botões "⬇ Exportar textos" e "⬆ Importar textos…" no painel. Salvam num arquivo .json os textos já cadastrados (✓) e trazem de volta em outro computador ou paróquia. Na importação, os textos novos entram; se algum já existe com texto diferente, o programa pergunta se troca. Também dá para arrastar o arquivo para a janela.',
+    '📖 Correções na Liturgia do dia: pedir um dia do mês seguinte não traz mais, por engano, o mesmo dia do mês atual; e os domingos do Advento e da Quaresma saem sem o Glória.',
+    '🖼 Botão "Imagem" no Adicionar (e no Ctrl+I): um banner, um flyer ou um cartaz no roteiro — por exemplo, antes da Missa começar. Já abre em "Só a imagem": escolha o arquivo, cole (Ctrl+V) ou arraste para a janela. Dá para trocar para imagem com texto. Use ↑ ↓ para pôr no lugar certo.',
+    '📢 Avisos paroquiais para várias comunidades: marque "Todas" ou só as capelas onde o aviso vale (antes era uma só ou todas). Cada aviso continua com a data de início e de fim.',
+    '🖨 Avisos de uma celebração (na janela 📢 Avisos paroquiais): escolha o dia e a Missa e veja só os avisos que valem nela. "🖨 Imprimir / PDF" faz a folha A4 para ler no ambão; "🖼 Imagens para o Holyrics" grava os avisos como imagens Full HD na pasta de imagens do Holyrics (sugerida sozinha na primeira vez).',
+    '☁ Avisos na nuvem juntam aviso por aviso: se dois computadores (ou a nova Secretaria MiguelAngelus) mexem em avisos diferentes ao mesmo tempo, nada se perde, e o que um apagou some também no outro. Num computador ligado à nuvem pela primeira vez, a Agenda e os Avisos que já estão na nuvem têm prioridade.',
+    '🗂 Pronto para a Secretaria MiguelAngelus 1.0: um programa separado para a secretaria paroquial cadastrar a Agenda e os Avisos, que chegam aqui pela nuvem.',
+  ] },
   { versao: '1.8.9', data: '2026-11-13', itens: [
     '↺ Cantos: depois do último slide da música aparece o cartão "Recomeçar". Um clique e o telão volta ao começo da letra (pula o slide de título) — para quando o grupo repete a música (na Comunhão, por exemplo) sem precisar rolar a lista de volta.',
   ] },

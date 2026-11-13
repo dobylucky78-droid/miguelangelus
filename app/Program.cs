@@ -19,6 +19,19 @@ namespace MiguelAngelus
         // Endereço interno das páginas. NÃO mudar: os dados (IndexedDB) ficam guardados por endereço,
         // e este é o do tempo em que o programa se chamava Miguelyrics.
         internal const string Host = "miguelyrics.example";
+        // (Secretaria MiguelAngelus 1.0) O mesmo programa compilado com SECRETARIA (secretaria\app\SecretariaMiguelAngelus.csproj):
+        // outra pasta de dados, outro nome e a página no modo Secretaria (só Agenda e Avisos). Projeção, NDI, celular etc. ficam de fora.
+#if SECRETARIA
+        internal const bool Secretaria = true;
+        internal const string NomeApp = "Secretaria MiguelAngelus";
+        const string PastaDadosNome = "SecretariaMiguelAngelus";
+        internal const string PaginaInicial = "index.html?app=secretaria";
+#else
+        internal const bool Secretaria = false;
+        internal const string NomeApp = "MiguelAngelus";
+        const string PastaDadosNome = "MiguelAngelus";
+        internal const string PaginaInicial = "index.html";
+#endif
         internal static readonly string PastaWeb = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "web");
 
         // Pastas de vídeos e áudios escolhidas neste computador, servidas em endereços próprios
@@ -73,7 +86,8 @@ namespace MiguelAngelus
             var teste = Environment.GetEnvironmentVariable("MIGUELANGELUS_DADOS");
             if (!string.IsNullOrEmpty(teste)) return teste;
             var local = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-            var nova = Path.Combine(local, "MiguelAngelus");
+            var nova = Path.Combine(local, PastaDadosNome);
+            if (Secretaria) return nova;
             var antiga = Path.Combine(local, "Miguelyrics");
             if (Directory.Exists(nova) || !Directory.Exists(antiga)) return nova;
             try { Directory.Move(antiga, nova); return nova; }
@@ -90,8 +104,8 @@ namespace MiguelAngelus
             try { Icone = Icon.ExtractAssociatedIcon(Application.ExecutablePath); } catch { }
             if (!File.Exists(Path.Combine(PastaWeb, "index.html")))
             {
-                MessageBox.Show("Não encontrei a pasta \"web\" ao lado do MiguelAngelus.exe.\nDescompacte o programa inteiro (todas as pastas) antes de abrir.",
-                    "MiguelAngelus", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show("Não encontrei a pasta \"web\" ao lado do programa.\nDescompacte o programa inteiro (todas as pastas) antes de abrir.",
+                    NomeApp, MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
             }
             Application.Run(new JanelaPrincipal());
@@ -259,7 +273,7 @@ namespace MiguelAngelus
 
         public JanelaPrincipal()
         {
-            Text = "MiguelAngelus";
+            Text = Program.NomeApp;
             WindowState = FormWindowState.Maximized;
             MinimumSize = new Size(900, 560);
             Load += async (s, e) =>
@@ -270,9 +284,9 @@ namespace MiguelAngelus
                     await Web.EnsureCoreWebView2Async(Program.Ambiente);
                     Configurar();
                     Web.CoreWebView2.WebMessageReceived += AoReceberMensagem;
-                    Web.CoreWebView2.Navigate($"https://{Program.Host}/index.html");
+                    Web.CoreWebView2.Navigate($"https://{Program.Host}/{Program.PaginaInicial}");
                 }
-                catch (Exception ex) { Program.Erro("iniciar o MiguelAngelus", ex); Close(); }
+                catch (Exception ex) { Program.Erro("iniciar o " + Program.NomeApp, ex); Close(); }
             };
             relogioNdi.Tick += (s, e) => InformarNdi();
             FormClosed += (s, e) => { relogioNdi.Stop(); ndi?.Dispose(); ndiTelao?.Dispose(); celular?.Dispose(); joystick?.Dispose(); };
@@ -287,6 +301,9 @@ namespace MiguelAngelus
             {
                 var m = json.Deserialize<System.Collections.Generic.Dictionary<string, object>>(e.WebMessageAsJson);
                 var tipo = m.TryGetValue("tipo", out var t) ? t as string : null;
+                // a Secretaria não projeta: nada de NDI, celular, câmeras ou joystick
+                if (Program.Secretaria && (tipo == "ndi" || tipo == "faixa" || tipo == "ndiTelao" || tipo == "joyLigar" || tipo == "ndiPix" ||
+                    tipo == "celular" || tipo == "ndiWebcam" || tipo == "ptz")) return;
                 if (tipo == "ndi") LigarNdi(m.TryGetValue("ligar", out var l) && l is bool b && b, m.TryGetValue("nome", out var n) ? n as string : null);
                 else if (tipo == "faixa") ndi?.Desenhar(LerFaixa(m));
                 else if (tipo == "ndiTelao") LigarNdiTelao(m.TryGetValue("ligar", out var lt) && lt is bool bt && bt, m.TryGetValue("nome", out var nt) ? nt as string : null);
@@ -479,8 +496,44 @@ namespace MiguelAngelus
                         }
                         return;
                     }
-                    case "midiaSugerir":   // pasta padrão do Holyrics (X:\Holyrics\Holyrics\files\media\video|audio), se existir
-                        var sub = Convert.ToString(m["tipoMidia"]) == "audio" ? "audio" : "video";
+                    // ----- (1.8.10 / Secretaria) imagens dos avisos de uma celebração (para o Holyrics) -----
+                    case "imagensEscolherPasta":
+                        using (var d = new FolderBrowserDialog { Description = "Pasta onde salvar as imagens dos avisos (ex.: a pasta image do Holyrics)", ShowNewFolderButton = true })
+                        {
+                            var atual = m.TryGetValue("atual", out var at) ? Convert.ToString(at) : "";
+                            if (!string.IsNullOrEmpty(atual) && Directory.Exists(atual)) d.SelectedPath = atual;
+                            Responder(id, new { ok = true, pasta = d.ShowDialog(this) == DialogResult.OK ? d.SelectedPath : null });
+                        }
+                        return;
+                    case "imagensSalvar":
+                    {
+                        var pasta = Convert.ToString(m["pasta"]);
+                        if (string.IsNullOrWhiteSpace(pasta)) throw new InvalidOperationException("escolha a pasta das imagens");
+                        Directory.CreateDirectory(pasta);
+                        var invalidos = Path.GetInvalidFileNameChars();
+                        string Limpo(object o) => new string(Convert.ToString(o).Select(ch => invalidos.Contains(ch) ? '-' : ch).ToArray()).Trim();
+                        // as imagens antigas da mesma celebração saem (ex.: tinha 3 slides e agora são 2)
+                        var prefixo = Limpo(m["prefixo"]);
+                        if (prefixo.Length >= 8)
+                            foreach (var f in Directory.GetFiles(pasta, prefixo + "*.png")) try { File.Delete(f); } catch { }
+                        var n = 0;
+                        foreach (System.Collections.Generic.Dictionary<string, object> it in (System.Collections.IEnumerable)m["arquivos"])
+                        {
+                            var nome = Limpo(it["nome"]);
+                            if (!nome.EndsWith(".png", StringComparison.OrdinalIgnoreCase)) nome += ".png";
+                            File.WriteAllBytes(Path.Combine(pasta, nome), Convert.FromBase64String(Convert.ToString(it["base64"])));
+                            n++;
+                        }
+                        Responder(id, new { ok = true, pasta, gravados = n }); return;
+                    }
+                    case "imagensMostrar":
+                    {
+                        var pasta = Convert.ToString(m["pasta"]);
+                        if (Directory.Exists(pasta)) Process.Start(new ProcessStartInfo("explorer.exe", "\"" + pasta + "\"") { UseShellExecute = true });
+                        Responder(id, new { ok = true }); return;
+                    }
+                    case "midiaSugerir":   // pasta padrão do Holyrics (X:\Holyrics\Holyrics\files\media\video|audio|image), se existir
+                        var sub = Convert.ToString(m["tipoMidia"]) == "audio" ? "audio" : Convert.ToString(m["tipoMidia"]) == "image" ? "image" : "video";
                         string achada = null;
                         foreach (var u in DriveInfo.GetDrives())
                         {

@@ -5,7 +5,11 @@
 <title>MiguelAngelus — Projeção para a Missa</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="stylesheet" href="css/operador.css">
-<script>try { if (localStorage.getItem('lumen.temaApp') === 'claro') document.documentElement.dataset.temaApp = 'claro'; } catch (_) {}</script>
+<script>try { if (localStorage.getItem('lumen.temaApp') === 'claro') document.documentElement.dataset.temaApp = 'claro'; } catch (_) {}
+  // (Secretaria MiguelAngelus 1.0) o mesmo programa aberto no modo Secretaria: só Agenda e Avisos (index.html?app=secretaria)
+  const SECRETARIA = new URLSearchParams(location.search).get('app') === 'secretaria';
+  const VERSAO_SECRETARIA = '1.0.0';   // versão da Secretaria (a do .iss e do .csproj precisam bater)
+  if (SECRETARIA) { document.documentElement.classList.add('app-secretaria'); document.title = 'Secretaria MiguelAngelus'; }</script>
 <link rel="icon" type="image/svg+xml" href="img/icone.svg">
 </head>
 <body>
@@ -21,7 +25,7 @@
     </div>
     <div class="splash-info">
       <div class="splash-gratis"><b>Gratuito · uso livre</b></div>
-      <div data-versao>Versão 1.8.9</div>
+      <div data-versao>Versão 1.8.10</div>
       <div>© 2026</div>
       <div><b>PASCOM</b></div>
       <div><b>São José Operário Ilha</b></div>
@@ -29,6 +33,13 @@
     <div class="splash-status"><span class="splash-pontos"><i></i><i></i><i></i></span><span id="splashStatus">Carregando…</span></div>
   </div>
 </div>
+<script>if (SECRETARIA) {
+  // mesmo cartão da família (como o do Cast), em amarelo: "MiguelAngelus" igual aos outros e "Secretaria" estilizado
+  document.querySelector('.splash-marca img').src = 'img/secretaria.svg';
+  document.querySelector('.splash-nome').innerHTML = '<b>Miguel</b>Angelus <span class="marca-sec">Secretaria</span>';
+  document.querySelector('.splash-sub').textContent = 'Agenda e avisos da paróquia';
+  document.querySelector('.splash [data-versao]').textContent = 'Versão ' + VERSAO_SECRETARIA;
+}</script>
 
 <!-- ============ TOPO: marca + menus + liturgia ============ -->
 <header class="topo">
@@ -140,6 +151,38 @@
   <span id="estadoProj" class="estado-proj">projeção fechada</span>
   <button id="btnProjecao" class="primario">Abrir projeção</button>
 </header>
+
+<!-- ============ Secretaria MiguelAngelus (só no modo Secretaria: index.html?app=secretaria) ============ -->
+<main id="secretaria" class="sec-home" hidden>
+  <div class="sec-cab">
+    <img src="img/secretaria.svg" alt="">
+    <div>
+      <h1><span class="dourado">Miguel</span>Angelus <span class="marca-sec">Secretaria</span></h1>
+      <p class="sutil">Agenda e avisos da paróquia. O que for feito aqui vai pela nuvem para o MiguelAngelus:
+        as celebrações aparecem nos cards e roteiros, e os avisos entram sozinhos na tela de Avisos das Missas.</p>
+    </div>
+  </div>
+  <div id="secNuvem" class="sec-nuvem"></div>
+  <div class="sec-cartoes">
+    <button type="button" data-sec="calendario"><span class="ic">📅</span><b>Calendário</b>
+      <span>As celebrações do mês. Mudar o horário ou cancelar num dia; celebração avulsa (casamento, batizado, Missa de 7º dia…).</span></button>
+    <button type="button" data-sec="celebracoes"><span class="ic">⛪</span><b>Celebrações recorrentes</b>
+      <span>Missas e celebrações que se repetem toda semana ou todo mês (ex.: 1ª sexta-feira).</span></button>
+    <button type="button" data-sec="paroquia"><span class="ic">🏛</span><b>Paróquia e comunidades</b>
+      <span>Dados da paróquia, matriz e capelas, padroeiros.</span></button>
+    <button type="button" data-sec="avisos"><span class="ic">📢</span><b>Avisos paroquiais</b>
+      <span>O aviso, de quando até quando vale e em quais comunidades.</span></button>
+    <button type="button" data-sec="avisosCel"><span class="ic">🖨</span><b>Avisos de uma celebração</b>
+      <span>Folha para ler no ambão (ou PDF) e imagens para o Holyrics.</span></button>
+    <button type="button" data-sec="nuvem"><span class="ic">☁</span><b>Nuvem da paróquia</b>
+      <span>Conectar ao Google Drive da paróquia (o mesmo do MiguelAngelus) e sincronizar.</span></button>
+  </div>
+  <section class="sec-semana">
+    <h2>Próximos 7 dias</h2>
+    <p class="sutil pequeno">Clique numa celebração para ver, imprimir ou gerar as imagens dos avisos dela.</p>
+    <div id="secSemana"></div>
+  </section>
+</main>
 
 <main class="layout">
   <!-- ============ TRILHO: módulos ============ -->
@@ -311,6 +354,7 @@
     <div id="painelEucaristia" class="painel-euc"></div>
     <input type="file" id="arqImgSlide" accept="image/*" hidden>
     <input type="file" id="arqFolhetosEuc" accept=".pdf,.docx,.txt" multiple hidden>
+    <input type="file" id="arqEucJson" accept=".json" hidden>
   </section>
 
   <!-- ============ DIREITA: ao vivo + roteiro ============ -->
@@ -366,6 +410,7 @@
         <button data-add="homilia" title="Slide para a homilia (fica no ar o tempo todo)">Homilia</button>
         <button data-add="momento" title="Slide só com o nome do momento (Saudação, Bênção Final…), escolhido de uma lista">Momento</button>
         <button data-add="texto">Texto</button>
+        <button data-add="imagem" title="Imagem (banner, flyer, cartaz…): só a imagem, ou com texto. Escolha o arquivo, cole (Ctrl+V) ou arraste para a janela">🖼 Imagem</button>
         <button data-add="avisos" title="Tela de avisos paroquiais: título chamativo e os avisos programados para a data">Avisos</button>
         <button data-add="midia" title="Vídeo, áudio, apresentação ou câmera">Mídia</button>
       </div>
@@ -549,6 +594,15 @@
             <input type="number" min="1" max="8" data-cfg="versosPorSlide">
           </label>
           <label class="check"><input type="checkbox" data-cfg="numerarVersos"> Mostrar número dos versículos</label>
+          <h4>📅 Liturgia do dia</h4>
+          <label class="campo">Fonte principal das leituras
+            <select data-cfg="fonteLeituras">
+              <option value="paulus">Paulus (Liturgia Diária, a mesma editora do Missal)</option>
+              <option value="api">API Liturgia Diária (Dancrf)</option>
+            </select>
+          </label>
+          <p class="sutil pequeno">Se a fonte principal não responder (sem internet, site fora do ar ou dia ainda não publicado),
+            o MiguelAngelus tenta a outra e avisa de onde vieram as leituras. As orações do dia vêm sempre da API.</p>
         </section>
 
         <section data-ajpainel="altar">
@@ -964,13 +1018,30 @@
       <div class="linha">
         <label class="campo">A partir de <input type="date" id="apInicio"></label>
         <label class="campo">Até (inclusive) <input type="date" id="apFim"></label>
-        <label class="campo">Comunidade <select id="apLocal"></select></label>
         <span class="espaco"></span>
         <button type="button" id="apCancelar" hidden>Cancelar</button>
         <button type="button" id="apAdicionar" class="primario">+ Adicionar</button>
       </div>
+      <div class="campo">Onde avisar <small class="sutil">(marque uma ou mais comunidades, ou Todas)</small></div>
+      <div id="apLocais" class="ap-locais"></div>
       <p class="sutil pequeno" style="margin:0">Sem data final: o aviso continua até ser apagado.</p>
     </div>
+    <details id="apCel" class="ap-cel">
+      <summary>🖨 Avisos de uma celebração — papel (PDF) e imagens para o Holyrics</summary>
+      <div class="linha">
+        <label class="campo">Dia <input type="date" id="apcData"></label>
+        <label class="campo apc-cel-campo">Celebração <select id="apcCel"></select></label>
+      </div>
+      <div id="apcLista" class="apc-lista"></div>
+      <div class="linha">
+        <button type="button" id="apcImprimir" title="Folha A4 com os avisos desta celebração, para ler no ambão (escolha &quot;Salvar como PDF&quot; para guardar)">🖨 Imprimir / salvar PDF…</button>
+        <button type="button" id="apcImagens" class="primario" title="Uma imagem Full HD por slide, no jeito da tela de avisos do telão">🖼 Gerar imagens</button>
+        <span class="espaco"></span>
+      </div>
+      <div class="linha apc-pasta"><span class="sutil pequeno">Pasta das imagens: <b id="apcPasta">—</b></span><span class="espaco"></span>
+        <button type="button" id="apcEscolher">Escolher pasta…</button><button type="button" id="apcAbrirPasta">Abrir pasta</button></div>
+      <div id="apcPrevia" class="apc-previa"></div>
+    </details>
     <details class="ap-estilo">
       <summary>🎨 Aparência da tela de avisos</summary>
       <div class="linha">
@@ -1064,9 +1135,9 @@
     <p class="sutil"><b>Miguel</b> + <b>Angelus</b> ("anjo", em latim): uma homenagem ao Miguel, que idealizou e criou
       esse projeto, e a <b>São Miguel Arcanjo</b>, cuja festa foi na semana em que o programa nasceu. 😇</p>
     <div class="creditos">
-      <div class="credito"><div class="foto">M</div>
+      <div class="credito"><img class="foto" src="img/foto-miguel.webp" alt="Miguel">
         <div><span class="sutil pequeno">Criado por</span><b>Miguel Aurelio Dutra Martins</b></div></div>
-      <div class="credito"><div class="foto">M</div>
+      <div class="credito"><img class="foto" src="img/foto-marcio.webp" alt="Marcio">
         <div><span class="sutil pequeno">Desenvolvido por</span><b>Marcio Aurelio Rios Martins</b></div></div>
     </div>
     <div class="sobre-brasoes">
@@ -1087,7 +1158,7 @@
       <a href="mailto:contato.miguelangelus@gmail.com" target="_blank" rel="noopener" class="mail" title="E-mail do MiguelAngelus: dúvidas, sugestões e outras paróquias">
         <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M3.5 6.5 12 13l8.5-6.5" fill="none" stroke="currentColor" stroke-width="2"/></svg>contato.miguelangelus@gmail.com</a>
     </div>
-    <p class="sutil pequeno" id="versaoApp">Versão 1.8.9</p>
+    <p class="sutil pequeno" id="versaoApp">Versão 1.8.10</p>
     <div class="linha"><span class="espaco"></span><button value="ok" class="primario">OK</button></div>
   </form>
 </dialog>
@@ -1293,9 +1364,13 @@
     <h2>📖 Liturgia do dia</h2>
     <div id="litAuto" class="linha lit-auto">
       <label class="campo">Dia <input type="date" id="litBuscaData"></label>
-      <button type="button" id="btnBuscarPaulus" class="primario">🌐 Buscar na Paulus</button>
-      <span class="sutil pequeno" style="flex:1">Busca sozinha no site da Paulus (precisa de internet). Se preferir, copie e cole como abaixo.</span>
+      <button type="button" id="btnBuscarPaulus" class="primario">🌐 Buscar a liturgia</button>
+      <span class="sutil pequeno" style="flex:1">Busca sozinha as leituras na fonte escolhida nos Ajustes (📖 Bíblia), com a outra de reserva (precisa de internet). Se preferir, copie e cole como abaixo.</span>
     </div>
+    <p class="sutil pequeno lit-fontes">Fontes: as leituras, o salmo e a aclamação vêm da <a href="https://www.paulus.com.br/portal/liturgia-diaria/" target="_blank">Liturgia Diária da Paulus</a>
+      (ou, se escolhida nos Ajustes ou de reserva, da API abaixo, que não traz a aclamação);
+      as orações do dia (Coleta, sobre as Oferendas, depois da Comunhão) e a Antífona da Comunhão vêm da
+      <a href="https://github.com/Dancrf/liturgia-diaria" target="_blank">API Liturgia Diária, de Dancrf</a> (projeto livre e gratuito). O MiguelAngelus só busca os textos na hora; nada fica guardado no programa.</p>
     <ol class="lit-passos">
       <li><button type="button" id="btnAbrirPaulus" class="primario">Abrir a Liturgia Diária (Paulus) ↗</button>
         <span class="sutil">e escolha o dia na página (setas "Dia anterior / próximo").</span></li>
@@ -1310,7 +1385,7 @@
     </div>
     <div class="separador">Celebrações deste dia (Agenda)</div>
     <div id="litCelebracoes" class="dist-lista"></div>
-    <p class="sutil pequeno">Cada celebração marcada ganha um roteiro com o modelo de Missa, a antífona, as leituras, o salmo e a aclamação do dia. Os cantos ficam para você escolher.</p>
+    <p class="sutil pequeno">Cada celebração marcada ganha um roteiro com o modelo de Missa, as antífonas, as leituras, o salmo, a aclamação e as orações do dia. Os cantos ficam para você escolher.</p>
     <div class="linha">
       <span class="espaco"></span>
       <button value="cancelar" formnovalidate>Cancelar</button>
@@ -1452,6 +1527,7 @@
 <script src="js/aovivo.js"></script>
 <script src="js/classificacoes.js"></script>
 <script src="js/menus.js"></script>
+<script src="js/secretaria.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>

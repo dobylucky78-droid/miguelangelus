@@ -16,7 +16,13 @@ namespace MiguelAngelus
     static class Atualizacao
     {
         // De onde vem a versão nova (a página "Releases" do código público). Para testes: MIGUELANGELUS_ATUALIZACAO_URL
+#if SECRETARIA
+        const string UrlPadrao = "https://api.github.com/repos/dobylucky78-droid/secretaria-miguelangelus/releases/latest";
+        const string AnexoDoSite = "Instalar-Secretaria-MiguelAngelus.exe";
+#else
         const string UrlPadrao = "https://api.github.com/repos/dobylucky78-droid/miguelangelus/releases/latest";
+        const string AnexoDoSite = "Instalar-MiguelAngelus.exe";
+#endif
         // Quem precisa ter assinado o instalador baixado (nome no certificado da Certum). Para testes: MIGUELANGELUS_ATUALIZACAO_ASSINANTE
         const string AssinantePadrao = "Open Source Developer Marcio Aurelio Rios Martins";
 
@@ -62,7 +68,7 @@ namespace MiguelAngelus
             // Instalar-MiguelAngelus.exe (o do site) contar só as instalações novas; senão, o primeiro .exe
             var exes = ((System.Collections.ArrayList)j["assets"]).Cast<System.Collections.Generic.Dictionary<string, object>>()
                 .Where(a => (a["name"] as string ?? "").EndsWith(".exe", StringComparison.OrdinalIgnoreCase)).ToList();
-            var anexo = exes.FirstOrDefault(a => !string.Equals(a["name"] as string, "Instalar-MiguelAngelus.exe", StringComparison.OrdinalIgnoreCase))
+            var anexo = exes.FirstOrDefault(a => !string.Equals(a["name"] as string, AnexoDoSite, StringComparison.OrdinalIgnoreCase))
                 ?? exes.FirstOrDefault();
             if (anexo == null) return new { ok = true, ligada = true, atual, nova = (string)null };
             return new
@@ -79,9 +85,9 @@ namespace MiguelAngelus
         internal static async Task<string> BaixarEConferir(string url, Action<long, long> progresso)
         {
             if (!Uri.TryCreate(url, UriKind.Absolute, out var u) || (u.Scheme != "https" && !(Teste && u.IsLoopback))) throw new InvalidOperationException("endereço inválido");
-            var pasta = Path.Combine(Path.GetTempPath(), "MiguelAngelus-atualizacao");
+            var pasta = Path.Combine(Path.GetTempPath(), Program.Secretaria ? "SecretariaMiguelAngelus-atualizacao" : "MiguelAngelus-atualizacao");
             Directory.CreateDirectory(pasta);
-            var destino = Path.Combine(pasta, "Instalar MiguelAngelus.exe");
+            var destino = Path.Combine(pasta, Program.Secretaria ? "Instalar Secretaria MiguelAngelus.exe" : "Instalar MiguelAngelus.exe");
             using (var r = await http.GetAsync(url, HttpCompletionOption.ResponseHeadersRead))
             {
                 r.EnsureSuccessStatusCode();

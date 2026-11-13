@@ -12,7 +12,10 @@
 
 const Sync = { estado: { vistos: {}, enviados: {}, removidos: [] }, pedidos: {}, seq: 0, sujo: false, ocupado: false, ultimo: 0, erro: null, timer: 0 };
 
-const GRUPOS_SYNC = [
+// (Secretaria MiguelAngelus) a Secretaria só recebe e envia a Agenda e os Avisos
+const GRUPOS_SYNC = typeof SECRETARIA !== 'undefined' && SECRETARIA ? [
+  { sub: 'config', store: 'config', filtro: r => ['agenda', 'avisos'].includes(r.id) },
+] : [
   { sub: 'config', store: 'config', filtro: r => ['agenda', 'eucaristia', 'pix', 'avisos', 'perfis', 'ordinario', 'links', 'joyPerfis', 'classificacoes', 'tercos'].includes(r.id) },
   { sub: 'roteiros', store: 'roteiros' },
   { sub: 'cantos', store: 'cantos' },
@@ -74,6 +77,9 @@ function juntarApresentacoes(base, outra) {
 // ---------- baixar (ao abrir) ----------
 async function puxarSync() {
   let novos = 0;
+  // (1.8.10) primeira sincronização deste computador (ou da Secretaria): a Agenda, os Avisos e os ajustes que já estão na
+  // nuvem valem mais que os daqui (que acabaram de nascer vazios) — senão um computador novo apagaria a Agenda da paróquia
+  const primeira = !Object.keys(Sync.estado.vistos || {}).length;
   for (const g of GRUPOS_SYNC) {
     const arqs = (await arqApp('listar', { sub: g.sub })).arquivos.filter(a => a.nome.endsWith('.json'));
     const mudados = arqs.filter(a => Sync.estado.vistos[`${g.sub}/${a.nome}`] !== a.mtime);
@@ -89,8 +95,22 @@ async function puxarSync() {
         const local = await DB.obter(g.store, obj.id);
         // Agenda: a apresentação de cada capela (imagens, tamanhos, tema) não é atropelada pelo resto da Agenda que
         // veio do outro computador — vale, capela por capela, a mais nova (layoutEm). (1.6.6)
+        // (1.8.10) Avisos: junta aviso por aviso (a secretaria e a projeção podem mexer ao mesmo tempo). Só quando os dois lados
+        // já são da versão nova (têm "apagados"); com um computador antigo, continua valendo o arquivo mais novo.
+        if (g.store === 'config' && obj.id === 'avisos' && local?.valor?.apagados && obj.valor?.apagados && typeof juntarAvisos === 'function') {
+          const r = juntarAvisos(local.valor, obj.valor);
+          const faltaNaNuvem = juntarAvisos(obj.valor, local.valor).mudouBase;
+          if (r.mudouBase || faltaNaNuvem) {
+            if (faltaNaNuvem) { await DB.salvar('config', { id: 'avisos', valor: r.valor }); Sync.sujo = true; }
+            else await DB.salvar('config', { ...obj, valor: r.valor }, { daNuvem: true });
+            novos++;
+          }
+          Sync.estado.vistos[it.caminho] = a.mtime;
+          Sync.estado.enviados['config:avisos'] = Math.max(Sync.estado.enviados['config:avisos'] || 0, faltaNaNuvem ? 0 : obj.atualizado || 0);
+          continue;
+        }
         if (g.store === 'config' && obj.id === 'agenda' && local?.valor && obj.valor) {
-          const nuvemMaisNova = (obj.atualizado || 0) > (local.atualizado || 0);
+          const nuvemMaisNova = primeira || (obj.atualizado || 0) > (local.atualizado || 0);
           const base = nuvemMaisNova ? obj.valor : local.valor, outra = nuvemMaisNova ? local.valor : obj.valor;
           const mudou = juntarApresentacoes(base, outra);
           if (nuvemMaisNova || mudou) {
@@ -104,7 +124,7 @@ async function puxarSync() {
           Sync.estado.enviados[k] = Math.max(Sync.estado.enviados[k] || 0, mudou ? 0 : obj.atualizado || 0);
           continue;
         }
-        if (!local || (obj.atualizado || 0) > (local.atualizado || 0)) {
+        if (!local || (obj.atualizado || 0) > (local.atualizado || 0) || (primeira && g.store === 'config')) {
           if (g.store === 'midias' && local?.blob) obj.blob = local.blob;
           await DB.salvar(g.store, obj, { daNuvem: true });
           novos++;
@@ -128,6 +148,7 @@ async function puxarSync() {
       Sync.estado.vistos[it.caminho] = rem.find(a => `removidos/${a.nome}` === it.caminho)?.mtime || 1;
     }
   }
+  if (SECRETARIA) { await salvarEstadoSync(true); return novos; }      // a Secretaria não usa mídias
   // catálogo de mídias na nuvem (só a ficha; o arquivo desce quando alguém pede)
   const fichas = (await arqApp('listar', { sub: 'midias' })).arquivos.filter(a => a.nome.endsWith('.json') && Sync.estado.vistos[`midias/${a.nome}`] !== a.mtime);
   if (fichas.length) {

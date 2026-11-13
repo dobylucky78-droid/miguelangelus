@@ -47,6 +47,7 @@ const CONFIG_PADRAO = {
   ndiLigado: false, ndiNome: 'MiguelAngelus Letras', ndiTelao: false, faixaTamanho: 4.6, faixaOpacidade: 0.6,
   faixaCantos: true, faixaRespostas: true, faixaLeituras: true, faixaAvisos: true, faixaPix: true,
   bibliaAtiva: '', roteiroAtivo: '',
+  fonteLeituras: 'paulus',                       // (1.8.10) Liturgia do dia: fonte principal das leituras ('paulus' ou 'api'); a outra é a reserva
 };
 
 const S = {
@@ -1762,7 +1763,8 @@ function novoItem(tipo) {
     case 'antifona': return { ...base, tipo: 'texto', antifona: true, titulo: tipoAntifona() === 'comunhao' ? 'Antífona da Comunhão' : 'Antífona de Entrada', texto: '' };
     // (1.7.7, ideia do Thiago) Intenções da Missa (nomes dos falecidos, ação de graças…), lidas no começo
     case 'intencoes': return { ...base, tipo: 'texto', intencoes: true, titulo: 'Intenções da Missa', texto: '' };
-    case 'imagem': return { ...base, titulo: '', imagem: '', layout: 'esquerda', escurecer: 45, texto: '' };
+    // (1.8.10, pedido do Luciano) item avulso: começa em "Só a imagem" (banner/flyer antes da Missa); a Abertura do folheto define o próprio layout
+    case 'imagem': return { ...base, titulo: '', imagem: '', layout: 'so', escurecer: 45, texto: '' };
     case 'homilia': return { ...base, titulo: 'Homilia', texto: '', usarCapa: true, mostrarRef: true };
     case 'ordinario': return { ...base, parte: 'saudacao' };
     case 'midia': return { ...base, midiaId: '', loop: false };
@@ -2684,6 +2686,7 @@ function exportarBackup() {
 async function importarBackup(arquivo) {
   try {
     const d = JSON.parse(await lerTexto(arquivo));
+    if (d.tipo === 'eucaristia') return importarTextosEuc(d);     // (1.8.10) arquivo arrastado do ✝ Exportar textos
     if (d.app !== 'lumen') throw new Error('Este arquivo não é um backup do MiguelAngelus.');
     const nc = (d.cantos || []).length, nr = (d.roteiros || []).length, no = (d.oracoes || []).length;
     if (!confirm(`Importar ${nc} canto(s), ${no} oração(ões) e ${nr} roteiro(s)?\nItens iguais já existentes serão substituídos.`)) return;
@@ -3315,6 +3318,7 @@ async function iniciar() {
   try { navigator.storage?.persist?.(); } catch (_) {}
   enviarConfigTelao(); renderTemasRapidos();
   enviarLayout();
+  if (SECRETARIA) return iniciarSecretaria();      // secretaria.js: só Agenda e Avisos
   mostrarNovidadesSeAtualizou();
   // roteiros repetidos (mesma celebração): pergunta depois da tela de abertura e das novidades
   setTimeout(() => {

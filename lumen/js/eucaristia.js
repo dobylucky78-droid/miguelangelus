@@ -259,6 +259,8 @@ function renderEucaristia() {
       <span class="sutil">${comTexto} de ${total} textos cadastrados · lista baseada no Missal Romano (confira com o Missal da paróquia)</span>
       <span class="espaco"></span>
       <button data-euc-folhetos title="Lê um ou vários folhetos em PDF e guarda só a oração eucarística e o prefácio (não cria roteiros)">📄 Ler orações de folhetos…</button>
+      <button data-euc-exportar title="Salva num arquivo .json os textos cadastrados (✓), para levar a outro computador ou paróquia">⬇ Exportar textos</button>
+      <button data-euc-importar title="Traz os textos de um arquivo .json exportado por outro MiguelAngelus">⬆ Importar textos…</button>
     </div>
     <p class="sutil pequeno euc-ajuda">Os textos entram sozinhos quando um <b>folheto</b> traz a oração e o prefácio do dia. Os que faltarem (—), clique em ✎ e cole do Missal.
       No texto, linha em branco separa os slides e linha começando com <b>—</b> é resposta do povo.</p>
@@ -334,6 +336,56 @@ function abrirEditorEuc(id) {
   $('#formTextoEuc').texto.focus();
 }
 
+// ---------- (1.8.10) Exportar / importar os textos (.json) ----------
+// Só os textos cadastrados e os itens "extras" (vindos de folhetos); os nomes do Papa e do Bispo ficam (são de cada paróquia).
+// Cada texto leva o nome junto: assim um extra de outro computador (id diferente) se acha pelo nome.
+function exportarTextosEuc() {
+  const ids = Object.keys(Euc.dados.textos).filter(temTexto);
+  if (!ids.length) return toast('Nenhum texto cadastrado para exportar.');
+  const extras = Euc.dados.extras.filter(x => ids.includes(x.id));
+  const textos = Object.fromEntries(ids.map(id => [id, { nome: nomeEuc(id), ...Euc.dados.textos[id] }]));
+  const dados = { app: 'MiguelAngelus', tipo: 'eucaristia', versao: 1, exportado: new Date().toISOString(), textos, extras };
+  baixar(`Orações eucarísticas e prefácios MiguelAngelus ${isoData(new Date())}.json`, JSON.stringify(dados, null, 1));
+  toast(`${ids.length} texto(s) exportado(s).`);
+}
+
+async function importarTextosEuc(d) {
+  // aceita o arquivo exportado aqui ou um backup completo (pega só a parte da Eucaristia)
+  const fonte = d?.tipo === 'eucaristia' ? d : d?.app === 'lumen' && d.eucaristia ? d.eucaristia : null;
+  if (!fonte?.textos) throw new Error('Este arquivo não tem orações eucarísticas nem prefácios do MiguelAngelus.');
+  const extrasArq = new Map((fonte.extras || []).map(x => [x.id, x]));
+  const novos = [], iguais = [], diferentes = [];
+  for (const [idArq, t] of Object.entries(fonte.textos)) {
+    if (!t?.texto) continue;
+    let id = idArq;
+    const ex = extrasArq.get(idArq);
+    if (ex || !(oeDe(idArq) || prefDe(idArq))) {
+      // item extra: acha pelo tipo + nome; se não existir, cria
+      const nome = ex?.nome || t.nome || idArq, tipo = ex?.tipo || 'pref';
+      const achado = (tipo === 'oe' ? listaOEs() : listaPrefacios()).find(x => normEuc(x.nome) === normEuc(nome));
+      if (achado) id = achado.id;
+      else {
+        id = idArq.startsWith('x-') && !Euc.dados.extras.some(x => x.id === idArq) ? idArq : 'x-' + uid();
+        Euc.dados.extras.push({ id, tipo, nome, grupo: ex?.grupo || 'Outros (importados)' });
+      }
+    }
+    const atual = Euc.dados.textos[id]?.texto;
+    const reg = { texto: t.texto, origem: 'importado', data: isoData(new Date()) };
+    if (!atual) novos.push([id, reg]);
+    else if (atual.trim() === t.texto.trim()) iguais.push(id);
+    else diferentes.push([id, reg]);
+  }
+  let trocar = false;
+  if (diferentes.length) trocar = confirm(`${novos.length} texto(s) novo(s) e ${diferentes.length} já cadastrado(s) com texto diferente:\n• `
+    + diferentes.slice(0, 12).map(([id]) => nomeEuc(id)).join('\n• ') + (diferentes.length > 12 ? '\n• …' : '')
+    + '\n\nOK = substituir esses pelo texto do arquivo · Cancelar = manter os daqui (os novos entram do mesmo jeito)');
+  for (const [id, reg] of [...novos, ...(trocar ? diferentes : [])]) Euc.dados.textos[id] = reg;
+  salvarEucaristia();
+  aposMudarEuc();
+  alert(`Importação concluída: ${novos.length} novo(s), ${trocar ? diferentes.length : 0} substituído(s), `
+    + `${trocar ? 0 : diferentes.length} mantido(s) como estavam, ${iguais.length} já iguais.`);
+}
+
 function aposMudarEuc() {
   renderEucaristia();
   renderRoteiroLista();
@@ -355,6 +407,15 @@ function ligarEucaristia() {
     if (ver) return abrirItem(ver.dataset.eucVer === 'pref' ? { tipo: 'prefacio', prefId: Euc.sel.pref } : { tipo: 'eucaristica', oeId: Euc.sel.oe });
     if (e.target.closest('[data-euc-add]')) adicionarEucaristiaAoRoteiro();
     if (e.target.closest('[data-euc-folhetos]')) $('#arqFolhetosEuc').click();
+    if (e.target.closest('[data-euc-exportar]')) exportarTextosEuc();
+    if (e.target.closest('[data-euc-importar]')) $('#arqEucJson').click();
+  });
+  $('#arqEucJson').addEventListener('change', async e => {
+    const a = e.target.files[0];
+    e.target.value = '';
+    if (!a) return;
+    try { await importarTextosEuc(JSON.parse(await lerTexto(a))); }
+    catch (err) { alert('Não foi possível importar:\n' + err.message); }
   });
   $('#arqFolhetosEuc').addEventListener('change', async e => {
     const arquivos = [...e.target.files];
