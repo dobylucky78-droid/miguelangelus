@@ -5,6 +5,9 @@
  * A versão mais nova fica em cima. Ao gerar uma versão nova, acrescente a entrada dela aqui.
  */
 const NOVIDADES = [
+  { versao: '1.8.9', data: '2026-11-13', itens: [
+    '↺ Cantos: depois do último slide da música aparece o cartão "Recomeçar". Um clique e o telão volta ao começo da letra (pula o slide de título) — para quando o grupo repete a música (na Comunhão, por exemplo) sem precisar rolar a lista de volta.',
+  ] },
   { versao: '1.8.8', data: '2026-11-13', itens: [
     '☁ Botão "Atualizar" nas abas Roteiros, Cantos, Bíblia, Orações e Apresentações: busca na hora o que os outros computadores mudaram na nuvem (um canto novo, um roteiro preparado em casa), sem esperar a sincronização automática nem fechar e abrir o programa. Aproveita e manda para a nuvem o que mudou aqui. No fim, mostra quantos itens chegaram. Aparece só com a sincronização ligada (Ajustes → Sincronização).',
     '▶ Ajuda → Sobre: link para o canal "MiguelAngelus" no YouTube, com os vídeos tutoriais (primeiros passos, roteiro, telão, músicos).',

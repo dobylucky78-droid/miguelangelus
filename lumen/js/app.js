@@ -1340,7 +1340,10 @@ function renderSlides() {
       <span class="num">${i + 1}</span>${botoesTam(s, i)}
       ${s.img ? `<div class="mini"><img src="${s.img}" alt="">${s.texto ? `<div class="corpo">${htmlCartao(s)}</div>` : ''}</div>` : `<div class="corpo">${htmlCartao(s)}</div>`}
       ${s.rodape ? `<div class="rod">${esc(s.rodape)}</div>` : ''}
-    </div>`).join('');
+    </div>`).join('')
+    // (1.8.9) canto: depois do último slide, um cartão para recomeçar a música (projeta o 1º slide)
+    + (a.item.tipo === 'canto' && a.slides.length > 1
+      ? `<button type="button" class="slide-recomecar" data-recomecar title="Projeta de novo o começo da letra deste canto">↺ Recomeçar<small>volta ao começo da música</small></button>` : '');
   const f = el.querySelector('.foco');
   if (f) f.scrollIntoView({ block: 'nearest' });
 }
@@ -2746,6 +2749,8 @@ function ligarEventos() {
 
   // Slides
   $('#slides').addEventListener('click', e => {
+    // ↺ Recomeçar: o 1º slide com letra (pula o de título "Entrada / nome do canto")
+    if (e.target.closest('[data-recomecar]')) return projetar(Math.max(0, (S.atual?.slides || []).findIndex(s => !s.secao)));
     const s = e.target.closest('.slide');
     if (!s) return;
     const bt = e.target.closest('[data-tam]');
