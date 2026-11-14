@@ -187,6 +187,7 @@ function abrirAvisosPar(editarId) {
   limparFormAvisoPar();
   renderEstiloAvisos();
   abrirDialogo('dlgAvisosPar');
+  if (SECRETARIA) modoAvisosPar('cad');
   if (editarId) editarAvisoPar(editarId);
   else $('#apTexto').focus();
 }
@@ -476,10 +477,22 @@ async function gerarImagensCelebracao() {
   } finally { b.disabled = false; }
 }
 
+// (Secretaria) a mesma janela em dois modos: 'cad' = cadastro dos avisos; 'cel' = só os avisos de uma celebração
+// (papel/PDF e imagens). No MiguelAngelus fica tudo junto, como sempre (sem modo).
+function modoAvisosPar(modo) {
+  const dlg = $('#dlgAvisosPar');
+  dlg.classList.toggle('modo-cad', modo === 'cad');
+  dlg.classList.toggle('modo-cel', modo === 'cel');
+  $('#apTitulo').textContent = modo === 'cel' ? '🖨 Avisos de uma celebração' : '📢 Avisos paroquiais';
+  if (modo === 'cel') { $('#apCel').open = true; renderAvisosCelebracao(); dlg.querySelector('form').scrollTop = 0; }
+  else if (modo === 'cad') setTimeout(() => $('#apTexto').focus(), 30);
+}
+
 function abrirAvisosCelebracao() {
   abrirAvisosPar();
   $('#apCel').open = true;
   renderAvisosCelebracao();
+  if (SECRETARIA) return modoAvisosPar('cel');
   setTimeout(() => $('#apCel').scrollIntoView({ block: 'start' }), 50);
 }
 
@@ -491,6 +504,8 @@ function ligarAvisosCelebracao() {
   $('#apcImagens').addEventListener('click', gerarImagensCelebracao);
   $('#apcEscolher').addEventListener('click', () => NO_APP ? escolherPastaImagens() : toast('Escolher a pasta só no programa (no navegador as imagens são baixadas).'));
   $('#apcAbrirPasta').addEventListener('click', () => arqApp('imagensMostrar', { pasta: S.config.avisosPastaImagens }));
+  $('#apIrCadastro').addEventListener('click', () => modoAvisosPar('cad'));
+  $('#apIrCel').addEventListener('click', () => modoAvisosPar('cel'));
 }
 
 function ligarAvisosPar() {

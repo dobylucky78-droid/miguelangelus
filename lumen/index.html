@@ -1008,8 +1008,10 @@
 <!-- ============ Avisos paroquiais (programados + aparência da tela) ============ -->
 <dialog id="dlgAvisosPar">
   <form method="dialog" class="form">
-    <h2>📢 Avisos paroquiais</h2>
-    <p class="sutil" style="margin:0">Os avisos programados entram sozinhos no item <b>Avisos</b> dos roteiros das Missas do período
+    <h2 id="apTitulo">📢 Avisos paroquiais</h2>
+    <p class="sutil ap-cel-explica" style="margin:0">Escolha o dia e a celebração: aparecem só os avisos que valem nela.
+      Imprima a folha para ler no ambão (ou salve em PDF) ou gere as imagens para o Holyrics.</p>
+    <p class="sutil ap-cad-explica" style="margin:0">Os avisos programados entram sozinhos no item <b>Avisos</b> dos roteiros das Missas do período
       (e da comunidade escolhida). No roteiro, dá para acrescentar avisos só daquela Missa.</p>
     <div id="apLista" class="ap-lista"></div>
     <div class="ap-form">
@@ -1065,6 +1067,9 @@
     </details>
     <div class="linha">
       <button type="button" id="apLimpar" class="perigo" hidden>Apagar vencidos</button>
+      <!-- (Secretaria) as duas janelas separadas: um botão leva de uma à outra -->
+      <button type="button" id="apIrCadastro" class="ap-so-cel" title="Cadastrar, mudar ou apagar avisos">✎ Cadastrar / editar avisos</button>
+      <button type="button" id="apIrCel" class="ap-so-cad" title="Folha para o ambão (PDF) e imagens para o Holyrics de uma Missa">🖨 Avisos de uma celebração…</button>
       <span class="espaco"></span>
       <button value="fechar" class="primario">Fechar</button>
     </div>

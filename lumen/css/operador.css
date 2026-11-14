@@ -1210,3 +1210,11 @@ html.app-secretaria .splash-gratis { color: #9a6a00; }
 .sobre-sec-nome .dourado { color: #f0c75e; }
 .sobre-sec-nome .marca-sec { display: table; margin-top: .04em; font-size: 1.05em; }
 .sobre-sec-sub { margin-top: 6px; color: #ffe7a3; font-size: 15px; }
+
+/* (Secretaria) Avisos: a mesma janela em dois modos — cadastro (modo-cad) e avisos de uma celebração (modo-cel) */
+#dlgAvisosPar:not(.modo-cel) .ap-cel-explica, #dlgAvisosPar:not(.modo-cel) .ap-so-cel, #dlgAvisosPar:not(.modo-cad) .ap-so-cad { display: none; }
+#dlgAvisosPar.modo-cel .ap-cad-explica, #dlgAvisosPar.modo-cel #apLista, #dlgAvisosPar.modo-cel .ap-form,
+#dlgAvisosPar.modo-cel .ap-estilo, #dlgAvisosPar.modo-cel #apLimpar, #dlgAvisosPar.modo-cel #apCel > summary,
+#dlgAvisosPar.modo-cad #apCel { display: none !important; }
+#dlgAvisosPar.modo-cel #apCel { border: 0; padding: 0; }
+#dlgAvisosPar.modo-cel .apc-lista { min-height: 120px; }
