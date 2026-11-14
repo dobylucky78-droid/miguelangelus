@@ -172,7 +172,7 @@ function ligarFormatacao() {
     else if ('cor' in bt.dataset) { aplicarCor(Formato.alvo, bt.dataset.cor); paleta.hidden = true; posicionarBarra(); }
   });
   document.addEventListener('focusin', e => {
-    if (e.target.tagName !== 'TEXTAREA') return;
+    if (e.target.tagName !== 'TEXTAREA' || 'semFormato' in e.target.dataset) return;   // data-sem-formato: texto simples (Secretaria)
     clearTimeout(Formato.timer); Formato.alvo = e.target;
     // janela aberta (editor de canto, de oração…) fica "por cima de tudo": a barra vai para dentro dela, senão some atrás
     const casa = e.target.closest('dialog[open]') || document.body;
@@ -183,7 +183,7 @@ function ligarFormatacao() {
     if (e.target === Formato.alvo) Formato.timer = setTimeout(() => { Formato.alvo = null; b.hidden = true; }, 150);
   });
   document.addEventListener('keydown', e => {
-    if (e.target.tagName !== 'TEXTAREA' || !(e.ctrlKey || e.metaKey) || e.altKey) return;
+    if (e.target.tagName !== 'TEXTAREA' || 'semFormato' in e.target.dataset || !(e.ctrlKey || e.metaKey) || e.altKey) return;
     // Ctrl+Shift+> / Ctrl+Shift+< aumenta/diminui a letra (como no Word)
     if (e.shiftKey && (e.key === '>' || e.key === '<' || e.code === 'Period' || e.code === 'Comma')) {
       e.preventDefault(); e.stopPropagation();

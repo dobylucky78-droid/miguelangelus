@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
@@ -8,7 +8,7 @@
 <script>try { if (localStorage.getItem('lumen.temaApp') === 'claro') document.documentElement.dataset.temaApp = 'claro'; } catch (_) {}
   // (Secretaria MiguelAngelus 1.0) o mesmo programa aberto no modo Secretaria: só Agenda e Avisos (index.html?app=secretaria)
   const SECRETARIA = new URLSearchParams(location.search).get('app') === 'secretaria';
-  const VERSAO_SECRETARIA = '1.0.0';   // versão da Secretaria (a do .iss e do .csproj precisam bater)
+  const VERSAO_SECRETARIA = '1.1.0';   // versão da Secretaria (a do .iss e do .csproj precisam bater)
   if (SECRETARIA) { document.documentElement.classList.add('app-secretaria'); document.title = 'Secretaria MiguelAngelus'; }</script>
 <link rel="icon" type="image/svg+xml" href="img/icone.svg">
 </head>
@@ -25,7 +25,7 @@
     </div>
     <div class="splash-info">
       <div class="splash-gratis"><b>Gratuito · uso livre</b></div>
-      <div data-versao>Versão 1.8.10</div>
+      <div data-versao>Versão 1.9.0</div>
       <div>© 2026</div>
       <div><b>PASCOM</b></div>
       <div><b>São José Operário Ilha</b></div>
@@ -174,6 +174,12 @@
       <span>O aviso, de quando até quando vale e em quais comunidades.</span></button>
     <button type="button" data-sec="avisosCel"><span class="ic">🖨</span><b>Avisos de uma celebração</b>
       <span>Folha para ler no ambão (ou PDF) e imagens para o Holyrics.</span></button>
+    <button type="button" data-sec="marcacoes" class="sec-local"><span class="ic">📒</span><b>Agenda de marcações</b>
+      <span>Batizados, casamentos, 15 anos, 7º dia, crisma, 1ª comunhão… por igreja. Só entre as Secretarias.</span></button>
+    <button type="button" data-sec="intencoes" class="sec-local"><span class="ic">🕯</span><b>Intenções de Missa</b>
+      <span>As intenções de cada Missa, a folha para ler e o relatório das ofertas. Só entre as Secretarias.</span></button>
+    <button type="button" data-sec="eventos"><span class="ic">🎉</span><b>Eventos com QR code</b>
+      <span>Retiro, festa, curso… com cartaz e um QR code que põe o evento na agenda do celular.</span></button>
     <button type="button" data-sec="nuvem"><span class="ic">☁</span><b>Nuvem da paróquia</b>
       <span>Conectar ao Google Drive da paróquia (o mesmo do MiguelAngelus) e sincronizar.</span></button>
   </div>
@@ -196,6 +202,7 @@
     <button data-aba="apresentacoes" title="Apresentações: slides com imagem e texto, ou PDF (Alt+7)"><span class="ic">🖼️</span>Apresent.</button>
     <button data-aba="cameras" title="Câmeras ao vivo no telão (Alt+8)"><span class="ic">📷</span>Câmeras</button>
     <button data-aba="calendario" title="Calendário litúrgico: consultar qualquer data (Alt+9)"><span class="ic">📆</span>Calendário</button>
+    <button data-aba="eventos" title="Eventos da paróquia com QR code para a agenda do celular (Alt+0)"><span class="ic">🎉</span>Eventos</button>
   </nav>
 
   <!-- ============ MÓDULO aberto ============ -->
@@ -316,6 +323,18 @@
       <div id="calLit" class="cal-lit"></div>
     </section>
 
+    <section id="aba-eventos" class="aba">
+      <div class="modulo-tit">Eventos <button type="button" class="btn-nuvem" data-nuvem hidden title="Buscar agora na nuvem o que os outros computadores mudaram (e mandar o que mudou aqui)">☁ Atualizar</button></div>
+      <div class="linha botoes-midia">
+        <button id="btnNovoEvento" class="primario" title="Cadastrar um evento (retiro, festa, curso…) com cartaz">＋ Novo evento</button>
+        <button id="btnGerenciarEventos" title="Ver, editar e apagar os eventos">✎ Editar eventos…</button>
+      </div>
+      <label class="check pequeno"><input type="checkbox" id="evAbaPassados"> mostrar os que já passaram</label>
+      <div id="listaEventos" class="ev-lista ev-aba"></div>
+      <p class="sutil pequeno">Clique num evento para ver no centro e projetar: o cartaz e um QR code. Quem aponta a câmera do celular
+        salva o evento na agenda. Os eventos feitos na Secretaria MiguelAngelus chegam pela nuvem; os feitos aqui também vão para lá.</p>
+    </section>
+
     <section id="aba-midia" class="aba">
       <div class="modulo-tit" id="midiaTit">Vídeos</div>
       <div class="linha">
@@ -412,6 +431,7 @@
         <button data-add="texto">Texto</button>
         <button data-add="imagem" title="Imagem (banner, flyer, cartaz…): só a imagem, ou com texto. Escolha o arquivo, cole (Ctrl+V) ou arraste para a janela">🖼 Imagem</button>
         <button data-add="avisos" title="Tela de avisos paroquiais: título chamativo e os avisos programados para a data">Avisos</button>
+        <button data-add="eventos" title="Apresentar eventos: os eventos marcados (aba 🎉 Eventos), cada um com o cartaz e o QR code, passando sozinhos no telão">🎉 Apresentar eventos</button>
         <button data-add="midia" title="Vídeo, áudio, apresentação ou câmera">Mídia</button>
       </div>
     </section>
@@ -1140,9 +1160,9 @@
     <p class="sutil"><b>Miguel</b> + <b>Angelus</b> ("anjo", em latim): uma homenagem ao Miguel, que idealizou e criou
       esse projeto, e a <b>São Miguel Arcanjo</b>, cuja festa foi na semana em que o programa nasceu. 😇</p>
     <div class="creditos">
-      <div class="credito"><img class="foto" src="img/foto-miguel.webp" alt="Miguel">
+      <div class="credito"><div class="foto">M</div>
         <div><span class="sutil pequeno">Criado por</span><b>Miguel Aurelio Dutra Martins</b></div></div>
-      <div class="credito"><img class="foto" src="img/foto-marcio.webp" alt="Marcio">
+      <div class="credito"><div class="foto">M</div>
         <div><span class="sutil pequeno">Desenvolvido por</span><b>Marcio Aurelio Rios Martins</b></div></div>
     </div>
     <div class="sobre-brasoes">
@@ -1163,7 +1183,7 @@
       <a href="mailto:contato.miguelangelus@gmail.com" target="_blank" rel="noopener" class="mail" title="E-mail do MiguelAngelus: dúvidas, sugestões e outras paróquias">
         <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M3.5 6.5 12 13l8.5-6.5" fill="none" stroke="currentColor" stroke-width="2"/></svg>contato.miguelangelus@gmail.com</a>
     </div>
-    <p class="sutil pequeno" id="versaoApp">Versão 1.8.10</p>
+    <p class="sutil pequeno" id="versaoApp">Versão 1.9.0</p>
     <div class="linha"><span class="espaco"></span><button value="ok" class="primario">OK</button></div>
   </form>
 </dialog>
@@ -1533,6 +1553,8 @@
 <script src="js/classificacoes.js"></script>
 <script src="js/menus.js"></script>
 <script src="js/secretaria.js"></script>
+<script src="js/secretariacadastros.js"></script>
+<script src="js/eventos.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>

@@ -1,7 +1,7 @@
 'use strict';
 /* Barra de menus (Arquivo, Editar, Exibir, Projeção, Ferramentas, Ajuda) e troca de módulos. */
 
-const MODULOS = ['roteiros', 'cantos', 'biblia', 'missa', 'videos', 'audios', 'apresentacoes', 'cameras', 'calendario'];
+const MODULOS = ['roteiros', 'cantos', 'biblia', 'missa', 'videos', 'audios', 'apresentacoes', 'cameras', 'calendario', 'eventos'];
 // Vídeos, Áudios, Apresentações e Câmeras usam a mesma seção (aba-midia), cada um mostrando só o seu tipo
 const MODULO_MIDIA = { videos: 'video', audios: 'audio', apresentacoes: 'apresentacao', cameras: 'camera' };
 
@@ -25,6 +25,7 @@ function mostrarAba(nome, interativo = true) {
   }
   if (nome === 'roteiros') mostrarCards(true);   // Roteiros: cards no centro
   if (nome === 'calendario') renderCalLit();
+  if (nome === 'eventos' && typeof renderAbaEventos === 'function') renderAbaEventos();
 }
 
 function abrirDialogo(id) {
@@ -77,6 +78,7 @@ function alternarTelaCheiaPainel() {
 
 function acaoMenu(acao) {
   if (acao.startsWith('ver-')) return mostrarAba(acao.slice(4));
+  if (acao.startsWith('sec-')) return acaoMenuSecretaria(acao.slice(4));   // menu da Secretaria (secretariacadastros.js)
   switch (acao) {
     case 'novoRoteiro': return $('#btnNovoRoteiro').click();
     case 'duplicarRoteiro': return $('#btnDuplicarRoteiro').click();
@@ -185,9 +187,9 @@ function ligarMenus() {
     if (e.key === 'Escape' && aberto) { fechar(); e.stopImmediatePropagation(); e.preventDefault(); }
   }, true);
 
-  // Alt+1..9 troca de módulo; F11 põe o painel em tela cheia
+  // Alt+1..9 troca de módulo (Alt+0 = o 10º, Eventos); F11 põe o painel em tela cheia
   document.addEventListener('keydown', e => {
-    if (e.altKey && !e.ctrlKey && /^[1-9]$/.test(e.key)) { e.preventDefault(); mostrarAba(MODULOS[+e.key - 1]); }
+    if (e.altKey && !e.ctrlKey && /^[0-9]$/.test(e.key)) { e.preventDefault(); mostrarAba(MODULOS[e.key === '0' ? 9 : +e.key - 1]); }
     if (e.key === 'F1') { e.preventDefault(); abrirManual(); }
   });
 

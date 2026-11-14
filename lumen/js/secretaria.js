@@ -11,6 +11,14 @@
 // VERSAO_SECRETARIA fica no <head> do index.html (o splash usa antes deste arquivo carregar)
 
 const NOVIDADES_SECRETARIA = [
+  { versao: '1.1.0', data: '2026-11-14', itens: [
+    '☰ Menu no alto da janela: Ajustes (nuvem, pasta do Holyrics, paróquia e comunidades, aparência) e Ajuda (Como usar com F1, vídeos, site, e-mail de contato, novidades, atualização, Sobre).',
+    '📒 Marcações por igreja: batizados, casamentos, 15 anos, 7º dia, crismas, 1ª comunhão, bênçãos. Visão por dia, semana e mês, filtros, busca, aviso de choque de horário e impressão. O 7º dia escolhe a Missa e já cria a intenção.',
+    '🕯 Intenções de Missa: por celebração, agrupadas por tipo. "A pedido de" é lido na Missa; o "Responsável" (quem pediu e fez a oferta) fica só na secretaria. Folha para ler no ambão (sem valores) e relatório de ofertas por período e igreja.',
+    '🎉 Eventos com QR code: título, data, local, descrição e cartaz (modelo 1080 × 1350 px). Imagem Full HD para o Holyrics e cartaz A4 para o mural, com o QR que põe o evento na agenda do celular. Os eventos aparecem também no MiguelAngelus.',
+    '☁ Duas ou mais secretarias na mesma nuvem: marcações, intenções e eventos vão e voltam sozinhos. Se outro computador mudou ou apagou o mesmo item, o programa pergunta antes de salvar.',
+    '📅 Campos de data com o calendário que abre ao clicar.',
+  ] },
   { versao: '1.0.0', data: '2026-11-13', itens: [
     '🎉 Primeira versão da Secretaria MiguelAngelus: a Agenda da paróquia (comunidades, celebrações recorrentes e do dia) e os Avisos paroquiais, sincronizados pela nuvem com o MiguelAngelus.',
     '📢 Avisos com data de início e de fim, para uma, várias ou todas as comunidades.',
@@ -25,13 +33,18 @@ function renderSecretariaSemana() {
   for (let k = 0; k < 7; k++) {
     const d = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate() + k), iso = isoData(d);
     const ocs = ocorrencias(d);
-    if (!ocs.length) continue;
-    dias.push(`<div class="sec-dia"><div class="sec-dia-tit">${k === 0 ? 'Hoje' : k === 1 ? 'Amanhã' : DIAS[d.getDay()]}, ${dataCurta(d)}</div>
+    // (1.1) marcações do dia (só deste computador) e intenções de cada Missa
+    const marcs = typeof Marc !== 'undefined' ? Marc.lista.filter(m => m.data === iso && m.situacao !== 'cancelada' && m.tipo !== '7dia') : [];
+    if (!ocs.length && !marcs.length) continue;
+    dias.push(`<div class="sec-dia"><div class="sec-dia-tit">${k === 0 ? 'Hoje' : k === 1 ? 'Amanhã' : DIAS[d.getDay()]}, ${dataCurta(d)}
+        ${marcs.length ? `<span class="sec-marcs" data-sec-marc="${iso}" title="${esc(marcs.map(m => `${m.hora} ${tipoMarc(m.tipo)[1]}: ${m.nomes.split('\n')[0]}`).join('\n'))}">📒 ${marcs.length} marcaç${marcs.length > 1 ? 'ões' : 'ão'}</span>` : ''}</div>
       ${ocs.map(o => {
         const loc = localDe(o.localId), n = o.cancelada ? 0 : avisosVigentes(iso, o.localId).length;
+        const ni = !o.cancelada && typeof Int !== 'undefined' && ehMissa(o.tipo) ? intencoesDe(iso, o).length : 0;
         return `<div class="sec-ev ${o.cancelada ? 'cancelada' : ''}" data-iso="${iso}" data-chave="${esc(o.chave)}" title="${o.cancelada ? 'Cancelada neste dia' : 'Ver os avisos desta celebração'}">
           <span class="sec-hora">${esc(o.hora)}</span>${loc ? `<span class="card-ponto" style="background:${loc.cor}"></span>` : ''}
           <span class="sec-txt">${esc(o.texto)}${o.cancelada ? ' <i>(cancelada)</i>' : ''}</span>
+          ${ni ? `<span class="sec-int" data-sec-int title="Ver as intenções desta Missa">🕯 ${ni}</span>` : ''}
           ${o.cancelada ? '' : `<span class="sec-av">${n ? `📢 ${n} aviso${n > 1 ? 's' : ''}` : 'sem avisos'}</span>`}</div>`;
       }).join('')}</div>`);
   }
@@ -68,6 +81,9 @@ function abrirSecretaria(qual) {
     case 'avisos': return abrirAvisosPar();
     case 'avisosCel': return abrirAvisosCelebracao();
     case 'nuvem': return abrirAjustes('sync');
+    case 'marcacoes': return abrirMarcacoes();
+    case 'intencoes': return abrirIntencoes();
+    case 'eventos': return abrirEventos();
   }
 }
 
@@ -88,6 +104,7 @@ function iniciarSecretaria() {
   $('#versaoApp').textContent = versao + ' · ' + (NO_APP ? 'aplicativo para Windows' : 'no navegador');
   document.querySelectorAll('[data-versao]').forEach(e => e.textContent = 'Versão ' + VERSAO_SECRETARIA);
   $('#secretaria').hidden = false;
+  iniciarCadastrosSecretaria();     // secretariacadastros.js: menu Ajustes/Ajuda, marcações e intenções
   const explica = $('[data-ajpainel="sync"] > p.sutil.pequeno');
   if (explica) explica.innerHTML = 'Use a <b>mesma</b> nuvem do MiguelAngelus (a conta do Google Drive da paróquia, ou a mesma pasta compartilhada). ' +
     'Ao abrir, a Secretaria pega a Agenda e os Avisos mais novos; o que mudar aqui vai logo para a nuvem. Só a Agenda e os Avisos vão e vêm — ' +
@@ -97,6 +114,10 @@ function iniciarSecretaria() {
     const b = e.target.closest('[data-sec]');
     if (b) return abrirSecretaria(b.dataset.sec);
     if (e.target.closest('[data-sec-sync]')) return enviarSecretaria();
+    const mc = e.target.closest('[data-sec-marc]');
+    if (mc) { Marc.visao = 'dia'; Marc.ref = deIso(mc.dataset.secMarc); return abrirMarcacoes(); }
+    const ei = e.target.closest('.sec-ev [data-sec-int]');
+    if (ei) { const p = ei.closest('.sec-ev'); return abrirIntencoes(p.dataset.iso, p.dataset.chave); }
     const ev = e.target.closest('.sec-ev:not(.cancelada)');
     if (ev) {
       abrirAvisosCelebracao();

@@ -709,6 +709,10 @@ function gerarSlidesBase(item) {
     }
     case 'avisos':
       return slidesAvisos(item);          // avisosparoquiais.js
+    case 'evento':
+      return slidesEvento(item);          // (1.9) eventos.js: cartaz + QR
+    case 'eventos':
+      return slidesShowEventos(item);     // (1.9) eventos.js: os eventos marcados, um slide cada, passando sozinhos
     case 'imagem': {
       // Slide híbrido: a mesma imagem em todos os slides do item; linha em branco separa os textos
       if (!item.imagem) return dividir(item.texto).map(t => ({ texto: t, rodape: item.titulo || '' }));
@@ -833,6 +837,7 @@ function projetar(i) {
   renderSlides();
   renderRoteiroLista();
   renderControles();
+  if (typeof aoProjetarShow === 'function') aoProjetarShow();     // (1.9) "Apresentar eventos" passa sozinho (eventos.js)
 }
 
 // (1.7.0) Editando o texto de um item: a prévia da direita mostra, enquanto se digita, o slide onde está o cursor — só
@@ -1440,7 +1445,7 @@ function renderCabecalho() {
   if (!a) {
     el.innerHTML = `<div class="boas-vindas">
       <img src="img/logo.svg" alt="MiguelAngelus" class="logo-boas-vindas">
-      <p>1. Na coluna da esquerda ficam os módulos: <b>Cantos</b>, <b>Bíblia</b>, <b>Orações</b>, <b>Vídeos</b>, <b>Áudios</b>, <b>Apresentações</b>, <b>Câmeras</b> e <b>Calendário</b>.</p>
+      <p>1. Na coluna da esquerda ficam os módulos: <b>Cantos</b>, <b>Bíblia</b>, <b>Orações</b>, <b>Vídeos</b>, <b>Áudios</b>, <b>Apresentações</b>, <b>Câmeras</b>, <b>Calendário</b> e <b>Eventos</b>.</p>
       <p>2. No <b>Roteiro da Missa</b> (à direita), clique em <b>Folheto PDF</b> ou escolha um modelo e preencha os cantos e as leituras.</p>
       <p>3. Clique em <b>Abrir projeção</b>, leve a janela para o telão e clique num slide para projetar.</p>
     </div>`;
@@ -1592,6 +1597,12 @@ function renderCabecalho() {
            <textarea data-campo="extras" rows="3" placeholder="Avisos só desta Missa (opcional). Linha em branco separa um aviso do outro.">${esc(it.extras)}</textarea>`;
       break;
     }
+    case 'evento':
+      h = htmlCabEvento(it, noRoteiro, btnAdd);     // (1.9) eventos.js
+      break;
+    case 'eventos':
+      h = htmlCabShowEventos(it);                   // (1.9) eventos.js
+      break;
     case 'prefacio':
     case 'eucaristica': {
       const pref = it.tipo === 'prefacio', id = pref ? it.prefId : it.oeId;
@@ -1618,7 +1629,7 @@ function renderCabecalho() {
     }
   }
   if (noRoteiro && it.partituraId) h += htmlPartituraDoItem(it);
-  if (noRoteiro && !['imagem', 'midia', 'avisos'].includes(it.tipo)) h += htmlFundoItem(it);
+  if (noRoteiro && !['imagem', 'midia', 'avisos', 'evento', 'eventos'].includes(it.tipo)) h += htmlFundoItem(it);
   el.innerHTML = h;
   atualizarStatusRef();
 }
@@ -1666,6 +1677,8 @@ function resumoItem(it) {
       const n = avisosDoItem(it).length;
       return { rot: 'Avisos', tit: `${it.titulo || estiloAvisos().titulo} · ${n ? n + ' aviso(s)' : 'só o título'}`, vazio: false };
     }
+    case 'evento': return resumoEvento(it);      // (1.9) eventos.js
+    case 'eventos': return resumoShowEventos(it);
     case 'prefacio': return { rot: 'Prefácio', tit: nomeEuc(it.prefId), vazio: !temTexto(it.prefId) };
     case 'eucaristica': return { rot: 'Or. Eucarística', tit: nomeEuc(it.oeId), vazio: !temTexto(it.oeId) };
     case 'midia': {
@@ -1691,10 +1704,13 @@ function renderRoteiroLista() {
     el.innerHTML = '<p class="vazio">Roteiro vazio. Use <b>Folheto PDF</b>, <b>Aplicar modelo</b> ou adicione itens abaixo.</p>';
     return;
   }
+  const grupos = typeof marcasGrupoLoop === 'function' ? marcasGrupoLoop(itens) : [];   // (1.9) 🔁 itens seguidos que repetem juntos
   el.innerHTML = itens.map((it, i) => {
     const r = resumoItem(it);
     const sel = S.atual && S.atual.rIdx === i;
-    return `<div class="it ${sel ? 'sel' : ''} ${r.vazio ? 'pendente' : ''}" data-i="${i}" draggable="true" title="Arraste para mudar a ordem">
+    const g = grupos[i] ? ` loop-g loop-${grupos[i]}` : '';
+    return `<div class="it ${sel ? 'sel' : ''} ${r.vazio ? 'pendente' : ''}${g}" data-i="${i}" draggable="true" title="${g ? '🔁 Repete em grupo com os itens marcados ao lado. ' : ''}Arraste para mudar a ordem">
+      ${grupos[i] === 'ini' ? '<span class="loop-ic" title="Repete em grupo">🔁</span>' : ''}
       <span class="tag t-${it.tipo}">${esc(r.rot)}</span>
       <span class="tit">${esc(tirarMarcas(r.tit || ''))}</span>
       ${S.live.item === it ? '<span class="pt-vivo" title="No ar"></span>' : ''}
@@ -1774,6 +1790,10 @@ function novoItem(tipo) {
     case 'ladainha': return itemCantoDeOracao('Ladainha', oracoesDoMomento('Ladainha').find(o => /Nossa Senhora/.test(o.titulo)) || oracoesDoMomento('Ladainha')[0]);
     case 'preces': return { ...base, titulo: 'Oração dos Fiéis', resposta: 'Senhor, escutai a nossa prece.', convite: '', texto: '', conclusao: '' };
     case 'avisos': return { ...base, titulo: '', extras: '', programados: true };
+    // (1.9) evento da aba 🎉 Eventos: já vem com o próximo (dá para trocar no cabeçalho)
+    case 'evento': return { ...base, eventoId: eventosPorVir()[0]?.id || '' };
+    // (1.9) "Apresentar eventos": os eventos por vir já marcados; 10 s cada; recomeça do início ao terminar
+    case 'eventos': return { ...base, titulo: 'Apresentar eventos', eventoIds: eventosPorVir().map(e => e.id), segundos: 10, repetir: true };
   }
 }
 
@@ -2808,7 +2828,7 @@ function ligarEventos() {
     if (S.atual.rIdx >= 0) { salvarRoteiro(); renderRoteiroLista(); }
     if (it.tipo === 'terco' && e.target.type === 'checkbox') { atualizarSlides(); return renderCabecalho(); }
     atualizarSlides();
-    if (e.target.tagName === 'SELECT') renderCabecalho();
+    if (e.target.tagName === 'SELECT' || (it.tipo === 'eventos' && campo === 'repetir')) renderCabecalho();   // (1.9) a nota 🔁 do grupo muda
     else if (campo === 'ref') atualizarStatusRef();
   });
   $('#itemCab').addEventListener('click', e => {
@@ -2818,6 +2838,7 @@ function ligarEventos() {
     if (!cmd || !S.atual) return;
     const it = S.atual.item;
     if (cmd.startsWith('ap')) return comandoApresentacao(cmd);
+    if (cmd.startsWith('evento')) return comandoEvento(cmd, it);      // (1.9) eventos.js
     if (cmd === 'editarOrdinario') return abrirEditorOrdinario(it.parte);
     if (cmd === 'fundoEscolher') return $('#arqFundoItem').click();
     if (cmd === 'fundoTirar') { delete it.fundoImg; it.usarFundo = false; return aposMudarFundoItem(); }
@@ -3260,6 +3281,7 @@ async function iniciar() {
   ligarMidia();
   ligarApresentacoes();
   renderMidias();
+  if (!SECRETARIA) await iniciarEventosMA();     // (1.9) aba 🎉 Eventos (eventos.js)
   ligarOracoes();
   ligarEditorOrdinario();
   renderOracoes();

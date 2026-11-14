@@ -5,6 +5,13 @@
  * A versão mais nova fica em cima. Ao gerar uma versão nova, acrescente a entrada dela aqui.
  */
 const NOVIDADES = [
+  { versao: '1.9.0', data: '2026-11-14', itens: [
+    '🎉 Aba Eventos (Alt+0): os eventos da paróquia (festas, retiros, cursos) com cartaz e QR code. Clique num evento para projetar: o cartaz fica à esquerda e o QR à direita; quem aponta a câmera do celular recebe "Adicionar à agenda", sem precisar de internet. Dá para criar e editar aqui ou na Secretaria MiguelAngelus: os eventos vão e voltam pela nuvem (só os eventos: os dados da secretaria não vêm para cá).',
+    '🎉 "Apresentar eventos" no Adicionar do roteiro: marque quais eventos entram, quantos segundos cada um fica no telão e se recomeça do início ao terminar. Clique no primeiro slide e os outros passam sozinhos. A apresentação espera com o telão congelado e para se você projetar outra coisa ou usar Limpar.',
+    '🎵 Som na apresentação de eventos: escolha um áudio (ou "📂 Arquivo de áudio…"). Ele toca enquanto os eventos passam e para, abaixando devagar, quando as imagens acabam.',
+    '🔁 Repetir em grupo: itens seguidos do roteiro marcados para repetir (um vídeo com "Repetir" e a apresentação de eventos com ↻, por exemplo) viram um grupo. Cada um passa uma vez e chama o seguinte; depois do último, o grupo recomeça. O grupo aparece no roteiro com uma barra verde-água e 🔁.',
+    '📅 Campos de data com o calendário que abre ao clicar, no tema escuro e no claro.',
+  ] },
   { versao: '1.8.10', data: '2026-11-13', itens: [
     '📖 Liturgia do dia (Missas de semana): além das leituras da Paulus, o roteiro agora traz as orações próprias do dia — a Oração da Coleta (no lugar da Coleta fixa), a Oração sobre as Oferendas (depois do Orai, irmãos), a Antífona da Comunhão e a Oração depois da Comunhão (antes da bênção). Essas orações vêm da API Liturgia Diária, projeto livre e gratuito de Dancrf (github.com/Dancrf/liturgia-diaria) — ideia do Luciano —, buscadas na hora de montar; sem internet, fica como antes. O crédito das fontes aparece na tela da Liturgia do dia.',
     '📖 Fonte das leituras: em Ajustes → 📖 Bíblia → "Liturgia do dia" escolha a fonte principal — Paulus (padrão, a mesma editora do Missal) ou a API Liturgia Diária. Se a principal não responder (sem o dia publicado, site fora do ar), o botão "🌐 Buscar a liturgia" tenta a outra e avisa de onde vieram as leituras. A API não traz a aclamação ao Evangelho: confira no roteiro.',

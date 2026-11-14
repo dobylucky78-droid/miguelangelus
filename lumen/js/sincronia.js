@@ -12,9 +12,17 @@
 
 const Sync = { estado: { vistos: {}, enviados: {}, removidos: [] }, pedidos: {}, seq: 0, sujo: false, ocupado: false, ultimo: 0, erro: null, timer: 0 };
 
-// (Secretaria MiguelAngelus) a Secretaria só recebe e envia a Agenda e os Avisos
+// (Secretaria MiguelAngelus) a Secretaria só recebe e envia a Agenda e os Avisos…
+// (1.1) …e, numa pasta SÓ DELA ("secretaria/"), as marcações e intenções; os eventos em "eventos/". Um arquivo por item
+// (secm-/seci-/sece-), compartilhados entre os computadores da secretaria.
+// O MiguelAngelus lê e grava SÓ a pasta "eventos/" (aba 🎉 Eventos); marcações e intenções nunca chegam a ele.
+const ehItemSecretaria = id => /^sec[mie]-/.test(id || '');
+const ehEvento = id => /^sece-/.test(id || '');
 const GRUPOS_SYNC = typeof SECRETARIA !== 'undefined' && SECRETARIA ? [
   { sub: 'config', store: 'config', filtro: r => ['agenda', 'avisos'].includes(r.id) },
+  { sub: 'secretaria', store: 'config', filtro: r => /^sec[mi]-/.test(r.id || '') },   // marcações e intenções: só a Secretaria
+  // eventos numa pasta própria: o MiguelAngelus também lê (aba 🎉 Eventos) e pode criar, como nos avisos
+  { sub: 'eventos', store: 'config', filtro: r => ehEvento(r.id) },
 ] : [
   { sub: 'config', store: 'config', filtro: r => ['agenda', 'eucaristia', 'pix', 'avisos', 'perfis', 'ordinario', 'links', 'joyPerfis', 'classificacoes', 'tercos'].includes(r.id) },
   { sub: 'roteiros', store: 'roteiros' },
@@ -23,6 +31,7 @@ const GRUPOS_SYNC = typeof SECRETARIA !== 'undefined' && SECRETARIA ? [
   { sub: 'apresentacoes', store: 'midias', filtro: r => r.tipo === 'apresentacao' },
   { sub: 'biblias', store: 'biblias', filtro: r => !r.junto },   // a Bíblia que vem com o programa não sobe (todos já a têm)
   { sub: 'partituras', store: 'partituras' },                   // (1.8.6) páginas da partitura de cada canto (JPEG)
+  { sub: 'eventos', store: 'config', filtro: r => ehEvento(r.id) },   // (1.9) 🎉 eventos, os mesmos da Secretaria
 ];
 const ligadaSync = () => NO_APP && (S.config.syncModo === 'google' || (S.config.syncModo === 'pasta' && S.config.syncPasta));
 
@@ -216,7 +225,8 @@ async function enviarSync(aoAndar) {
   // apagados aqui → marca na nuvem e remove o arquivo
   const pend = Sync.estado.removidos.splice(0);
   for (const x of pend) {
-    const sub = GRUPOS_SYNC.find(g => g.store === x.store && (x.store !== 'midias' || x.apresentacao))?.sub;
+    // o grupo certo pelo filtro (no store "config" há mais de um grupo na Secretaria: a Agenda/Avisos e os itens dela)
+    const sub = GRUPOS_SYNC.find(g => g.store === x.store && (!g.filtro || g.filtro({ id: x.id, tipo: x.apresentacao ? 'apresentacao' : undefined })))?.sub;
     if (!sub) continue;
     const r = await arqApp('gravarVarios', { itens: [{ caminho: `removidos/${x.store}__${x.id}.json`, texto: JSON.stringify(x) }] });
     Sync.estado.vistos[`removidos/${x.store}__${x.id}.json`] = r.gravados[0].mtime;
@@ -279,6 +289,7 @@ async function recarregarDadosDaNuvem() {
   if (typeof carregarClassificacoes === 'function') await carregarClassificacoes();
   if (typeof carregarTercoVersoes === 'function') await carregarTercoVersoes();     // 📿 versões do terço
   if (typeof carregarEucaristia === 'function') await carregarEucaristia();         // textos da Eucaristia e nomes do Papa/Bispo
+  if (typeof recarregarCadastrosSecretaria === 'function') await recarregarCadastrosSecretaria();   // (Secretaria 1.1)
   try { renderCantos(); renderOracoes(); renderMidias(); renderRoteiroCab(); renderRoteiroLista(); } catch (_) {}
   if (typeof oferecerJuntarRoteiros === 'function') setTimeout(() => oferecerJuntarRoteiros(), 500);   // cópias de outro computador
 }
@@ -548,7 +559,9 @@ function ligarSincronia() {
   DB.aoMudar = () => { Sync.sujo = true; renderSync(); };
   DB.aoRemover = (store, id) => {
     const apresentacao = store === 'midias' && Midia.lista.find(m => m.id === id)?.tipo === 'apresentacao';
-    if (!['roteiros', 'cantos', 'oracoes', 'biblias', 'partituras'].includes(store) && !apresentacao) return;
+    // (Secretaria 1.1) marcação/intenção/evento apagado; no MiguelAngelus, só o evento
+    const itemSec = store === 'config' && (SECRETARIA ? ehItemSecretaria(id) : ehEvento(id));
+    if (!['roteiros', 'cantos', 'oracoes', 'biblias', 'partituras'].includes(store) && !apresentacao && !itemSec) return;
     Sync.estado.removidos.push({ store, id, quando: Date.now(), apresentacao });
     Sync.sujo = true; salvarEstadoSync(); renderSync();
   };

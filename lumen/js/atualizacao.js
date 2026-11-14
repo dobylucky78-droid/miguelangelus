@@ -19,7 +19,7 @@ async function verificarAtualizacao({ silencioso = true } = {}) {
   if (!r.nova) { if (!silencioso) toast(`Você já está na versão mais nova (${r.atual}).`); return; }
   if (silencioso && S.config.versaoIgnorada === r.nova) return;
   Atual.info = r;
-  $('#atuTitulo').textContent = `MiguelAngelus ${r.nova} disponível`;
+  $('#atuTitulo').textContent = `${typeof SECRETARIA !== 'undefined' && SECRETARIA ? 'Secretaria MiguelAngelus' : 'MiguelAngelus'} ${r.nova} disponível`;
   $('#atuVersoes').textContent = `Você tem a versão ${r.atual}. Tamanho do download: ${fmtTamanho(r.tamanho || 0)}.`;
   $('#atuNotas').textContent = (r.notas || '').trim() || 'Melhorias e correções.';
   $('#atuStatus').textContent = '';

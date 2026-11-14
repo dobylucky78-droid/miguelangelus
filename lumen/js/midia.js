@@ -474,10 +474,18 @@ function htmlPlayer(it) {
       <label class="campo">Volume <input type="range" id="plVol" min="0" max="1" step="0.05" value="${volumeMidia()}"></label>
       <label class="check"><input type="checkbox" id="plLoop" ${it.loop ? 'checked' : ''}> Repetir</label>
     </div>
+    ${video ? htmlNotaGrupo(it) : ''}
     <p class="sutil pequeno">${video
       ? 'O vídeo aparece no telão com som; a prévia "Ao vivo" fica sem som. Clicar num slide (ou Esc) volta para o texto. Espaço pausa e continua.'
       : 'O áudio toca neste computador. Você pode continuar projetando textos enquanto ele toca. Espaço pausa e continua.'}</p>
   </div>`;
+}
+
+// (1.9) Vídeo com "Repetir" encostado em outros itens que repetem: diz que o conjunto é que se repete
+function htmlNotaGrupo(it) {
+  const g = typeof grupoLoop === 'function' ? grupoLoop(it) : [];
+  return `<p class="sutil pequeno" id="plGrupo">${g.length ? `🔁 <b>Repete em grupo:</b> ${g.map(x => esc(nomeItemGrupo(x))).join(' → ')} → (volta ao primeiro). ` +
+    'Este vídeo passa uma vez e chama o item seguinte.' : ''}</p>`;
 }
 
 // Estado de reprodução de uma mídia (null = parada)
@@ -556,7 +564,8 @@ function tocarPausar(m, it) {
     enviar({ tipo: 'midia', acao: v.pausado ? 'play' : 'pause' });
     v.pausado = !v.pausado;
   } else {
-    Object.assign(v, { id: m.id, t: 0, dur: m.duracao, pausado: false, ativo: true, loop: !!it?.loop });
+    // (1.9) em grupo de itens que se repetem, o vídeo passa uma vez e chama o seguinte (eventos.js)
+    Object.assign(v, { id: m.id, t: 0, dur: m.duracao, pausado: false, ativo: true, loop: typeof loopDoVideo === 'function' ? loopDoVideo(it) : !!it?.loop });
     S.live = { slide: null, preto: false, item: it || null, idx: -1 };
     enviar({ tipo: 'slide', slide: null });      // tira o texto que estava por baixo
     enviar({ tipo: 'preto', on: false });
@@ -610,8 +619,11 @@ function receberStatusMidia(m) {
   const mv = midiaPorId(v.id); if (mv?.pasta && m.dur && !mv.duracao) mv.duracao = m.dur;   // arquivos da pasta: duração só ao tocar
   if (v.ativo && !m.ativo) {                     // terminou ou foi tirado da tela por um slide
     v.ativo = false;
+    // terminou sozinho: o item do vídeo ainda é o que está no ar (um slide ou Limpar já teriam trocado S.live)
+    const acabou = S.live.item?.tipo === 'midia' && midiaDe(S.live.item)?.id === v.id ? S.live.item : null;
     if (S.live.item?.tipo === 'midia') S.live.item = null;
     renderRoteiroLista();
+    if (acabou && typeof aoAcabarVideoGrupo === 'function') aoAcabarVideoGrupo(acabou);   // (1.9) repetir em grupo
   }
   atualizarPlayerUI();
 }
@@ -721,7 +733,9 @@ function ligarMidia() {
       it.loop = e.target.checked;
       if (S.atual.rIdx >= 0) salvarRoteiro();
       if (m?.tipo === 'audio' && Midia.audioId === m.id) Midia.audio.loop = it.loop;
-      if (m?.tipo === 'video' && Midia.video.id === m.id) { Midia.video.loop = it.loop; enviar({ tipo: 'midia', acao: 'loop', on: it.loop }); }
+      if (m?.tipo === 'video' && Midia.video.id === m.id) { Midia.video.loop = loopDoVideo(it); enviar({ tipo: 'midia', acao: 'loop', on: Midia.video.loop }); }
+      renderRoteiroLista();                       // a marca 🔁 do grupo muda
+      const nota = $('#plGrupo'); if (nota) nota.outerHTML = htmlNotaGrupo(it);
     }
   });
   $('#slides').addEventListener('change', e => {
