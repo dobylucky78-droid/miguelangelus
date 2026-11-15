@@ -107,8 +107,8 @@ function iniciarSecretaria() {
   iniciarCadastrosSecretaria();     // secretariacadastros.js: menu Ajustes/Ajuda, marcações e intenções
   const explica = $('[data-ajpainel="sync"] > p.sutil.pequeno');
   if (explica) explica.innerHTML = 'Use a <b>mesma</b> nuvem do MiguelAngelus (a conta do Google Drive da paróquia, ou a mesma pasta compartilhada). ' +
-    'Ao abrir, a Secretaria pega a Agenda e os Avisos mais novos; o que mudar aqui vai logo para a nuvem. Só a Agenda e os Avisos vão e vêm — ' +
-    'roteiros, cantos e o resto continuam só no MiguelAngelus.';
+    'Ao abrir, a Secretaria pega o que há de mais novo; o que mudar aqui vai logo para a nuvem. A Agenda, os Avisos e os Eventos vão e vêm com o MiguelAngelus. ' +
+    '🔒 As marcações e as intenções (com nomes, telefones e ofertas) ficam só entre os computadores da Secretaria. Roteiros, cantos e o resto continuam só no MiguelAngelus.';
 
   $('#secretaria').addEventListener('click', e => {
     const b = e.target.closest('[data-sec]');

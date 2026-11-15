@@ -188,7 +188,9 @@
   .ptz-zm { display: flex; flex-direction: column; gap: 8px; touch-action: none; }
   .ptz-zm button { padding: 16px 12px; }
   .ptz-pad button.ativo, .ptz-zm button.ativo { background: var(--acento); color: #1b1503; }
-  #acordado { position: fixed; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+  /* (1.9.1) tela acesa sem HTTPS: o Chrome atual só segura a tela por um vídeo mudo se ele estiver na tela e for grande
+     (≥ 20% da tela, ≥ 75% visível) — o de 1 px era ignorado. Tela inteira, por cima, quase transparente e sem pegar toque. */
+  #acordado { position: fixed; left: 0; top: 0; width: 100vw; height: 100vh; object-fit: cover; opacity: .01; pointer-events: none; z-index: 2147483000; background: transparent; }
   /* Tablet: conteúdo centralizado numa coluna confortável, letra e miniaturas maiores */
   @media (min-width: 700px) {
     main > section, .nav .setas, .folha > div { max-width: 760px; margin-left: auto; margin-right: auto; }
@@ -890,11 +892,22 @@ async function cmd(acao, dados) {
 // ---------- tela sempre acesa ----------
 let acordou = false;
 async function manterAcesa() {
-  if (acordou) return;
-  try { if ('wakeLock' in navigator) { await navigator.wakeLock.request('screen'); acordou = true; return; } } catch (_) {}
-  try { await $('#acordado').play(); acordou = true; } catch (_) {}      // sem HTTPS: um vídeo mudo em repetição mantém a tela ligada
+  if (acordou || document.visibilityState !== 'visible') return;
+  try {
+    if ('wakeLock' in navigator) {               // com HTTPS (ou o endereço liberado no chrome://flags): o jeito certo
+      const t = await navigator.wakeLock.request('screen');
+      acordou = true; t.addEventListener('release', () => { acordou = false; });
+      return;
+    }
+  } catch (_) {}
+  // sem HTTPS: um vídeo mudo em repetição, do tamanho da tela (ver #acordado no CSS)
+  const v = $('#acordado');
+  try { v.muted = true; await v.play(); acordou = true; } catch (_) {}
 }
-document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { acordou = false; if (token) verificar(); } });
+// o vídeo parou sozinho (o Android pausa ao bloquear/trocar de app): na volta, toca de novo
+$('#acordado').addEventListener('pause', () => { acordou = false; });
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { acordou = false; manterAcesa(); if (token) verificar(); } });
+manterAcesa();   // vídeo mudo não precisa de toque; o Wake Lock também não
 
 // ---------- eventos ----------
 document.addEventListener('click', e => {

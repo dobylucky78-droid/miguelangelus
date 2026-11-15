@@ -36,7 +36,7 @@ const CONFIG_PADRAO = {
   espacoResposta: true,                          // espaço entre as falas: a resposta do povo fica separada
   salmoCorrido: true,                            // salmo: versos de cada estrofe em texto corrido (não quebra a cada vírgula)
   // ideias do Hermínio (1.6.5): 1º slide de cada parte do roteiro com o nome dela; área útil do slide (margens, % da tela)
-  slideSecao: true, numerarSecoes: false, margemLados: 5, margemTopo: 5,
+  slideSecao: true, numerarSecoes: false, secaoSoNome: true, margemLados: 5, margemTopo: 5,
   contornarCantos: true,                         // (1.6.6) o texto contorna o quadrado de cada imagem dos cantos
   // ideias do Thiago (1.7.6): transição suave; o nome da parte junto do texto, colorido; o texto continua centralizado
   // ao desviar das imagens dos cantos
@@ -634,7 +634,10 @@ function slideDaSecao(item) {
       titulo = `${n}. ${titulo}`;
     }
   }
-  return { texto: `<gg>${titulo}</gg>` + (nome[1] ? `\n${tirarMarcas(nome[1])}` : ''), rodape: '', secao: true, secaoNome: titulo };
+  // (1.9.1, Hermínio se confundiu com o nome do canto no Santo) "só o nome": sem a 2ª linha (canto, referência do Salmo);
+  // a linha escrita à mão num item Momento continua
+  const sub = nome[1] && (momento || S.config.secaoSoNome === false) ? `\n${tirarMarcas(nome[1])}` : '';
+  return { texto: `<gg>${titulo}</gg>` + sub, rodape: '', secao: true, secaoNome: titulo };
 }
 
 // Refrão no início e depois de cada estrofe (sem refrão: só as estrofes).
@@ -2679,7 +2682,7 @@ function ligarAjustes() {
       if (k === 'temaApp') return aplicarTemaApp();     // só o aplicativo; o telão não muda
       if (k === 'textoAltar') return atualizarAltarNoAr();
       enviarConfigTelao(); renderTemasRapidos(); desenharPreviaMargens();
-      if (['versosPorSlide', 'numerarVersos', 'quebraAuto', 'linhasPorSlide', 'caracteresPorLinha', 'quebraCantos', 'salmoCorrido', 'slideSecao', 'numerarSecoes',
+      if (['versosPorSlide', 'numerarVersos', 'quebraAuto', 'linhasPorSlide', 'caracteresPorLinha', 'quebraCantos', 'salmoCorrido', 'slideSecao', 'numerarSecoes', 'secaoSoNome',
         'secaoJunto', 'cruz', 'versosFolheto', 'slideAuto', 'margemLados', 'margemTopo', 'maiusculas'].includes(k)) atualizarSlides();
     });
   }

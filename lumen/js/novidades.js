@@ -5,6 +5,10 @@
  * A versão mais nova fica em cima. Ao gerar uma versão nova, acrescente a entrada dela aqui.
  */
 const NOVIDADES = [
+  { versao: '1.9.1', data: '2026-11-15', itens: [
+    '🏷 Slide de título de cada parte: agora mostra só o nome da parte (ex.: "Santo"), sem o nome do canto embaixo, que confundia quem estava no telão. Para voltar a mostrar o canto (ou a referência do Salmo), desmarque "só o nome (sem o do canto)" em Ajustes, ao lado de "1º slide de cada parte com o nome dela". A linha que você escreve num item Momento continua aparecendo.',
+    '📱 Celular dos músicos: a tela não apaga mais enquanto a página do MiguelAngelus está aberta, também nos celulares Android que abrem pelo endereço da rede da igreja.',
+  ] },
   { versao: '1.9.0', data: '2026-11-14', itens: [
     '🎉 Aba Eventos (Alt+0): os eventos da paróquia (festas, retiros, cursos) com cartaz e QR code. Clique num evento para projetar: o cartaz fica à esquerda e o QR à direita; quem aponta a câmera do celular recebe "Adicionar à agenda", sem precisar de internet. Dá para criar e editar aqui ou na Secretaria MiguelAngelus: os eventos vão e voltam pela nuvem (só os eventos: os dados da secretaria não vêm para cá).',
     '🎉 "Apresentar eventos" no Adicionar do roteiro: marque quais eventos entram, quantos segundos cada um fica no telão e se recomeça do início ao terminar. Clique no primeiro slide e os outros passam sozinhos. A apresentação espera com o telão congelado e para se você projetar outra coisa ou usar Limpar.',
