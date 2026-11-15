@@ -444,6 +444,8 @@ namespace MiguelAngelus
         string modoSync = "pasta";      // "pasta" (Google Drive para computador, OneDrive…) ou "google" (API do Drive)
         GoogleDrive google;
         GoogleDrive Google => google ?? (google = new GoogleDrive(cliente));
+        GoogleAgenda agendaG;   // (protótipo, Secretaria) agenda compartilhada da secretaria, numa conta própria
+        GoogleAgenda AgendaG { get { if (agendaG == null) agendaG = new GoogleAgenda(cliente); agendaG.UsarClienteSeFaltar(Google.ClienteId, Google.ClienteSegredo); return agendaG; } }
 
         async void Arquivo(System.Collections.Generic.Dictionary<string, object> m)
         {
@@ -473,6 +475,25 @@ namespace MiguelAngelus
                     case "googleDesconectar":
                         Google.Desconectar();
                         Responder(id, new { ok = true }); return;
+                    // ----- (protótipo) agenda da secretaria numa conta do Google própria -----
+                    case "agendaStatus":
+                        Responder(id, new { ok = true, temCliente = AgendaG.TemCliente, conectado = AgendaG.Conectado, email = AgendaG.Email }); return;
+                    case "agendaCarregarCliente":
+                        using (var d = new OpenFileDialog { Title = "Arquivo JSON do ID do cliente (Google Cloud → Clientes → Fazer download do JSON)", Filter = "Arquivo do Google (*.json)|*.json" })
+                        {
+                            if (d.ShowDialog(this) != DialogResult.OK) { Responder(id, new { ok = false, erro = "cancelado" }); return; }
+                            AgendaG.DefinirCliente(File.ReadAllText(d.FileName));
+                        }
+                        Responder(id, new { ok = true, temCliente = AgendaG.TemCliente }); return;
+                    case "agendaConectar":
+                        await AgendaG.Conectar();
+                        Activate();
+                        Responder(id, new { ok = true, email = AgendaG.Email }); return;
+                    case "agendaDesconectar":
+                        AgendaG.Desconectar();
+                        Responder(id, new { ok = true }); return;
+                    case "agendaApi":
+                        Responder(id, new { ok = true, dados = await AgendaG.Chamar(Convert.ToString(m["metodo"]), Convert.ToString(m["caminho"]), m.TryGetValue("corpo", out var cp) ? cp : null) }); return;
                     // ----- pastas de vídeos e áudios (independe da sincronização) -----
                     case "midiaEscolherPasta":
                         var deVideo = Convert.ToString(m["tipoMidia"]) != "audio";

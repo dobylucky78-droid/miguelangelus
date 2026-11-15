@@ -20,6 +20,7 @@ const MENU_SECRETARIA = `
   <div class="menu"><button class="menu-titulo">Ajustes</button>
     <div class="menu-itens">
       <button data-menu="sec-nuvem">☁ Nuvem da paróquia (Google Drive)…</button>
+      <button data-menu="sec-agendaG">📆 Agenda da secretaria (conta própria)…</button>
       <button data-menu="sec-pasta">🖼 Pasta das imagens do Holyrics…</button>
       <hr>
       <button data-menu="sec-paroquia">🏛 Paróquia e comunidades…</button>
@@ -51,6 +52,7 @@ function abrirEndereco(url) {
 function acaoMenuSecretaria(acao) {
   switch (acao) {
     case 'nuvem': return abrirAjustes('sync');
+    case 'agendaG': return abrirAgendaG();
     case 'pasta':
       if (!NO_APP) return toast('A pasta das imagens se escolhe só no aplicativo para Windows.');
       return escolherPastaImagens().then(ok => ok && toast('🖼 Pasta das imagens: ' + S.config.avisosPastaImagens));
@@ -109,7 +111,7 @@ const lerReais = s => { const n = parseFloat(String(s || '').replace(/[^\d,.-]/g
 const nomeIgreja = id => { const l = localDe(id); return l ? `${l.tipo} ${l.nome}` : '—'; };
 
 // ---------------------------------------------------------------- itens compartilhados entre as Secretarias
-const PREF_SEC = { marc: 'secm-', int: 'seci-', ev: 'sece-' };
+const PREF_SEC = { marc: 'secm-', int: 'seci-', ev: 'sece-', usu: 'secu-' };   // usu: pessoas da 📆 agenda (secretariaagendag.js)
 const horaCurta = t => new Date(t).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
 
 // versao = quando o item foi gravado pela última vez (o "atualizado" do registro), para conferir conflitos
@@ -1052,6 +1054,7 @@ function iniciarCadastrosSecretaria() {
   ligarMarcacoes();
   ligarIntencoes();
   ligarEventosSec();
+  if (typeof iniciarAgendaG === 'function') iniciarAgendaG();   // (protótipo) 📆 agenda da secretaria numa conta própria
   // F1 abre o "Como usar" da Secretaria (o manual do MiguelAngelus não serve aqui)
   document.addEventListener('keydown', e => {
     if (e.key !== 'F1') return;

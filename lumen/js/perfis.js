@@ -10,7 +10,7 @@ const CAMPOS_PERFIL = ['fonte', 'fonteMax', 'corTexto', 'corFundo', 'alinhamento
   'mostrarRotulos', 'corRotulo', 'espacoResposta',
   // Tamanho dos slides (outra seção dos Ajustes, mas também é "o jeito da tela")
   'slideAuto', 'quebraAuto', 'linhasPorSlide', 'caracteresPorLinha', 'quebraCantos', 'versosPorSlide', 'numerarVersos', 'salmoCorrido',
-  'margemLados', 'margemTopo', 'slideSecao', 'numerarSecoes', 'secaoSoNome', 'contornarCantos',
+  'margemLados', 'margemTopo', 'slideSecao', 'numerarSecoes', 'secaoSoNome', 'silencioComunhao', 'contornarCantos',
   'transicao', 'secaoJunto', 'corSecao', 'centralizarCantos', 'cruz', 'corCruz', 'versosFolheto',
   'textoAltar'];                       // a tela do botão Altar (que já usa a aparência acima)
 

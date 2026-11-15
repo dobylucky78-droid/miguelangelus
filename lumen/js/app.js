@@ -36,7 +36,7 @@ const CONFIG_PADRAO = {
   espacoResposta: true,                          // espaço entre as falas: a resposta do povo fica separada
   salmoCorrido: true,                            // salmo: versos de cada estrofe em texto corrido (não quebra a cada vírgula)
   // ideias do Hermínio (1.6.5): 1º slide de cada parte do roteiro com o nome dela; área útil do slide (margens, % da tela)
-  slideSecao: true, numerarSecoes: false, secaoSoNome: true, margemLados: 5, margemTopo: 5,
+  slideSecao: true, numerarSecoes: false, secaoSoNome: true, silencioComunhao: false, margemLados: 5, margemTopo: 5,
   contornarCantos: true,                         // (1.6.6) o texto contorna o quadrado de cada imagem dos cantos
   // ideias do Thiago (1.7.6): transição suave; o nome da parte junto do texto, colorido; o texto continua centralizado
   // ao desviar das imagens dos cantos
@@ -590,17 +590,51 @@ const MOMENTOS_MISSA = [
   ['Liturgia da Palavra', ['Liturgia da Palavra', 'Primeira Leitura', 'Salmo Responsorial', 'Segunda Leitura', 'Aclamação ao Evangelho',
     'Evangelho', 'Homilia', 'Profissão de Fé', 'Oração dos Fiéis']],
   ['Liturgia Eucarística', ['Liturgia Eucarística', 'Apresentação das Oferendas', 'Oração sobre as Oferendas', 'Oração Eucarística']],
-  ['Rito da Comunhão', ['Rito da Comunhão', 'Pai-Nosso', 'Saudação da Paz', 'Cordeiro de Deus', 'Comunhão', 'Ação de Graças', 'Oração depois da Comunhão']],
+  ['Rito da Comunhão', ['Rito da Comunhão', 'Pai-Nosso', 'Saudação da Paz', 'Cordeiro de Deus', 'Comunhão', 'Momento de silêncio para oração pessoal', 'Ação de Graças', 'Oração depois da Comunhão']],
   ['Ritos Finais', ['Avisos', 'Ritos Finais', 'Bênção Final', 'Despedida', 'Canto Final']],
 ];
 const nomesMomentos = () => MOMENTOS_MISSA.flatMap(g => g[1]);
+
+// (1.9.2) "Momento de silêncio para oração pessoal": um momento à parte — nunca leva número e não "engole" o título da
+// parte seguinte (a Oração depois da Comunhão continua com o slide de título dela). Com a chave dos Ajustes
+// (silencioComunhao), entra sozinho em cada roteiro aberto, logo depois do canto de comunhão (uma vez por roteiro:
+// se a equipe tirar, não volta).
+const MOMENTO_SILENCIO = 'Momento de silêncio para oração pessoal';
+const ehSilencio = i => i?.tipo === 'momento' && semAcento((i.titulo || '').trim()).toLowerCase() === semAcento(MOMENTO_SILENCIO).toLowerCase();
+
+function silencioNoRoteiro(r) {
+  if (!S.config.silencioComunhao || !r?.itens || r.silencioFeito) return false;
+  const itens = r.itens;
+  if (itens.some(i => ehSilencio(i) || i.auto === 'silencio')) { r.silencioFeito = true; return true; }
+  let pos = -1;
+  itens.forEach((i, k) => { if (i.tipo === 'canto' && i.momento === 'Comunhão') pos = k; });
+  if (pos < 0) return false;                         // ainda sem canto de comunhão: entra quando ele vier
+  itens.splice(pos + 1, 0, { id: uid(), tipo: 'momento', titulo: MOMENTO_SILENCIO, sub: '', auto: 'silencio' });
+  r.silencioFeito = true;
+  if (r === S.roteiro && S.atual?.rIdx >= 0) S.atual.rIdx = itens.indexOf(S.atual.item);
+  return true;
+}
+
+// desligou a chave: tira dos roteiros os que entraram sozinhos (e não foram mexidos); ligou: põe no roteiro aberto
+function aposMudarSilencio() {
+  if (S.config.silencioComunhao) { if (silencioNoRoteiro(S.roteiro)) { salvarRoteiro(); renderRoteiroLista(); } return; }
+  for (const r of S.roteiros) {
+    const antes = r.itens.length;
+    r.itens = r.itens.filter(i => !(i.auto === 'silencio' && ehSilencio(i) && !(i.sub || '').trim()));
+    if (r.itens.length === antes && !r.silencioFeito) continue;
+    delete r.silencioFeito;
+    if (r === S.roteiro) { if (S.atual?.rIdx >= 0) { const k = r.itens.indexOf(S.atual.item); if (k < 0) S.atual = null; else S.atual.rIdx = k; } salvarRoteiro(); }
+    else { r.atualizado = Date.now(); DB.salvar('roteiros', r); }
+  }
+  renderRoteiroLista(); renderSlides();
+}
 
 // Item que continua o anterior não ganha slide de título: o marcado (semSecao) e o Pai-Nosso logo depois do
 // "Rito da Comunhão" do folheto (que termina chamando o Pai-Nosso) e o "Eis o Cordeiro" logo depois do Cordeiro
 function continuaAnterior(item, itens) {
   if (item.semSecao) return true;
   const ant = itens[itens.indexOf(item) - 1];
-  if (ant?.tipo === 'momento' && item.tipo !== 'momento' && (ant.titulo || '').trim()) return true;     // o slide do momento já é o título
+  if (ant?.tipo === 'momento' && item.tipo !== 'momento' && (ant.titulo || '').trim() && !ehSilencio(ant)) return true;     // o slide do momento já é o título (o de silêncio não)
   if (item.tipo !== 'ordinario') return false;
   if (!ant) return false;
   if (item.parte === 'pai-nosso') return (ant.tipo === 'texto' && /rito da comunhao/.test(semAcento(ant.titulo || ''))) || (ant.tipo === 'ordinario' && ant.parte === 'rito-comunhao');
@@ -609,7 +643,7 @@ function continuaAnterior(item, itens) {
 }
 
 // partes que o folheto não numera: comentários, antífonas e as intenções
-const semNumero = i => i.intencoes || i.antifona || (i.tipo === 'texto' && /^(coment[aá]rio|ant[ií]fona)/i.test(i.titulo || ''));
+const semNumero = i => i.intencoes || i.antifona || ehSilencio(i) || (i.tipo === 'texto' && /^(coment[aá]rio|ant[ií]fona)/i.test(i.titulo || ''));
 function slideDaSecao(item) {
   const momento = item.tipo === 'momento';      // o Momento é o próprio slide de título: sai mesmo sem "slide com o nome da parte"
   const noRoteiro = !!S.roteiro?.itens.includes(item);
@@ -617,7 +651,7 @@ function slideDaSecao(item) {
   const nome = nomeDaSecao(item);
   if (!nome || !nome[0]) return null;
   let titulo = tirarMarcas(nome[0]);
-  if (S.config.numerarSecoes && noRoteiro) {
+  if (S.config.numerarSecoes && noRoteiro && !ehSilencio(item)) {
     const itens = S.roteiro.itens;
     // o Momento leva o número que o folheto dá à parte que vem logo depois dele
     const prox = momento ? itens[itens.indexOf(item) + 1] : null;
@@ -1701,6 +1735,7 @@ function renderRoteiroCab() {
 
 function renderRoteiroLista() {
   const el = $('#roteiroItens');
+  if (silencioNoRoteiro(S.roteiro)) salvarRoteiro();   // (1.9.2) momento de silêncio depois do canto de comunhão, se ligado
   const itens = S.roteiro.itens;
   const bl = $('#btnLetrasRoteiro'); if (bl) bl.hidden = !itensSemLetras(S.roteiro).length;    // roteiro antigo, sem P./T.
   if (!itens.length) {
@@ -2681,6 +2716,7 @@ function ligarAjustes() {
       salvarConfig();
       if (k === 'temaApp') return aplicarTemaApp();     // só o aplicativo; o telão não muda
       if (k === 'textoAltar') return atualizarAltarNoAr();
+      if (k === 'silencioComunhao') return aposMudarSilencio();
       enviarConfigTelao(); renderTemasRapidos(); desenharPreviaMargens();
       if (['versosPorSlide', 'numerarVersos', 'quebraAuto', 'linhasPorSlide', 'caracteresPorLinha', 'quebraCantos', 'salmoCorrido', 'slideSecao', 'numerarSecoes', 'secaoSoNome',
         'secaoJunto', 'cruz', 'versosFolheto', 'slideAuto', 'margemLados', 'margemTopo', 'maiusculas'].includes(k)) atualizarSlides();

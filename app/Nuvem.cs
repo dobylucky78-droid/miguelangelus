@@ -40,6 +40,8 @@ namespace MiguelAngelus
 
         public bool TemCliente => !string.IsNullOrEmpty(clienteId);
         public bool Conectado => !string.IsNullOrEmpty(refreshToken);
+        internal string ClienteId => clienteId;            // (protótipo da Agenda Google) a agenda usa o mesmo ID do cliente
+        internal string ClienteSegredo => clienteSegredo;
 
         // ---------- credenciais guardadas (criptografadas para este usuário do Windows) ----------
         void Carregar()

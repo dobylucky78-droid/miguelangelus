@@ -84,6 +84,7 @@ function abrirSecretaria(qual) {
     case 'marcacoes': return abrirMarcacoes();
     case 'intencoes': return abrirIntencoes();
     case 'eventos': return abrirEventos();
+    case 'agendaG': return abrirAgendaG();
   }
 }
 

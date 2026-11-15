@@ -5,6 +5,10 @@
  * A versão mais nova fica em cima. Ao gerar uma versão nova, acrescente a entrada dela aqui.
  */
 const NOVIDADES = [
+  { versao: '1.9.2', data: '2026-11-15', itens: [
+    '🤫 Novo momento "Momento de silêncio para oração pessoal" (no Inserir → Momento, em Rito da Comunhão). Ele nunca leva número, e a Oração depois da Comunhão continua com o slide de título dela.',
+    '🤫 Em Ajustes, ao lado do "1º slide de cada parte com o nome dela", a chave "Momento de silêncio … depois do canto de comunhão, em todos os roteiros": cada roteiro aberto ganha esse momento logo depois do canto de comunhão. Se tirar de um roteiro, ele não volta; desligar a chave tira os que entraram sozinhos.',
+  ] },
   { versao: '1.9.1', data: '2026-11-15', itens: [
     '🏷 Slide de título de cada parte: agora mostra só o nome da parte (ex.: "Santo"), sem o nome do canto embaixo, que confundia quem estava no telão. Para voltar a mostrar o canto (ou a referência do Salmo), desmarque "só o nome (sem o do canto)" em Ajustes, ao lado de "1º slide de cada parte com o nome dela". A linha que você escreve num item Momento continua aparecendo.',
     '📱 Celular dos músicos: a tela não apaga mais enquanto a página do MiguelAngelus está aberta, também nos celulares Android que abrem pelo endereço da rede da igreja.',

@@ -1,4 +1,4 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
@@ -25,7 +25,7 @@
     </div>
     <div class="splash-info">
       <div class="splash-gratis"><b>Gratuito · uso livre</b></div>
-      <div data-versao>Versão 1.9.1</div>
+      <div data-versao>Versão 1.9.2</div>
       <div>© 2026</div>
       <div><b>PASCOM</b></div>
       <div><b>São José Operário Ilha</b></div>
@@ -176,6 +176,8 @@
       <span>Folha para ler no ambão (ou PDF) e imagens para o Holyrics.</span></button>
     <button type="button" data-sec="marcacoes" class="sec-local"><span class="ic">📒</span><b>Agenda de marcações</b>
       <span>Batizados, casamentos, 15 anos, 7º dia, crisma, 1ª comunhão… por igreja. Só entre as Secretarias.</span></button>
+    <button type="button" data-sec="agendaG" class="sec-local" hidden><!-- aparece só depois de ligar em Ajustes → 📆 Agenda da secretaria --><span class="ic">📆</span><b>Agenda da secretaria</b>
+      <span>A agenda do Google que a secretaria já usa, numa conta própria. Ver é livre; para mexer, cada pessoa entra com a sua senha. (protótipo)</span></button>
     <button type="button" data-sec="intencoes" class="sec-local"><span class="ic">🕯</span><b>Intenções de Missa</b>
       <span>As intenções de cada Missa, a folha para ler e o relatório das ofertas. Só entre as Secretarias.</span></button>
     <button type="button" data-sec="eventos"><span class="ic">🎉</span><b>Eventos com QR code</b>
@@ -555,6 +557,9 @@
             <label class="check" title="Cada parte do roteiro (Entrada, Ato Penitencial, Coleta, Salmo…) começa com um slide só com o nome dela — ideia do Hermínio"><input type="checkbox" data-cfg="slideSecao"> 1º slide de cada parte com o nome dela</label>
             <label class="check" title="Ex.: 3. Ato Penitencial — na ordem do roteiro"><input type="checkbox" data-cfg="numerarSecoes"> com número</label>
             <label class="check" title="Ligado: o slide de título mostra só o nome da parte (ex.: Santo). Desligado: mostra também o nome do canto ou a referência do Salmo embaixo. A linha que você escreve num item Momento sempre aparece."><input type="checkbox" data-cfg="secaoSoNome"> só o nome (sem o do canto)</label>
+          </div>
+          <div class="linha">
+            <label class="check" title="Cada roteiro aberto ganha, logo depois do canto de comunhão, o item Momento &quot;Momento de silêncio para oração pessoal&quot; (sem número). Se tirar de um roteiro, não volta. Desligar tira os que entraram sozinhos."><input type="checkbox" data-cfg="silencioComunhao"> <b>Momento de silêncio</b> para oração pessoal depois do canto de comunhão, em todos os roteiros</label>
           </div>
           <div class="linha">
             <label class="check" title="Em vez de um slide só com o nome, o nome da parte vai em cima do texto, no 1º slide dela, colorido como no folheto — ideia do Thiago"><input type="checkbox" data-cfg="secaoJunto"> Nome da parte <b>junto do texto</b>, colorido</label>
@@ -1161,9 +1166,9 @@
     <p class="sutil"><b>Miguel</b> + <b>Angelus</b> ("anjo", em latim): uma homenagem ao Miguel, que idealizou e criou
       esse projeto, e a <b>São Miguel Arcanjo</b>, cuja festa foi na semana em que o programa nasceu. 😇</p>
     <div class="creditos">
-      <div class="credito"><div class="foto">M</div>
+      <div class="credito"><img class="foto" src="img/foto-miguel.webp" alt="Miguel">
         <div><span class="sutil pequeno">Criado por</span><b>Miguel Aurelio Dutra Martins</b></div></div>
-      <div class="credito"><div class="foto">M</div>
+      <div class="credito"><img class="foto" src="img/foto-marcio.webp" alt="Marcio">
         <div><span class="sutil pequeno">Desenvolvido por</span><b>Marcio Aurelio Rios Martins</b></div></div>
     </div>
     <div class="sobre-brasoes">
@@ -1184,7 +1189,7 @@
       <a href="mailto:contato.miguelangelus@gmail.com" target="_blank" rel="noopener" class="mail" title="E-mail do MiguelAngelus: dúvidas, sugestões e outras paróquias">
         <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M3.5 6.5 12 13l8.5-6.5" fill="none" stroke="currentColor" stroke-width="2"/></svg>contato.miguelangelus@gmail.com</a>
     </div>
-    <p class="sutil pequeno" id="versaoApp">Versão 1.9.1</p>
+    <p class="sutil pequeno" id="versaoApp">Versão 1.9.2</p>
     <div class="linha"><span class="espaco"></span><button value="ok" class="primario">OK</button></div>
   </form>
 </dialog>
@@ -1555,6 +1560,7 @@
 <script src="js/menus.js"></script>
 <script src="js/secretaria.js"></script>
 <script src="js/secretariacadastros.js"></script>
+<script src="js/secretariaagendag.js"></script>
 <script src="js/eventos.js"></script>
 <script src="js/app.js"></script>
 </body>

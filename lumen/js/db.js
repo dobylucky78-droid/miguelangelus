@@ -43,7 +43,7 @@ const DB = (() => {
     // (1.6.5) avisos, perfis e Pix também: sem a data da mudança, só a 1ª versão subia e as mudanças não chegavam aos outros computadores
     || (store === 'config' && ['agenda', 'eucaristia', 'avisos', 'perfis', 'pix', 'ordinario', 'links', 'joyPerfis', 'classificacoes', 'tercos'].includes(obj?.id))
     // (Secretaria 1.1) cada marcação (secm-), intenção (seci-) e evento (sece-) é um registro: sincroniza item por item
-    || (store === 'config' && /^sec[mie]-/.test(obj?.id || ''));
+    || (store === 'config' && /^sec[mieu]-/.test(obj?.id || ''));
 
   const api = {
     todos: store => tx(store, 'readonly', s => s.getAll()),

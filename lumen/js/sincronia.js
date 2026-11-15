@@ -16,11 +16,12 @@ const Sync = { estado: { vistos: {}, enviados: {}, removidos: [] }, pedidos: {},
 // (1.1) …e, numa pasta SÓ DELA ("secretaria/"), as marcações e intenções; os eventos em "eventos/". Um arquivo por item
 // (secm-/seci-/sece-), compartilhados entre os computadores da secretaria.
 // O MiguelAngelus lê e grava SÓ a pasta "eventos/" (aba 🎉 Eventos); marcações e intenções nunca chegam a ele.
-const ehItemSecretaria = id => /^sec[mie]-/.test(id || '');
+// (protótipo da Agenda Google) secu- = pessoas que podem mexer na agenda (nome + senha com hash), também só entre as Secretarias
+const ehItemSecretaria = id => /^sec[mieu]-/.test(id || '');
 const ehEvento = id => /^sece-/.test(id || '');
 const GRUPOS_SYNC = typeof SECRETARIA !== 'undefined' && SECRETARIA ? [
   { sub: 'config', store: 'config', filtro: r => ['agenda', 'avisos'].includes(r.id) },
-  { sub: 'secretaria', store: 'config', filtro: r => /^sec[mi]-/.test(r.id || '') },   // marcações e intenções: só a Secretaria
+  { sub: 'secretaria', store: 'config', filtro: r => /^sec[miu]-/.test(r.id || '') },   // marcações e intenções: só a Secretaria
   // eventos numa pasta própria: o MiguelAngelus também lê (aba 🎉 Eventos) e pode criar, como nos avisos
   { sub: 'eventos', store: 'config', filtro: r => ehEvento(r.id) },
 ] : [
