@@ -5,6 +5,9 @@
  * A versão mais nova fica em cima. Ao gerar uma versão nova, acrescente a entrada dela aqui.
  */
 const NOVIDADES = [
+  { versao: '1.9.3', data: '2026-11-15', itens: [
+    '🎸 "Montar a letra a partir da cifra" reconhece mais formatos de acorde do Cifra Club: G7/4, D7/9, Eb6/9, Bm7b5, N.C., as marcas de repetição (2x), x2, bis e as linhas "Intro: G D Em C". Antes, um acorde desses fazia a linha de acordes inteira ir para a letra. A causa mais comum era invisível: ao copiar do Cifra Club, algumas linhas vêm com um caractere sem largura no começo, e agora ele é ignorado. Também saem o "Capotraste…" do cabeçalho e os acordes entre colchetes no meio da letra ("[G]Santo").',
+  ] },
   { versao: '1.9.2', data: '2026-11-15', itens: [
     '🤫 Novo momento "Momento de silêncio para oração pessoal" (no Inserir → Momento, em Rito da Comunhão). Ele nunca leva número, e a Oração depois da Comunhão continua com o slide de título dela.',
     '🤫 Em Ajustes, ao lado do "1º slide de cada parte com o nome dela", a chave "Momento de silêncio … depois do canto de comunhão, em todos os roteiros": cada roteiro aberto ganha esse momento logo depois do canto de comunhão. Se tirar de um roteiro, ele não volta; desligar a chave tira os que entraram sozinhos.',

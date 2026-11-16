@@ -12,15 +12,29 @@
 
 // ---------- acordes ----------
 // Acorde: "G", "F#m7", "A7(4/9)", "G#m7(5-)", "D7M(6/9)", "F7+", "Bbmaj7", "A#m11", "G#°", "Bm7/A"…
-const RX_ACORDE = /^[A-G][#b]?(?:m|M|maj|min|sus|dim|aug|add|°|º|\+)?\d*(?:M|\+|°|º|maj\d*)?(?:\([^)]*\))?(?:[+\-]\d+)?(?:\/[A-G][#b]?\d*)?$/;
+// (1.9.3) também "G7/4", "D7/9", "Eb6/9" (extensão com barra), "Bm7b5"/"C7#9" (alteração sem parênteses) e "N.C."
+const RX_ACORDE = /^(?:[A-G][#b]?(?:m|M|maj|min|sus|dim|aug|add|°|º|\+)?\d*(?:M|\+|°|º|maj\d*)?(?:[b#]\d+)*(?:\([^)]*\))?(?:[+\-]\d+)?(?:\/\d+)*(?:\/[A-G][#b]?\d*)?|N\.?C\.?)$/;
+// marcas de repetição e de compasso que aparecem nas linhas de acordes: "(2x)", "2x", "x2", "bis", "%", "|", "-", "…"
+const RX_MARCA_ACORDE = /^(?:\(?\d+\s*[xX]\)?|\(?[xX]\s*\d+\)?|\(?bis\)?|[-–.x:|%…*]+)$/i;
 const ehLinhaDeAcordes = l => {
   // parênteses em volta da linha inteira ("( Bm7  F#m7  G7M )") saem; os do acorde ("G#m7(5-)") ficam
-  let s = l.trim();
+  let s = invisiveis(l).trim();
+  // anotação entre parênteses no meio dos acordes: "(Riff 1)", "(Solo)", "(2x)"
+  s = s.replace(/\((?:riff|solo|intro|final|base|bis|\d+\s*x|x\s*\d+)[^)]*\)/gi, ' ');
+  // "Intro: G D Em C" / "Solo: …" (o Cifra Club usa) = linha de acordes com rótulo
+  s = s.replace(/^\[?(?:intro(?:du[cç][aã]o)?|solo|riff|base|final|ponte|interl[uú]dio|passagem|dedilhado)\]?\s*[:\-]\s*/i, '');
   if (/^\(.*\)$/.test(s)) s = s.slice(1, -1);
   s = s.replace(/\|/g, ' ');
   const p = s.split(/\s+/).filter(Boolean);
-  return p.length > 0 && p.every(x => RX_ACORDE.test(x) || /^[-–.x:|]+$/i.test(x) || /^\(?[A-G][^\s]*\)?$/.test(x) && RX_ACORDE.test(x.replace(/^\(|\)$/g, '')));
+  const um = x => RX_ACORDE.test(x) || /^\(?[A-G][^\s]*\)?$/.test(x) && RX_ACORDE.test(x.replace(/^\(|\)$/g, ''));
+  // dois acordes grudados ("A7(9-)Fº")
+  const acorde = x => um(x) || /\)[A-G]/.test(x) && x.split(/(?<=\))(?=[A-G])/).every(um);
+  // "(" e ")" soltos: o trecho entre parênteses continua na linha de baixo ("G ( D A/C#" … "Bm A ) E/G#")
+  return p.length > 0 && p.some(acorde) && p.every(x => acorde(x) || RX_MARCA_ACORDE.test(x) || /^[()]+$/.test(x))
+    || p.length > 0 && p.every(x => RX_MARCA_ACORDE.test(x));
 };
+// (1.9.3) caracteres invisíveis que vêm ao copiar do Cifra Club (espaço de largura zero no começo das linhas, espaço duro)
+function invisiveis(t) { return (t || '').replace(/[​-‍⁠﻿]/g, '').replace(/ /g, ' '); }
 const ehLinhaDeTab = l => /^\s*[EBGDAe]\|/.test(l);
 const NOTAS_S = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 const NOTAS_B = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'];
@@ -72,14 +86,21 @@ function letraDaCifra(cifra) {
   // "[Refrão]" que aparece 2+ vezes marca o refrão de verdade (o trecho que volta). Uma vez só (ex.: Glória com "[Refrão]"
   // em "Só vós sois o Santo") é só o nome de uma parte.
   const RX_REF = /^\s*\[(refr[aã]o|coro)[^\]]*\]/i;
-  const texto = (cifra || '').replace(/\r/g, '');
+  const texto = invisiveis(cifra).replace(/\r/g, '');
   const usarRefrao = (texto.match(/^\s*\[(refr[aã]o|coro)[^\]]*\]/gim) || []).length >= 2;
   let noRefrao = false, marcar = false;
   for (let l of texto.split('\n')) {
+    // (1.9.3) acorde no meio da letra, entre colchetes: "[G]Glória a Deus nas [C]alturas" (antes de ver se é "[Parte]")
+    if (/\[[A-G][^\]\s]*\]/.test(l)) {
+      const sem = l.replace(/\[([^\]\s]+)\]/g, (m, a) => RX_ACORDE.test(a) ? '' : m);
+      if (sem !== l) { l = sem; if (!l.trim()) continue; }
+    }
     if (usarRefrao && RX_REF.test(l)) { linhas.push(''); noRefrao = marcar = true; aposAcorde = false; continue; }
     if (ehLinhaDeTab(l) || /^\s*\[[^\]]*\]/.test(l)) { if (/^\s*\[/.test(l)) { linhas.push(''); noRefrao = marcar = false; } aposAcorde = false; continue; }
     if (ehLinhaDeAcordes(l)) { aposAcorde = true; continue; }
     if (/^\s*parte \d+ de \d+\s*$/i.test(l)) continue;         // rótulo das tablaturas do site ("Parte 2 de 5")
+    // (1.9.3) cabeçalho e rodapé do Cifra Club que vêm junto ao copiar a página
+    if (/^\s*(capotraste|capo\b|afina[cç][aã]o|tom\s*:|esta informa[cç][aã]o est[aá] errada|cifra club|exibir cifra|simplificar cifra|auto rolagem)/i.test(l)) continue;
     if (noRefrao && !l.trim()) continue;                   // o refrão inteiro num bloco só (até a próxima parte)
     if (marcar && l.trim()) { l = 'Refrão: ' + l.trim(); marcar = false; }
     l = l.replace(/\(\s*[A-G][^)]*\)/g, '').replace(/\S*(?:-{2,}|_+)\S*/g, juntarSilabas)

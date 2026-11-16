@@ -1925,7 +1925,9 @@ function renderCantos() {
 function organizarColado(bruto) {
   const norm = s => semAcento(s).replace(/[^a-z0-9]+/g, ' ').trim();
   const acorde = /^[A-G][#b]?(?:m|M|maj|min|sus|dim|aug|add|°|º)?\d*(?:\([^)]*\))?(?:\/[A-G][#b]?)?$/;
-  const ehCifra = t => { const p = t.split(/\s+/); return p.every(x => acorde.test(x) || /^[|\-–.x:]+$/i.test(x)); };
+  // (1.9.3) a mesma regra do "Montar a letra a partir da cifra" (cifras.js), que conhece mais formatos de acorde
+  const ehCifra = t => typeof ehLinhaDeAcordes === 'function' ? ehLinhaDeAcordes(t)
+    : t.split(/\s+/).every(x => acorde.test(x) || /^[|\-–.x:]+$/i.test(x));
   let autor = '';
   const linhas = [];
   for (const l of (bruto || '').replace(/\r/g, '').split('\n')) {
