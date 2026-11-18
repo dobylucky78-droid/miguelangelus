@@ -50,5 +50,5 @@ cada instalação guarda os seus dados no próprio computador ou no Google Drive
 
 ## Licença
 
-Código sob a licença MIT (veja `LICENSE`). A biblioteca PDF.js (`lumen/lib/pdfjs`) é da Mozilla, sob a licença Apache 2.0.
+Código sob a licença MIT (veja `LICENSE`). A biblioteca PDF.js (`lumen/lib/pdfjs`) é da Mozilla, sob a licença Apache 2.0. A biblioteca jsQR (`lumen/lib/jsqr`), que lê o QR code do Pix para mostrar o recebedor, é de Cosmo Wolfe e colaboradores, sob a licença Apache 2.0.
 Textos litúrgicos e letras de cantos pertencem aos seus autores e editoras.

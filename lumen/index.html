@@ -8,7 +8,7 @@
 <script>try { if (localStorage.getItem('lumen.temaApp') === 'claro') document.documentElement.dataset.temaApp = 'claro'; } catch (_) {}
   // (Secretaria MiguelAngelus 1.0) o mesmo programa aberto no modo Secretaria: só Agenda e Avisos (index.html?app=secretaria)
   const SECRETARIA = new URLSearchParams(location.search).get('app') === 'secretaria';
-  const VERSAO_SECRETARIA = '1.4.0';   // versão da Secretaria (a do .iss e do .csproj precisam bater)
+  const VERSAO_SECRETARIA = '1.4.1';   // versão da Secretaria (a do .iss e do .csproj precisam bater)
   if (SECRETARIA) { document.documentElement.classList.add('app-secretaria'); document.title = 'Secretaria MiguelAngelus'; }</script>
 <link rel="icon" type="image/svg+xml" href="img/icone.svg">
 </head>
@@ -25,7 +25,7 @@
     </div>
     <div class="splash-info">
       <div class="splash-gratis"><b>Gratuito · uso livre</b></div>
-      <div data-versao>Versão 1.9.7</div>
+      <div data-versao>Versão 1.9.8</div>
       <div>© 2026</div>
       <div><b>PASCOM</b></div>
       <div><b>São José Operário Ilha</b></div>
@@ -670,7 +670,7 @@
             basta colocar num computador.</p>
           <div class="pix-cadeado linha" id="pixCadeado"></div>
           <div class="pix-cfg" id="pixCfg">
-            <div><b>QR code</b><div class="pix-prev" id="pixPrevQr"></div>
+            <div><b>QR code</b><div class="pix-prev" id="pixPrevQr"></div><div id="pixRecebedor" class="pix-rec" hidden></div>
               <span class="linha"><button type="button" data-pix="qr">Escolher imagem…</button><button type="button" data-pixtirar="qr" class="perigo">Tirar</button></span></div>
             <div><b>Faixa com a chave (para conferir)</b><div class="pix-prev larga" id="pixPrevFaixa"></div>
               <span class="linha"><button type="button" data-pix="faixa">Escolher imagem…</button><button type="button" data-pixtirar="faixa" class="perigo">Tirar</button></span></div>
@@ -1206,7 +1206,7 @@
       <a href="mailto:contato.miguelangelus@gmail.com" target="_blank" rel="noopener" class="mail" title="E-mail do MiguelAngelus: dúvidas, sugestões e outras paróquias">
         <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M3.5 6.5 12 13l8.5-6.5" fill="none" stroke="currentColor" stroke-width="2"/></svg>contato.miguelangelus@gmail.com</a>
     </div>
-    <p class="sutil pequeno" id="versaoApp">Versão 1.9.7</p>
+    <p class="sutil pequeno" id="versaoApp">Versão 1.9.8</p>
     <div class="linha"><span class="espaco"></span><button value="ok" class="primario">OK</button></div>
   </form>
 </dialog>
@@ -1563,12 +1563,14 @@
 <script src="js/sincronia.js"></script>
 <script src="js/atualizacao.js"></script>
 <script src="js/novidades.js"></script>
+<script src="js/pixleitor.js"></script>
 <script src="js/pix.js"></script>
 <script src="js/formatacao.js"></script>
 <script src="js/cowabunga.js"></script>
 <script src="js/cifras.js"></script>
 <script src="js/partituras.js"></script>
 <script src="lib/qrcode/qrcode.min.js"></script>
+<script src="lib/jsqr/jsQR.js"></script>
 <script src="js/celular.js"></script>
 <script src="js/links.js"></script>
 <script src="js/joystick.js"></script>

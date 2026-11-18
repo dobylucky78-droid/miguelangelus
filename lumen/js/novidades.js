@@ -5,7 +5,10 @@
  * A versão mais nova fica em cima. Ao gerar uma versão nova, acrescente a entrada dela aqui.
  */
 const NOVIDADES = [
-  { versao: '1.9.7', data: '2026-11-19', itens: [
+  { versao: '1.9.8', data: '2026-11-18', itens: [
+    '💠 Para quem vai o Pix: em Ajustes → 💠 Pix, embaixo do QR code, o programa mostra o recebedor que está dentro do próprio QR (nome, cidade e chave). Ao escolher um QR novo, ele pergunta "Este QR code manda o Pix para: … É isso mesmo?" antes de guardar. Um QR trocado ou errado aparece na hora com outro nome. O recebedor aparece também ao passar o mouse no botão 💠 Pix. Tudo é lido no próprio computador, sem internet.',
+  ] },
+  { versao: '1.9.7', data: '2026-11-18', itens: [
     '📢 Avisos de evento e de campanha: no item Avisos, o aviso que a Secretaria ligou a um evento ou a uma campanha cadastrados aparece no telão como o slide pronto do evento (com o QR da agenda) ou da campanha (com o QR do Pix), no lugar do texto. A ordem é a mesma da folha que o leitor tem no ambão: primeiro os avisos comuns, depois os de evento e por último os de campanha. É só ir passando com o Próximo enquanto ele lê. Se o evento for apagado, ou a campanha pausada ou encerrada, o aviso volta a aparecer como texto.',
   ] },
   { versao: '1.9.6', data: '2026-11-18', itens: [

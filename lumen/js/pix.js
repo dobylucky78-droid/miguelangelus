@@ -93,6 +93,13 @@ function renderPixAjustes() {
   const prev = (el, src, vazio) => { if (el) el.innerHTML = src ? `<img src="${src}" alt="">` : `<span class="sutil pequeno">${vazio}</span>`; };
   prev($('#pixPrevQr'), Pix.qr, 'Sem QR code.');
   prev($('#pixPrevFaixa'), Pix.faixa, 'Sem faixa (opcional).');
+  // (1.9.8) para quem vai o dinheiro: lido do próprio QR (pixleitor.js); também no botão 💠 Pix
+  mostrarRecebedor($('#pixRecebedor'), Pix.qr).then(r => {
+    const b = $('#btnPix');
+    if (!b) return;
+    b.dataset.titulo ??= b.title;
+    b.title = b.dataset.titulo + (r?.pix ? `\nRecebedor: ${r.pix.nome}${r.pix.chave ? ' · ' + r.pix.chave : ''}` : '');
+  });
   const cad = $('#pixCadeado');
   if (!cad) return;
   const pode = !!Pix.senha && Pix.liberado;
@@ -173,7 +180,10 @@ function ligarPix() {
     const f = arq.files[0];
     if (!f || !Pix.escolhendo || !Pix.liberado) return;
     if (!/^image\//.test(f.type)) return toast('Escolha uma imagem (PNG ou JPG).');
-    Pix[Pix.escolhendo] = await lerImagemPix(f);
+    const img = await lerImagemPix(f);
+    // QR novo: mostra para quem vai o dinheiro e pede confirmação antes de guardar (e de ir para os outros computadores)
+    if (Pix.escolhendo === 'qr' && !await confirmarRecebedor(img)) return toast('QR code não guardado.');
+    Pix[Pix.escolhendo] = img;
     await salvarPix();
     toast(Pix.escolhendo === 'qr' ? '💠 QR code do Pix guardado.' : '💠 Faixa do Pix guardada.');
   });

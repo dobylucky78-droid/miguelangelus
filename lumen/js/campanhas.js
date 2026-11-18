@@ -259,7 +259,7 @@ const HTML_CAMPANHAS = `
             <input type="file" id="cpfArteArq" accept="image/*" hidden>
             <span class="sutil pequeno">Dica: no Canva, em pé, 1080 × 1350 px, baixe em PNG. Não ponha o QR na arte: o programa coloca ao lado, com o andamento.</span></div>
           <span class="espaco"></span>
-          <div class="ev-qr cp-pix"><div id="cpfQr" class="cp-qr">sem QR do Pix</div>
+          <div class="ev-qr cp-pix"><div id="cpfQr" class="cp-qr">sem QR do Pix</div><div id="cpfRecebedor" class="pix-rec" hidden></div>
             <button type="button" id="cpfQrEscolher" title="A imagem do QR code do Pix desta campanha (o banco gera: salve como imagem)">💠 QR code do Pix…</button>
             <button type="button" id="cpfQrTirar" hidden>Tirar o QR</button>
             <input type="file" id="cpfQrArq" accept="image/*" hidden></div>
@@ -304,6 +304,20 @@ function lerFormCp() {
 
 const pixTravado = () => !!Camp.senha && !Camp.liberada;
 
+// (1.9.8) "Recebedor: …" lido do QR da campanha; avisa se a chave digitada não é a do QR
+async function mostrarRecebedorCp(chave) {
+  const el = $('#cpfRecebedor');
+  if (!el) return;
+  if (Camp.qrMostrado !== Camp.qr) { Camp.qrMostrado = Camp.qr; Camp.recebedor = await mostrarRecebedor(el, Camp.qr); }
+  const r = Camp.recebedor, ch = (chave || '').trim();
+  el.querySelector('.pix-rec-dif')?.remove();
+  if (Camp.qr && r) el.className = 'pix-rec ' + (r.pix && r.pix.crcOk ? 'ok' : 'alerta');
+  if (Camp.qr && r?.pix?.chave && ch && ch.toLowerCase() !== r.pix.chave.toLowerCase()) {
+    el.insertAdjacentHTML('beforeend', `<div class="pix-rec-dif">⚠ A chave escrita (${esc(ch)}) é diferente da chave que está no QR. No telão aparece a escrita, mas quem lê o QR paga para a do QR: confira.</div>`);
+    el.className = 'pix-rec alerta';
+  }
+}
+
 function atualizarFormCp() {
   const d = lerFormCp(), c = campanhaAberta(), st = statusCamp(c || {});
   $('#cpfConta').textContent = `(${d.descricao.length}/160)`;
@@ -316,6 +330,7 @@ function atualizarFormCp() {
   $('#cpfArte').innerHTML = Camp.arte ? `<img src="${Camp.arte}" alt="arte">` : 'sem arte';
   $('#cpfArteTirar').hidden = !Camp.arte;
   $('#cpfQr').innerHTML = Camp.qr ? `<img src="${Camp.qr}" alt="QR do Pix">` : 'sem QR do Pix';
+  mostrarRecebedorCp(d.chave);
   // status e botões (só para campanha já salva)
   $('#cpfStatus').textContent = c ? STATUS_CAMP[st] : 'Nova campanha';
   $('#cpfStatus').dataset.st = c ? st : '';
@@ -461,7 +476,17 @@ function ligarCampanhasSec() {
     const f = e.target.files[0]; e.target.value = '';
     if (!f) return;
     if (qr && pixTravado()) return;
-    try { const url = await lerImagemCp(f, qr); if (qr) Camp.qr = url; else Camp.arte = url; atualizarFormCp(); }
+    try {
+      const url = await lerImagemCp(f, qr);
+      if (qr) {
+        // (1.9.8) para quem vai o dinheiro, lido do próprio QR, antes de aceitar; a chave vem junto se o campo estiver vazio
+        if (!await confirmarRecebedor(url)) return toast('QR code não usado.');
+        Camp.qr = url;
+        const r = await recebedorDoQr(url);
+        if (r?.pix?.chave && !$('#cpfChave').value.trim()) $('#cpfChave').value = r.pix.chave;
+      } else Camp.arte = url;
+      atualizarFormCp();
+    }
     catch (_) { toast('Não consegui abrir essa imagem.'); }
   });
   for (const id of ['cpfTitulo', 'cpfDescricao', 'cpfMeta', 'cpfObtido', 'cpfPct', 'cpfMostrarValores', 'cpfMostrador', 'cpfAgradecer', 'cpfChave'])

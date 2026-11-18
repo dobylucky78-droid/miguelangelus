@@ -11,7 +11,10 @@
 // VERSAO_SECRETARIA fica no <head> do index.html (o splash usa antes deste arquivo carregar)
 
 const NOVIDADES_SECRETARIA = [
-  { versao: '1.4.0', data: '2026-11-19', itens: [
+  { versao: '1.4.1', data: '2026-11-18', itens: [
+    '💠 Para quem vai o Pix de cada campanha: embaixo do QR code aparece o recebedor que está dentro do próprio QR (nome, cidade e chave). Ao escolher o QR, o programa pergunta se é para ele mesmo e já preenche a chave, se o campo estiver vazio. Se a chave escrita for diferente da chave do QR, aparece um alerta. Tudo é lido no próprio computador, sem internet.',
+  ] },
+  { versao: '1.4.0', data: '2026-11-18', itens: [
     '📢 Tipo do aviso: 📢 Aviso, 🎉 Evento ou 💝 Campanha. No de evento ou de campanha, escolha qual dos já cadastrados, ou "Não tem cadastrado", e aí fica só o texto. A folha impressa traz todos os textos nesta ordem: avisos comuns, avisos de evento e avisos de campanha (em cada grupo, primeiro os sem cadastro). No telão do MiguelAngelus, no lugar de cada aviso ligado entra o slide do evento ou da campanha, na mesma ordem em que o leitor lê. As imagens para o Holyrics seguem a mesma sequência.',
   ] },
   { versao: '1.3.0', data: '2026-11-18', itens: [
