@@ -340,13 +340,25 @@ function linhaMidia(m, selId) {
 const botaoNuvemPasta = m => !ligadaSync() ? ''
   : fichaPasta(m) ? '<span class="nuvem-ok" title="Também está na nuvem (os outros computadores podem baixar)">☁</span>'
   : '<button data-acao="subirPasta" class="so-hover" title="Enviar para a nuvem (os outros computadores poderão baixar)">☁↑</button>';
+// (1.9.4) ☑ Marcar: caixinhas nos arquivos e nas pastas; os marcados vão numa fila (⬇ baixar / ☁↑ enviar), um por vez
+Midia.marcando = false;
+Midia.marcados = new Set();        // ids "pasta:video:Sub/arquivo.mp4" (o mesmo id serve para o arquivo daqui e o da nuvem)
+Midia.idsDaPasta = new Map();      // chave da pasta na lista → ids dentro dela (para a caixinha da pasta)
+const caixaMarca = id => Midia.marcando ? `<span class="marca" data-marca="${esc(id)}" title="Marcar">${Midia.marcados.has(id) ? '☑' : '☐'}</span>` : '';
+function caixaPasta(chave, ids) {
+  if (!Midia.marcando || !ids.length) return '';
+  Midia.idsDaPasta.set(chave, ids);
+  const n = ids.filter(i => Midia.marcados.has(i)).length;
+  return `<span class="marca" data-marca-pasta="${esc(chave)}" title="Marcar a pasta inteira (${ids.length})">${!n ? '☐' : n === ids.length ? '☑' : '◪'}</span>`;
+}
 const linhaArquivo = (m, selId, comCaminho) => `<div class="it ${m.id === selId ? 'sel' : ''}" data-id="${esc(m.id)}" title="${esc(m.caminho)}">
-      <span class="tit">${esc(m.nome)}</span>${comCaminho && m.caminho.includes('/') ? `<span class="sutil pequeno">${esc(m.caminho.split('/').slice(0, -1).join(' › '))}</span>` : ''}
+      ${caixaMarca(m.id)}<span class="tit">${esc(m.nome)}</span>${comCaminho && m.caminho.includes('/') ? `<span class="sutil pequeno">${esc(m.caminho.split('/').slice(0, -1).join(' › '))}</span>` : ''}
       ${m.duracao ? `<span class="sutil pequeno">${fmtTempo(m.duracao)}</span>` : ''}${botaoNuvemPasta(m)}${botaoFav(m)}</div>`;
-// Arquivo que está na nuvem mas não nesta pasta: ⬇ Baixar grava na mesma subpasta
-const linhaSoNuvem = (f, selId) => `<div class="it ${idPasta(f.tipo, f.caminho) === selId ? 'sel' : ''}" data-id="${esc(idPasta(f.tipo, f.caminho))}" title="${esc(f.caminho)}">
-      <span class="tit">${esc(f.nome)}</span><span class="sutil pequeno">${esc(f.caminho.split('/').slice(0, -1).join(' › '))}</span>
-      <button data-acao="baixarPasta" data-chave="${esc(f.chave)}" class="primario" title="Baixar para a pasta deste computador (${fmtTamanho(f.tamanho || 0)})">⬇ Baixar</button></div>`;
+// Arquivo que está na nuvem mas não nesta pasta: clicar mostra a prévia (toca da nuvem); ⬇ Baixar grava na mesma subpasta
+const linhaSoNuvem = (f, selId, comCaminho) => `<div class="it ${idPasta(f.tipo, f.caminho) === selId ? 'sel' : ''}" data-id="${esc(idPasta(f.tipo, f.caminho))}" title="${esc(f.caminho)} — clique para ver a prévia">
+      ${caixaMarca(idPasta(f.tipo, f.caminho))}<span class="tit">${esc(f.nome)}</span>${comCaminho && f.caminho.includes('/') ? `<span class="sutil pequeno">${esc(f.caminho.split('/').slice(0, -1).join(' › '))}</span>` : ''}
+      <span class="sutil pequeno">${fmtTamanho(f.tamanho || 0)}</span>
+      <button data-acao="baixarPasta" data-chave="${esc(f.chave)}" class="primario" title="Baixar para a pasta deste computador, na mesma subpasta (${fmtTamanho(f.tamanho || 0)})">⬇</button></div>`;
 
 // Árvore de subpastas a partir dos caminhos "A/B/arquivo.mp4"
 function arvoreMidia(arquivos) {
@@ -361,15 +373,22 @@ function arvoreMidia(arquivos) {
   }
   return raiz;
 }
-function htmlArvore(no, tipo, prefixo, nivel, selId) {
+const idsDoNo = (no, tipo) => [...no.arqs.map(a => idPasta(tipo, a.caminho)), ...[...no.pastas.values()].flatMap(f => idsDoNo(f, tipo))];
+// folha: como desenhar o arquivo (o da pasta ou o que só está na nuvem); base: separa as chaves de abrir/fechar das duas árvores
+function htmlArvore(no, tipo, prefixo, nivel, selId, folha = m => linhaArquivo(m, selId), base = '') {
   const pastas = [...no.pastas.entries()].sort((a, b) => a[0].localeCompare(b[0], 'pt-BR', { numeric: true }));
   return pastas.map(([nome, filho]) => {
-    const chave = `m${tipo}:${prefixo}${nome}`;
+    const chave = `m${tipo}:${base}${prefixo}${nome}`;
     const f = Recolher.fechado(chave, true);
-    return `<button class="pasta" data-pasta-midia="${esc(chave)}" style="margin-left:${nivel * 10}px"><span class="seta">${f ? '▸' : '▾'}</span>📁 ${esc(nome)}<span class="n">${filho.n}</span></button>
-      ${f ? '' : `<div class="pasta-itens" style="margin-left:${nivel * 10}px">${htmlArvore(filho, tipo, prefixo + nome + '/', nivel + 1, selId)}</div>`}`;
-  }).join('') + no.arqs.slice().sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR', { numeric: true })).map(m => linhaArquivo(m, selId)).join('');
+    return `<div class="pasta-linha" style="margin-left:${nivel * 10}px">${caixaPasta(chave, idsDoNo(filho, tipo))}<button class="pasta" data-pasta-midia="${esc(chave)}"><span class="seta">${f ? '▸' : '▾'}</span>📁 ${esc(nome)}<span class="n">${filho.n}</span></button></div>
+      ${f ? '' : `<div class="pasta-itens" style="margin-left:${nivel * 10}px">${htmlArvore(filho, tipo, prefixo + nome + '/', nivel + 1, selId, folha, base)}</div>`}`;
+  }).join('') + no.arqs.slice().sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR', { numeric: true })).map(folha).join('');
 }
+
+// Endereço da prévia que toca da nuvem (o programa busca os pedaços no Drive; nada fica gravado no computador)
+const MIME_MIDIA = { mp4: 'video/mp4', m4v: 'video/mp4', webm: 'video/webm', mov: 'video/quicktime', mkv: 'video/x-matroska', ogv: 'video/ogg',
+  mp3: 'audio/mpeg', m4a: 'audio/mp4', aac: 'audio/aac', wav: 'audio/wav', ogg: 'audio/ogg', oga: 'audio/ogg', opus: 'audio/opus', flac: 'audio/flac' };
+const urlPreviaNuvem = f => `https://nuvem.miguelangelus.example/pastas/${f.chave}.bin?t=${encodeURIComponent(MIME_MIDIA[(f.caminho.split('.').pop() || '').toLowerCase()] || '')}`;
 
 function renderMidias() {
   const el = $('#listaMidias');
@@ -396,14 +415,23 @@ function renderMidias() {
     : `📁 <span title="${esc(p.raiz)}">${esc(p.raiz)}</span> · ${p.lendo ? 'lendo…' : p.erro ? `<span class="erro">${esc(p.erro)}</span>` : `${p.arquivos.length} arquivo(s)`}`;
   const arquivos = p?.arquivos || [];
   let h = '';
+  const sync = typeof Sync !== 'undefined' && ligadaSync();
+  const bm = $('#btnMarcarMidia');
+  if (bm) { bm.hidden = !sync || !NO_APP; bm.textContent = Midia.marcando ? '✓ Pronto' : '☑ Marcar'; bm.classList.toggle('primario', Midia.marcando); }
+  if (!sync) Midia.marcando = false;
+  Midia.idsDaPasta.clear();
+  const soNuvem = sync ? Object.values(Sync.estado.pastas || {}).filter(f => f.tipo === tipo && !p?.mapa?.has(f.caminho)) : [];
+  if (typeof renderBarraMarcados === 'function') renderBarraMarcados();
   const favs = favsOrdenadas().filter(f => (midiaPorId(f.id)?.tipo || '') === tipo);
   if (termo) {
     // favoritas primeiro (também pelo apelido); as outras abaixo
     const favAchadas = favs.filter(f => semAcento((f.apelido || '') + ' ' + (midiaPorId(f.id)?.caminho || midiaPorId(f.id)?.nome || '')).includes(termo));
     const ehFav = new Set(favAchadas.map(f => f.id));
     const achados = arquivos.filter(m => !ehFav.has(m.id) && semAcento(m.caminho).includes(termo)).sort(porNome);
+    const naNuvem = soNuvem.filter(f => semAcento(f.caminho).includes(termo)).sort(porNome);
     h = favAchadas.map(f => linhaFav(f, selId)).join('') + achados.slice(0, 300).map(m => linhaArquivo(m, selId, true)).join('') +
       (achados.length > 300 ? `<p class="sutil pequeno">… e mais ${achados.length - 300}. Refine a busca.</p>` : '') +
+      (naNuvem.length ? `<p class="sutil pequeno">☁ Na nuvem, faltam aqui:</p>` + naNuvem.slice(0, 200).map(f => linhaSoNuvem(f, selId, true)).join('') : '') +
       guardados.filter(m => !ehFav.has(m.id)).map(m => linhaMidia(m, selId)).join('');
     el.innerHTML = h || '<p class="vazio">Nada encontrado.</p>';
     return;
@@ -413,11 +441,12 @@ function renderMidias() {
     h += `<button class="pasta" data-pasta-midia="m${tipo}:#favoritas"><span class="seta">${f ? '▸' : '▾'}</span>⭐ Favoritas<span class="n">${favs.length}</span></button>
       ${f ? '' : `<div class="pasta-itens">${favs.map(x => linhaFav(x, selId)).join('')}</div>`}`;
   }
-  const soNuvem = typeof Sync !== 'undefined' && ligadaSync() ? Object.values(Sync.estado.pastas || {}).filter(f => f.tipo === tipo && !p?.mapa?.has(f.caminho)) : [];
   if (soNuvem.length && !p?.lendo) {
+    // (1.9.4) em árvore, com as mesmas subpastas: quem baixa monta a pasta igual à de quem enviou
     const f = Recolher.fechado('m' + tipo + ':#nuvem', false);
-    h += `<button class="pasta" data-pasta-midia="m${tipo}:#nuvem"><span class="seta">${f ? '▸' : '▾'}</span>☁ Na nuvem, faltam aqui<span class="n">${soNuvem.length}</span></button>
-      ${f ? '' : `<div class="pasta-itens">${soNuvem.map(x => linhaSoNuvem(x, selId)).join('')}</div>`}`;
+    const arv = arvoreMidia(soNuvem), total = soNuvem.reduce((s, x) => s + (x.tamanho || 0), 0);
+    h += `<div class="pasta-linha">${caixaPasta('m' + tipo + ':#nuvem', idsDoNo(arv, tipo))}<button class="pasta" data-pasta-midia="m${tipo}:#nuvem" title="${fmtTamanho(total)} no total. Clique num arquivo para a prévia; ⬇ baixa para a mesma subpasta deste computador."><span class="seta">${f ? '▸' : '▾'}</span>☁ Na nuvem, faltam aqui<span class="n">${soNuvem.length}</span></button></div>
+      ${f ? '' : `<div class="pasta-itens">${htmlArvore(arv, tipo, '', 0, selId, x => linhaSoNuvem(x, selId), '#nuvem/')}</div>`}`;
   }
   if (guardados.length) {
     const f = Recolher.fechado('m' + tipo + ':#guardados', false);
@@ -454,7 +483,12 @@ function htmlPlayer(it) {
   if (m.faltando) {
     const naNuvem = typeof Sync !== 'undefined' && ligadaSync() && fichaPasta(m);
     return `<p class="vazio">"${esc(m.caminho)}" não foi encontrado na pasta de ${m.tipo === 'video' ? 'vídeos' : 'áudios'} deste computador.<br>
-    ${naNuvem ? `Ele está na nuvem da paróquia.<br><br><button class="primario grande" data-pl="baixarPasta">⬇ Baixar da nuvem (${fmtTamanho(naNuvem.tamanho || 0)})</button>`
+    ${naNuvem ? `Ele está na nuvem da paróquia.<br><br>
+      ${NO_APP ? `<span class="previa-nuvem">${m.tipo === 'video'
+        ? `<video controls preload="metadata" src="${esc(urlPreviaNuvem(naNuvem))}"></video>`
+        : `<audio controls preload="metadata" src="${esc(urlPreviaNuvem(naNuvem))}"></audio>`}
+        <span class="sutil pequeno">Prévia direto da nuvem (só aqui, não vai ao telão). Pode demorar um pouco para começar.</span></span><br>` : ''}
+      <button class="primario grande" data-pl="baixarPasta">⬇ Baixar da nuvem (${fmtTamanho(naNuvem.tamanho || 0)})</button>`
       : `Confira em <b>${m.tipo === 'video' ? 'Vídeos' : 'Áudios'} → 📁 Escolher pasta</b> (as subpastas precisam ser iguais às do computador onde o roteiro foi feito),
          ou peça para quem tem o arquivo enviá-lo com <b>☁↑</b>.`}</p>`;
   }
@@ -691,7 +725,23 @@ function ligarMidia() {
   $('#roteiroItens').addEventListener('contextmenu', ctxMidia);
   $('#btnPastaMidia').addEventListener('click', escolherPastaMidia);
   $('#btnRelerPasta').addEventListener('click', () => lerPastaMidia(Midia.tipoAba));
+  // (1.9.4) ☑ Marcar e a fila de baixar/enviar
+  $('#btnMarcarMidia').addEventListener('click', () => { Midia.marcando = !Midia.marcando; renderMidias(); });
+  $('#barraMarcados').addEventListener('click', e => {
+    const b = e.target.closest('[data-fila]');
+    if (b && typeof acaoMarcados === 'function') acaoMarcados(b.dataset.fila);
+  });
+  $('#filaMidia').addEventListener('click', e => { if (e.target.closest('[data-fila="parar"]') && typeof pararFilaMidia === 'function') pararFilaMidia(); });
   $('#listaMidias').addEventListener('click', e => {
+    const mc = e.target.closest('[data-marca]');
+    if (mc) { const id = mc.dataset.marca; Midia.marcados.has(id) ? Midia.marcados.delete(id) : Midia.marcados.add(id); return renderMidias(); }
+    const mp = e.target.closest('[data-marca-pasta]');
+    if (mp) {
+      const ids = Midia.idsDaPasta.get(mp.dataset.marcaPasta) || [];
+      const todos = ids.every(i => Midia.marcados.has(i));
+      ids.forEach(i => todos ? Midia.marcados.delete(i) : Midia.marcados.add(i));
+      return renderMidias();
+    }
     const pasta = e.target.closest('[data-pasta-midia]');
     if (pasta) { Recolher.alternar(pasta.dataset.pastaMidia, !/#(guardados|nuvem|favoritas)$/.test(pasta.dataset.pastaMidia)); return renderMidias(); }
     const bx = e.target.closest('[data-acao="baixarPasta"]');

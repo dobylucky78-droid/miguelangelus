@@ -474,7 +474,31 @@ async function montarRoteirosDaLiturgia() {
 }
 
 // Título em CAIXA ALTA (Paulus) vira "Só a primeira maiúscula"; o da API já vem escrito normalmente
-const cap1 = s => s && s === s.toUpperCase() ? s.charAt(0) + s.slice(1).toLowerCase() : s;
+// A Paulus manda o título em maiúsculas ("SÃO LEÃO MAGNO, PAPA E DOUTOR DA IGREJA"): vira "São Leão Magno, papa e doutor
+// da Igreja", como no calendário — nomes com maiúscula; ligações (de, da, e…) e, depois da vírgula, os títulos (papa,
+// bispo, mártir…) em minúscula; "Terça-feira", "Bem-aventurada" só com a 1ª parte maiúscula.
+// Também conserta o que as versões antigas guardaram ("São leão magno, papa e doutor da igreja").
+const LIT_LIGACOES = new Set(['de', 'da', 'do', 'das', 'dos', 'e', 'a', 'o', 'as', 'os', 'em', 'no', 'na', 'nos', 'nas', 'à', 'ao', 'aos', 'às', 'para', 'por', 'com', 'ou']);
+const LIT_TITULOS = /^(papas?|bispos?|arcebispos?|presbíteros?|sacerdotes?|diáconos?|doutor(a|es|as)?|mártir(es)?|virgem|virgens|abade|abadessa|monges?|eremitas?|religios[oa]s?|fundador(a|es|as)?|apóstolos?|evangelistas?|missionári[oa]s?|leig[oa]s?|companheir[oa]s?|confessor(es)?|viúvas?|reis?|rainhas?|esposos?|irmãos?|patron[oa]s?|catequistas?|beat[oa]s?)$/;
+function nomeLiturgico(s) {
+  if (!s) return s;
+  const resto = s.slice(1);
+  if (!(s === s.toUpperCase() || (resto === resto.toLowerCase() && /\s/.test(s)))) return s;   // já veio certo
+  let depoisDaVirgula = false, primeira = true;
+  return s.toLowerCase().split(/(\s+|,)/).map(t => {
+    if (t === ',') { depoisDaVirgula = true; return t; }
+    if (!t.trim()) return t;
+    const [p, ...h] = t.split('-'); let r;
+    const limpo = p.replace(/[^\p{L}]/gu, '');
+    if (!primeira && LIT_LIGACOES.has(limpo)) r = p;
+    else if (depoisDaVirgula && LIT_TITULOS.test(limpo)) r = p;
+    else r = p.replace(/\p{L}/u, c => c.toUpperCase());
+    primeira = false;
+    // "Terça-feira", "Bem-aventurada" ficam com a 2ª parte minúscula; nomes ("Dung-Lac") não
+    return [r, ...h.map(x => /^(feira|aventurad[oa]s?)$/.test(x) ? x : x.replace(/\p{L}/u, c => c.toUpperCase()))].join('-');
+  }).join('');
+}
+const cap1 = nomeLiturgico;
 
 // Nome e cor da celebração vindos da Paulus ("ASSUNÇÃO…", "(branco, glória, creio)") vão para o card do roteiro
 function marcarLiturgia(rot, r) {

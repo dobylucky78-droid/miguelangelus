@@ -3294,6 +3294,14 @@ async function iniciar() {
   S.cantos = await DB.todos('cantos');
   await carregarPartituras();           // partituras.js (1.8.6)
   S.roteiros = await DB.todos('roteiros');
+  // (1.9.4) roteiros da Liturgia do dia guardados com o santo em minúsculas ("São leão magno, papa…"): conserta uma vez
+  for (const r of S.roteiros) {
+    const t = r.tituloLiturgico, novo = t && typeof nomeLiturgico === 'function' ? nomeLiturgico(t) : t;
+    if (!t || novo === t) continue;
+    r.tituloLiturgico = novo;
+    if (r.nome && r.nome.endsWith('— ' + t)) r.nome = r.nome.slice(0, -t.length) + novo;
+    try { await DB.salvar('roteiros', r); } catch (e) { console.warn('nome litúrgico', e); }
+  }
   Midia.lista = await DB.todos('midias');
   statusAbertura('Carregando orações, Agenda e Bíblia…');
   await carregarOracoes();

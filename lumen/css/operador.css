@@ -588,6 +588,19 @@ big.m-g { font-size: 1.3em; } big.m-gg { font-size: 1.7em; } small.m-pq { font-s
 .pasta:hover { border-color: #4a515d; }
 .pasta .n { margin-left: auto; color: var(--sutil); font-weight: 400; font-size: 12px; }
 .pasta-itens { padding-left: 8px; }
+/* (1.9.4) ☑ Marcar, fila de baixar/enviar e prévia da nuvem */
+.pasta-linha { display: flex; align-items: center; gap: 4px; }
+.pasta-linha > .pasta { flex: 1; min-width: 0; }
+.marca { cursor: pointer; font-size: 16px; line-height: 1; padding: 0 4px; color: var(--ouro, #d4a93a); user-select: none; flex: none; }
+.pasta-linha > .marca { margin-top: 3px; }
+.barra-marcados, .fila-midia { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 6px 8px; margin: 4px 0; border: 1px solid var(--borda); border-radius: 6px; background: var(--painel2); font-size: 12px; }
+.barra-marcados[hidden], .fila-midia[hidden] { display: none; }
+.fila-midia .fila-txt { flex: 1 1 100%; }
+.fila-midia .fila-barra { flex: 1; height: 6px; border-radius: 3px; background: var(--borda); overflow: hidden; }
+.fila-midia .fila-barra i { display: block; height: 100%; background: var(--ouro, #d4a93a); }
+.previa-nuvem { display: inline-flex; flex-direction: column; gap: 4px; align-items: center; max-width: 100%; }
+.previa-nuvem video { max-width: min(640px, 100%); max-height: 40vh; background: #000; border-radius: 6px; }
+.previa-nuvem audio { width: min(480px, 100%); }
 #dlgDistribuir { width: min(760px, 94vw); }
 .dist-lista { display: flex; flex-direction: column; gap: 3px; max-height: 55vh; overflow: auto; }
 .dist-item { display: flex; align-items: center; gap: 9px; padding: 7px 10px; border-radius: 6px; background: var(--painel2); cursor: pointer; }

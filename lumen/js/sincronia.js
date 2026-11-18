@@ -389,38 +389,177 @@ function temImagem(m) {
   });
 }
 
-async function enviarPastaNuvem(m) {
-  if (!ligadaSync() || !m?.pasta || m.faltando || Sync.ocupadoMidia) return;
-  if (!await temImagem(m) && !confirm(`"${m.nome}" está num formato antigo (MPEG-4 Parte 2): nas outras máquinas também vai tocar só o som.\n\nEnviar mesmo assim? (Melhor converter para H.264 antes.)`)) return;
-  if (!confirm(`Enviar "${m.nome}" (${fmtTamanho(m.tamanho)}) para o Google Drive da paróquia?\nOs outros computadores poderão baixá-lo para a pasta ${m.tipo === 'video' ? 'de vídeos' : 'de áudios'} deles.`)) return;
+// fila = true: veio da fila (☑ Marcar) — sem perguntas, erro volta para a fila em vez de alert
+async function enviarPastaNuvem(m, fila) {
+  if (!ligadaSync() || !m?.pasta || m.faltando) return;
+  if (Sync.ocupadoMidia) { if (!fila) toast('☁ Espere: já está enviando ou baixando um arquivo.'); return; }
+  if (!fila && !await temImagem(m) && !confirm(`"${m.nome}" está num formato antigo (MPEG-4 Parte 2): nas outras máquinas também vai tocar só o som.\n\nEnviar mesmo assim? (Melhor converter para H.264 antes.)`)) return;
+  if (!fila && !confirm(`Enviar "${m.nome}" (${fmtTamanho(m.tamanho)}) para o Google Drive da paróquia?\nOs outros computadores poderão baixá-lo para a pasta ${m.tipo === 'video' ? 'de vídeos' : 'de áudios'} deles.`)) return;
   const chave = chavePasta(m.tipo, m.caminho);
   Sync.ocupadoMidia = true;
   try {
     await conectarArmazem();
-    mostrarProgressoMidia(`Enviando "${m.nome}"`);
+    if (!fila) mostrarProgressoMidia(`Enviando "${m.nome}"`);
     await arqApp('midiaSubir', { tipoMidia: m.tipo, caminho: m.caminho, destino: `pastas/${chave}.bin` }, 6 * 3600 * 1000);
     const ficha = { chave, tipo: m.tipo, caminho: m.caminho, nome: m.nome, tamanho: m.tamanho, atualizado: Date.now() };
     const r = await arqApp('gravarVarios', { itens: [{ caminho: `pastas/${chave}.json`, texto: JSON.stringify(ficha) }] });
     (Sync.estado.pastas ||= {})[chave] = ficha;
     Sync.estado.vistos[`pastas/${chave}.json`] = r.gravados[0].mtime;
     salvarEstadoSync(true);
-    toast(`☁ "${m.nome}" está na nuvem. Nos outros computadores aparece com ⬇ Baixar.`);
-  } catch (e) { alert(`Não foi possível enviar "${m.nome}":\n${e.message}`); }
-  finally { Sync.ocupadoMidia = false; Sync.progressoMidia = null; renderMidias(); }
+    if (!fila) toast(`☁ "${m.nome}" está na nuvem. Nos outros computadores aparece com ⬇ Baixar.`);
+    return true;
+  } catch (e) { if (fila) throw e; alert(`Não foi possível enviar "${m.nome}":\n${e.message}`); }
+  finally { Sync.ocupadoMidia = false; if (!fila) Sync.progressoMidia = null; renderMidias(); }
 }
 
-async function baixarPastaNuvem(f) {
-  if (!ligadaSync() || !f || Sync.ocupadoMidia) return;
-  if (!S.config[CFG_PASTA[f.tipo]]) return alert(`Escolha antes a pasta ${f.tipo === 'video' ? 'de vídeos' : 'de áudios'} deste computador (📁 Escolher pasta).`);
+// (1.9.4) Quem não tem a pasta do Holyrics: cria Documentos\MiguelAngelus\Vídeos (ou \Áudios) para receber da nuvem,
+// com as mesmas subpastas de quem enviou (assim os roteiros acham os arquivos)
+async function garantirPastaMidia(tipo) {
+  if (S.config[CFG_PASTA[tipo]]) return true;
+  const nome = tipo === 'video' ? 'Vídeos' : 'Áudios';
+  if (!confirm(`Este computador ainda não tem pasta de ${nome.toLowerCase()}.\n\nCriar "Documentos\\MiguelAngelus\\${nome}" e baixar para lá, com as mesmas subpastas da nuvem?\n\n(Se este computador tem o Holyrics, cancele e escolha a pasta dele em 📁 Escolher pasta.)`)) return false;
+  const r = await arqApp('midiaPastaPadrao', { tipoMidia: tipo });
+  S.config[CFG_PASTA[tipo]] = r.pasta;
+  salvarConfig();
+  if (r.recarregar) Midia.recarregarNoFim = true;     // o endereço da pasta nova só vale depois de recarregar a página
+  Midia.pastas[tipo] = { raiz: r.pasta, arquivos: [], mapa: new Map() };
+  toast(`📁 Pasta criada: ${r.pasta}`);
+  return true;
+}
+function recarregarSePastaNova() {
+  if (!Midia.recarregarNoFim) return false;
+  Midia.recarregarNoFim = false;
+  toast('Abrindo a pasta nova…');
+  setTimeout(() => location.reload(), 1200);
+  return true;
+}
+
+async function baixarPastaNuvem(f, fila) {
+  if (!ligadaSync() || !f) return;
+  if (Sync.ocupadoMidia) { if (!fila) toast('☁ Espere: já está enviando ou baixando um arquivo.'); return; }
+  if (!fila && !await garantirPastaMidia(f.tipo)) return;
   Sync.ocupadoMidia = true;
   try {
     await conectarArmazem();
-    mostrarProgressoMidia(`Baixando "${f.nome}"`);
+    if (!fila) mostrarProgressoMidia(`Baixando "${f.nome}"`);
     await arqApp('midiaBaixar', { tipoMidia: f.tipo, caminho: f.caminho, origem: `pastas/${f.chave}.bin` }, 6 * 3600 * 1000);
+    if (fila) return true;
     toast(`☁ "${f.nome}" baixado em ${f.caminho}.`);
-    await lerPastaMidia(f.tipo);          // relê a pasta: o roteiro passa a achar o arquivo
-  } catch (e) { alert(`Não foi possível baixar "${f.nome}":\n${e.message}`); }
-  finally { Sync.ocupadoMidia = false; Sync.progressoMidia = null; renderMidias(); if (S.atual?.item.tipo === 'midia') { renderCabecalho(); renderSlides(); } }
+    if (!recarregarSePastaNova()) await lerPastaMidia(f.tipo);          // relê a pasta: o roteiro passa a achar o arquivo
+  } catch (e) { if (fila) throw e; alert(`Não foi possível baixar "${f.nome}":\n${e.message}`); }
+  finally { Sync.ocupadoMidia = false; if (!fila) { Sync.progressoMidia = null; renderMidias(); if (S.atual?.item.tipo === 'midia') { renderCabecalho(); renderSlides(); } } }
+}
+
+// ---------- (1.9.4) fila: ☑ marcados → ⬇ baixar / ☁↑ enviar, um por vez, em segundo plano ----------
+Midia.fila = [];          // { acao: 'baixar'|'enviar', tipo, caminho, nome, tamanho }
+Midia.filaInfo = null;    // { feitos, total, erros: [], atual, pc, parar }
+
+// O que dá para fazer com os marcados desta aba
+function marcadosDaAba() {
+  const tipo = Midia.tipoAba, baixar = [], enviar = [];
+  for (const id of Midia.marcados) {
+    const m = midiaDaPasta(id);
+    if (!m || m.tipo !== tipo) continue;
+    const ficha = Sync.estado.pastas?.[chavePasta(m.tipo, m.caminho)];
+    if (m.faltando) { if (ficha) baixar.push(ficha); }
+    else if (!ficha) enviar.push(m);
+  }
+  return { baixar, enviar };
+}
+const somaTam = l => l.reduce((s, x) => s + (x.tamanho || 0), 0);
+
+function renderBarraMarcados() {
+  const el = $('#barraMarcados');
+  if (!el) return;
+  const tipoAba = Midia.tipoAba === 'video' || Midia.tipoAba === 'audio';
+  el.hidden = !Midia.marcando || !tipoAba;
+  if (!el.hidden) {
+    const { baixar, enviar } = marcadosDaAba();
+    const n = [...Midia.marcados].filter(id => id.startsWith(`pasta:${Midia.tipoAba}:`)).length;
+    el.innerHTML = `<span>${n ? `${n} marcado(s)` : 'Marque arquivos ou pastas (☐).'}</span>
+      ${baixar.length ? `<button class="primario" data-fila="baixar" title="Baixar da nuvem para a pasta deste computador, nas mesmas subpastas">⬇ Baixar ${baixar.length} (${fmtTamanho(somaTam(baixar))})</button>` : ''}
+      ${enviar.length ? `<button class="primario" data-fila="enviar" title="Enviar para o Google Drive da paróquia (os outros computadores poderão baixar)">☁↑ Enviar ${enviar.length} (${fmtTamanho(somaTam(enviar))})</button>` : ''}
+      ${n ? '<button data-fila="limpar" title="Desmarcar tudo">Desmarcar</button>' : ''}`;
+  }
+  renderFilaMidia();
+}
+
+function renderFilaMidia() {
+  const el = $('#filaMidia');
+  if (!el) return;
+  const fi = Midia.filaInfo;
+  el.hidden = !fi;
+  if (!fi) return;
+  const a = fi.atual;
+  el.innerHTML = `<div class="fila-txt">${a ? `${a.acao === 'baixar' ? '⬇ Baixando' : '☁↑ Enviando'} ${fi.feitos + 1} de ${fi.total}: <b>${esc(a.nome)}</b> · ${fi.pc || 0}%` : 'Terminando…'}
+      ${fi.erros.length ? `<br><span class="erro">${fi.erros.length} com problema (tenta de novo marcando outra vez)</span>` : ''}</div>
+    <div class="fila-barra"><i style="width:${Math.round(((fi.feitos + (fi.pc || 0) / 100) / Math.max(1, fi.total)) * 100)}%"></i></div>
+    <button data-fila="parar" title="Para depois do arquivo que está indo agora">■ Parar a fila</button>`;
+}
+
+async function acaoMarcados(acao) {
+  if (acao === 'limpar') { Midia.marcados.clear(); return renderMidias(); }
+  const { baixar, enviar } = marcadosDaAba();
+  const lista = acao === 'baixar' ? baixar : enviar;
+  if (!lista.length) return;
+  const nomeTipo = Midia.tipoAba === 'video' ? 'vídeos' : 'áudios';
+  if (acao === 'baixar') {
+    if (!await garantirPastaMidia(Midia.tipoAba)) return;
+    if (!confirm(`Baixar ${lista.length} arquivo(s) (${fmtTamanho(somaTam(lista))}) da nuvem para a pasta de ${nomeTipo} deste computador?\nVão um por vez, em segundo plano; dá para continuar usando o MiguelAngelus.`)) return;
+  } else if (!confirm(`Enviar ${lista.length} arquivo(s) (${fmtTamanho(somaTam(lista))}) para o Google Drive da paróquia?\nVão um por vez, em segundo plano; os outros computadores poderão baixá-los.`)) return;
+  const ja = new Set(Midia.fila.map(x => x.acao + '|' + x.tipo + '|' + x.caminho));
+  for (const x of lista) {
+    const k = acao + '|' + x.tipo + '|' + x.caminho;
+    if (!ja.has(k)) { Midia.fila.push({ acao, tipo: x.tipo, caminho: x.caminho, nome: x.nome, tamanho: x.tamanho }); ja.add(k); }
+    Midia.marcados.delete(idPasta(x.tipo, x.caminho));
+  }
+  if (Midia.filaInfo) Midia.filaInfo.total = Midia.filaInfo.feitos + Midia.fila.length + (Midia.filaInfo.atual ? 1 : 0);
+  renderMidias();
+  processarFilaMidia();
+}
+
+function pararFilaMidia() {
+  if (!Midia.filaInfo) return;
+  Midia.filaInfo.parar = true;
+  Midia.fila = [];
+  toast('A fila para depois do arquivo que está indo agora.');
+  renderFilaMidia();
+}
+
+async function processarFilaMidia() {
+  if (Midia.filaInfo?.rodando) return;
+  const fi = Midia.filaInfo = { feitos: 0, total: Midia.fila.length, erros: [], atual: null, pc: 0, rodando: true };
+  const tipos = new Set();
+  Sync.progressoMidia = (feito, total) => {
+    const pc = Math.round(feito / Math.max(1, total) * 100);
+    if (pc !== fi.pc) { fi.pc = pc; renderFilaMidia(); }
+  };
+  while (Midia.fila.length && !fi.parar) {
+    while (Sync.ocupadoMidia) await new Promise(r => setTimeout(r, 1000));   // espera um envio avulso terminar
+    const x = fi.atual = Midia.fila.shift(); fi.pc = 0; renderFilaMidia();
+    tipos.add(x.tipo);
+    try {
+      if (x.acao === 'baixar') {
+        const f = Sync.estado.pastas?.[chavePasta(x.tipo, x.caminho)];
+        if (!f) throw new Error('não está mais na nuvem');
+        await baixarPastaNuvem(f, true);
+      } else {
+        const m = midiaDaPasta(idPasta(x.tipo, x.caminho));
+        if (!m || m.faltando) throw new Error('o arquivo não está mais na pasta');
+        await enviarPastaNuvem(m, true);
+      }
+    } catch (e) { fi.erros.push(`${x.nome}: ${e.message}`); console.warn('fila de mídias', x, e); }
+    fi.feitos++;
+  }
+  const ok = fi.feitos - fi.erros.length;
+  Sync.progressoMidia = null;
+  Midia.filaInfo = null;
+  renderFilaMidia();
+  toast(`☁ Fila terminada: ${ok} de ${fi.feitos} arquivo(s)${fi.erros.length ? `; ${fi.erros.length} com problema` : ''}.`);
+  if (fi.erros.length) alert('Não deu certo com estes arquivos:\n\n' + fi.erros.slice(0, 15).join('\n') + (fi.erros.length > 15 ? `\n… e mais ${fi.erros.length - 15}` : ''));
+  if (recarregarSePastaNova()) return;
+  for (const t of tipos) await lerPastaMidia(t);
+  renderMidias();
 }
 
 // ---------- tela (Ajustes) ----------

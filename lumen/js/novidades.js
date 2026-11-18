@@ -5,6 +5,12 @@
  * A versão mais nova fica em cima. Ao gerar uma versão nova, acrescente a entrada dela aqui.
  */
 const NOVIDADES = [
+  { versao: '1.9.4', data: '2026-11-17', itens: [
+    '☁ Vídeos e áudios na nuvem da paróquia, em Vídeos e Áudios (com a sincronização ligada): "☁ Na nuvem, faltam aqui" mostra as mesmas subpastas de quem enviou, e o que você baixa vai para a mesma subpasta deste computador, então os roteiros acham o arquivo.',
+    '▶ Prévia direto da nuvem: clique num vídeo ou áudio que ainda não está neste computador e ele toca ali mesmo, sem baixar (só aqui, não vai ao telão).',
+    '☑ Marcar: caixinhas nos arquivos e nas pastas. Marque o que quiser e clique em "⬇ Baixar" ou "☁↑ Enviar"; os arquivos vão numa fila, um por vez, enquanto você continua usando o programa ("■ Parar a fila" interrompe). Quem não tem a pasta do Holyrics ganha a pasta Documentos\\MiguelAngelus\\Vídeos (ou Áudios) no primeiro download.',
+    '✝ Liturgia do dia nas Missas de semana: o nome do santo no card do roteiro aparecia todo em minúsculas ("São leão magno, papa e doutor da igreja"). Agora fica "São Leão Magno, papa e doutor da Igreja", e os roteiros já criados são corrigidos sozinhos.',
+  ] },
   { versao: '1.9.3', data: '2026-11-15', itens: [
     '🎸 "Montar a letra a partir da cifra" reconhece mais formatos de acorde do Cifra Club: G7/4, D7/9, Eb6/9, Bm7b5, N.C., as marcas de repetição (2x), x2, bis e as linhas "Intro: G D Em C". Antes, um acorde desses fazia a linha de acordes inteira ir para a letra. A causa mais comum era invisível: ao copiar do Cifra Club, algumas linhas vêm com um caractere sem largura no começo, e agora ele é ignorado. Também saem o "Capotraste…" do cabeçalho e os acordes entre colchetes no meio da letra ("[G]Santo").',
   ] },

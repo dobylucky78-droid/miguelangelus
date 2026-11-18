@@ -50,7 +50,7 @@ function mostrarCards(sim) {
 function liturgiaDoRoteiro(r, inf = infoRoteiro(r)) {
   const lit = inf.data ? Liturgia.info(inf.data, localDe(inf.localId)?.padroeiro) : null;   // dia do padroeiro = solenidade
   const doFolheto = r.liturgiaDe && r.liturgiaDe === inf.iso;
-  const titulo = (doFolheto && r.tituloLiturgico) || (lit?.santo ? `${lit.titulo} (${lit.santo.toLowerCase()})` : lit?.titulo) || '';
+  const titulo = (doFolheto && r.tituloLiturgico && nomeLiturgico(r.tituloLiturgico)) ||(lit?.santo ? `${lit.titulo} (${lit.santo.toLowerCase()})` : lit?.titulo) || '';
   const cor = r.corManual || (doFolheto && r.cor) || lit?.cor || '';
   return { titulo, cor, corHex: Liturgia.CORES[cor] || '#5a606b' };
 }
