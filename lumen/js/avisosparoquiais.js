@@ -72,9 +72,39 @@ const locaisDoAviso = a => a.locais?.length ? a.locais : a.localId ? [a.localId]
 const vigente = (a, iso, localId) => (!a.inicio || a.inicio <= iso) && (!a.fim || iso <= a.fim) &&
   (!localId || !locaisDoAviso(a).length || locaisDoAviso(a).includes(localId));
 
-// Avisos programados que valem numa data e comunidade, na ordem de entrada
-const avisosVigentes = (iso, localId) => AvPar.lista.filter(a => vigente(a, iso, localId))
-  .sort((a, b) => (a.ordem ?? 0) - (b.ordem ?? 0) || (a.inicio || '').localeCompare(b.inicio || '')).map(a => a.texto.trim()).filter(Boolean);
+// (1.9.7) Tipo do aviso: comum, de evento ou de campanha. O de evento/campanha pode estar ligado a um evento ou a uma
+// campanha cadastrados (ligadoId): aí, no telão, no lugar do texto entra o slide pronto do evento ou da campanha.
+const TIPOS_AVISO = { aviso: '📢 Aviso', evento: '🎉 Evento', campanha: '💝 Campanha' };
+const tipoDoAviso = a => TIPOS_AVISO[a?.tipo] ? a.tipo : 'aviso';
+const listaEventosAv = () => (typeof Ev !== 'undefined' && Ev.lista) || [];
+const listaCampanhasAv = () => (typeof Camp !== 'undefined' && Camp.lista) || [];
+// o evento ou a campanha do aviso, se ainda vale para o telão (apagado, ou campanha pausada/encerrada: volta a ser texto)
+function ligadoDoAviso(a) {
+  if (!a?.ligadoId) return null;
+  if (tipoDoAviso(a) === 'evento') return listaEventosAv().find(e => e.id === a.ligadoId) || null;
+  if (tipoDoAviso(a) === 'campanha') {
+    const c = listaCampanhasAv().find(x => x.id === a.ligadoId);
+    return c && campanhaNoTelao(c) ? c : null;
+  }
+  return null;
+}
+// ordem na folha e no telão: avisos comuns; eventos (sem evento cadastrado, depois com); campanhas (sem, depois com)
+const grupoAviso = a => ({ aviso: 0, evento: 1, campanha: 3 })[tipoDoAviso(a)] + (tipoDoAviso(a) !== 'aviso' && ligadoDoAviso(a) ? 1 : 0);
+
+// Avisos programados (objetos) que valem numa data e comunidade, na ordem acima e, dentro de cada grupo, na de entrada
+const avisosVigentesObj = (iso, localId) => AvPar.lista.filter(a => vigente(a, iso, localId) && (a.texto || '').trim())
+  .sort((a, b) => grupoAviso(a) - grupoAviso(b) || (a.ordem ?? 0) - (b.ordem ?? 0) || (a.inicio || '').localeCompare(b.inicio || ''));
+const avisosVigentes = (iso, localId) => avisosVigentesObj(iso, localId).map(a => a.texto.trim());
+
+// Sequência do item Avisos: { texto, ev?, camp? } — os avisos escritos só para aquela Missa entram junto dos comuns
+function sequenciaAvisos(prog, extras) {
+  const comuns = prog.filter(a => grupoAviso(a) === 0), resto = prog.filter(a => grupoAviso(a) > 0);
+  const item = a => {
+    const l = ligadoDoAviso(a), t = tipoDoAviso(a);
+    return { texto: a.texto.trim(), ev: l && t === 'evento' ? l : null, camp: l && t === 'campanha' ? l : null };
+  };
+  return [...comuns.map(item), ...extras.map(texto => ({ texto })), ...resto.map(item)];
+}
 
 // Reparte os avisos em páginas (slides): até N por página e não muito texto numa só
 function paginarAvisos(textos) {
@@ -95,24 +125,46 @@ function quandoDoItem(item) {
   return { iso: info.iso || hojeIso(), localId: info.localId || '' };
 }
 
-function avisosDoItem(item) {
+function sequenciaDoItem(item) {
   const { iso, localId } = quandoDoItem(item);
-  const prog = item.programados === false ? [] : avisosVigentes(iso, localId);
-  return [...prog, ...dividir(item.extras)].filter(Boolean);
+  const prog = item.programados === false ? [] : avisosVigentesObj(iso, localId);
+  return sequenciaAvisos(prog, dividir(item.extras).filter(Boolean));
 }
+// todos os textos, na ordem da folha (impressão, contagem)
+const avisosDoItem = item => sequenciaDoItem(item).map(s => s.texto);
 
-// Slides do item: o título em todos; os avisos repartidos (até N por slide, e não muito texto num slide só)
+// Slides do item: os avisos de texto repartidos (até N por slide, e não muito texto num slide só), com o título em
+// todos; o aviso ligado a um evento ou campanha vira o slide do evento ou da campanha, no lugar certo da sequência
 function slidesAvisos(item) {
-  const e = estiloAvisos(), textos = avisosDoItem(item);
+  const e = estiloAvisos(), seq = sequenciaDoItem(item);
   const titulo = (item.titulo || '').trim() || e.titulo;
   const visual = { titulo, icone: e.icone, corTitulo: e.corTitulo, corTituloTexto: e.corTituloTexto,
     fundo: e.fundo === 'cor' ? e.corFundo : '', corTexto: e.fundo === 'cor' ? e.corTexto : '' };
-  const paginas = paginarAvisos(textos);
-  if (!paginas.length) paginas.push([]);
-  return paginas.map((itens, i) => ({
-    texto: itens.join('\n\n'), rodape: '',
-    avisos: { ...visual, itens, pag: paginas.length > 1 ? `${i + 1}/${paginas.length}` : '' },
-  }));
+  // blocos: { textos: [...] } ou { slide } (evento/campanha)
+  const blocos = [];
+  for (const s of seq) {
+    if (s.ev) blocos.push({ slide: slideDoEvento(s.ev) });
+    else if (s.camp) blocos.push({ slide: slideDaCampanha(s.camp) });
+    else if (blocos.length && blocos[blocos.length - 1].textos) blocos[blocos.length - 1].textos.push(s.texto);
+    else blocos.push({ textos: [s.texto] });
+  }
+  const paginasTexto = blocos.filter(b => b.textos).map(b => paginarAvisos(b.textos)).flat();
+  const total = paginasTexto.length;
+  let n = 0;
+  const pagTexto = itens => ({ texto: itens.join('\n\n'), rodape: '',
+    avisos: { ...visual, itens, pag: total > 1 ? `${++n}/${total}` : '' } });
+  const slides = blocos.flatMap(b => b.slide ? [b.slide] : paginarAvisos(b.textos).map(pagTexto));
+  return slides.length ? slides : [pagTexto([])];
+}
+
+// a imagem de um evento/campanha ficou pronta: o item Avisos aberto (ou no ar) troca o texto provisório pela imagem
+function avisosComImagemPronta() {
+  if (S.atual?.item?.tipo === 'avisos') atualizarSlides();
+  const L = S.live;
+  if (L.item?.tipo === 'avisos' && L.idx >= 0 && !L.slide?.img && !L.slide?.avisos) {
+    const s = gerarSlides(L.item)[L.idx];
+    if (s?.img) { L.slide = s; enviar({ tipo: 'slide', slide: s, direto: true }); }
+  }
 }
 
 // Item "Avisos" no roteiro novo, antes da bênção final (se a paróquia quiser e o roteiro ainda não tiver)
@@ -138,13 +190,13 @@ const htmlAviso = t => marcasEmHtml(esc(t));
 function renderAvisosPar() {
   const lista = [...AvPar.lista].sort((a, b) => {
     const o = { ativo: 0, agendado: 1, vencido: 2 };
-    return o[situacao(a)[0]] - o[situacao(b)[0]] || (a.inicio || '').localeCompare(b.inicio || '');
+    return o[situacao(a)[0]] - o[situacao(b)[0]] || grupoAviso(a) - grupoAviso(b) || (a.inicio || '').localeCompare(b.inicio || '');
   });
   $('#apLista').innerHTML = lista.length ? lista.map(a => {
     const [cls, txt] = situacao(a), locs = locaisDoAviso(a).map(localDe).filter(Boolean);
     return `<div class="ap-item ${cls} ${AvPar.editando === a.id ? 'sel' : ''}" data-id="${a.id}">
       <div class="ap-txt">${htmlAviso(a.texto)}</div>
-      <div class="ap-info"><span class="ap-sit">${esc(txt)}</span> · ${locs.length ? locs.map(l => `<span class="card-ponto" style="background:${l.cor}"></span> ${esc(l.nome)}`).join(', ') : 'todas as comunidades'}</div>
+      <div class="ap-info">${etiquetaLigado(a)}<span class="ap-sit">${esc(txt)}</span> · ${locs.length ? locs.map(l => `<span class="card-ponto" style="background:${l.cor}"></span> ${esc(l.nome)}`).join(', ') : 'todas as comunidades'}</div>
       <div class="ap-bts"><button type="button" data-ap="editar">Editar</button><button type="button" data-ap="apagar" class="perigo">🗑</button></div>
     </div>`;
   }).join('') : '<p class="sutil">Nenhum aviso programado. Escreva um aviso abaixo, escolha até quando ele vale e clique em Adicionar.</p>';
@@ -153,8 +205,39 @@ function renderAvisosPar() {
   $('#apLimpar').textContent = `Apagar ${n} vencido(s)`;
 }
 
+// "🎉 Novena de Natal (slide no telão) · " na lista; sem evento/campanha cadastrados: "🎉 Evento (só texto) · "
+function etiquetaLigado(a) {
+  const t = tipoDoAviso(a);
+  if (t === 'aviso') return '';
+  const l = ligadoDoAviso(a);
+  if (l) return `<span class="ap-ligado">${t === 'evento' ? '🎉' : '💝'} ${esc(l.titulo)} <small>(slide no telão)</small></span> · `;
+  const sumiu = a.ligadoId ? (t === 'evento' ? ' — o evento foi apagado' : ' — a campanha não está no telão') : '';
+  return `<span class="ap-ligado">${TIPOS_AVISO[t]} <small>(só texto${sumiu})</small></span> · `;
+}
+
+// "Qual evento?" / "Qual campanha?": os cadastrados, ou "não tem: fica só o texto"
+function renderLigadoAviso(tipo, sel = '') {
+  $('#apTipo').value = tipo;
+  const campo = $('#apLigadoCampo'), dica = $('#apLigadoDica');
+  campo.hidden = dica.hidden = tipo === 'aviso';
+  if (tipo === 'aviso') return;
+  const ev = tipo === 'evento';
+  const lista = ev ? eventosPorVirAv(sel) : listaCampanhasAv().filter(c => campanhaNoTelao(c) || c.id === sel).sort(ordemCamp);
+  $('#apLigadoRot').textContent = ev ? 'Qual evento?' : 'Qual campanha?';
+  $('#apLigado').innerHTML = `<option value="">${ev ? 'Não tem evento cadastrado (fica só o texto)' : 'Não tem campanha cadastrada (fica só o texto)'}</option>` +
+    lista.map(x => `<option value="${x.id}">${esc(x.titulo)}${ev ? ' · ' + dataBR(x.data) : statusCamp(x) !== 'ativa' ? ' (' + STATUS_CAMP[statusCamp(x)] + ')' : ''}</option>`).join('');
+  $('#apLigado').value = lista.some(x => x.id === sel) ? sel : '';
+  dica.textContent = ev
+    ? 'Na folha impressa sai o texto; no telão, no lugar dele, entra o slide do evento (com o QR da agenda). Os avisos de evento vêm depois dos avisos comuns.'
+    : 'Na folha impressa sai o texto; no telão, no lugar dele, entra o slide da campanha (com o QR do Pix). Os avisos de campanha vêm depois dos de evento.';
+}
+// eventos que ainda não passaram (e o já escolhido, mesmo que tenha passado)
+const eventosPorVirAv = sel => { const h = hojeIso(); return listaEventosAv().filter(e => (e.dataFim || e.data) >= h || e.id === sel)
+  .sort((a, b) => (a.data + (a.hora || '')).localeCompare(b.data + (b.hora || ''))); };
+
 function limparFormAvisoPar() {
   AvPar.editando = null;
+  renderLigadoAviso('aviso');
   $('#apTexto').value = '';
   $('#apInicio').value = hojeIso();
   $('#apFim').value = '';
@@ -196,6 +279,7 @@ function editarAvisoPar(id) {
   const a = AvPar.lista.find(x => x.id === id);
   if (!a) return;
   AvPar.editando = id;
+  renderLigadoAviso(tipoDoAviso(a), a.ligadoId || '');
   $('#apTexto').value = a.texto;
   $('#apInicio').value = a.inicio || '';
   $('#apFim').value = a.fim || '';
@@ -222,7 +306,8 @@ async function salvarAvisoParDoForm() {
   if (inicio && fim && fim < inicio) return toast('A data final é antes da inicial.');
   const locais = $$('#apLocais input[data-loc]:checked').map(el => el.dataset.loc);
   // localId: para os computadores ainda na versão antiga (uma comunidade só; várias = todas)
-  const dados = { texto, inicio, fim, locais, localId: locais.length === 1 ? locais[0] : '', em: Date.now() };
+  const tipo = $('#apTipo').value, ligadoId = tipo === 'aviso' ? '' : $('#apLigado').value;
+  const dados = { texto, inicio, fim, locais, localId: locais.length === 1 ? locais[0] : '', tipo, ligadoId, em: Date.now() };
   if (AvPar.editando) Object.assign(AvPar.lista.find(a => a.id === AvPar.editando) || {}, dados);
   else AvPar.lista.push({ id: uid(), ...dados });
   limparFormAvisoPar();
@@ -310,11 +395,11 @@ function renderAvisosCelebracao() {
 }
 
 function renderListaCelebracao() {
-  const { iso, localId } = celebracaoEscolhida(), textos = avisosVigentes(iso, localId);
-  $('#apcLista').innerHTML = textos.length
-    ? `<ol>${textos.map(t => `<li>${htmlAviso(t)}</li>`).join('')}</ol>`
+  const { iso, localId } = celebracaoEscolhida(), avs = avisosVigentesObj(iso, localId);
+  $('#apcLista').innerHTML = avs.length
+    ? `<ol>${avs.map(a => `<li>${htmlAviso(a.texto.trim())}${tipoDoAviso(a) !== 'aviso' ? `<div class="ap-info">${etiquetaLigado(a).replace(/ · $/, '')}</div>` : ''}</li>`).join('')}</ol>`
     : '<p class="sutil">Nenhum aviso programado vale para essa celebração.</p>';
-  $('#apcImprimir').disabled = $('#apcImagens').disabled = !textos.length;
+  $('#apcImprimir').disabled = $('#apcImagens').disabled = !avs.length;
   $('#apcPasta').textContent = S.config.avisosPastaImagens || '(ainda não escolhida)';
   $('#apcAbrirPasta').hidden = !NO_APP || !S.config.avisosPastaImagens;
   AvCel.previas = [];
@@ -447,12 +532,21 @@ async function escolherPastaImagens() {
 }
 
 async function gerarImagensCelebracao() {
-  const cel = celebracaoEscolhida(), textos = avisosVigentes(cel.iso, cel.localId);
-  if (!textos.length) return toast('Nenhum aviso para essa celebração.');
+  const cel = celebracaoEscolhida(), seq = sequenciaAvisos(avisosVigentesObj(cel.iso, cel.localId), []);
+  if (!seq.length) return toast('Nenhum aviso para essa celebração.');
   const b = $('#apcImagens');
   b.disabled = true;
   try {
-    const urls = await imagensDosAvisos(textos);
+    // na ordem da folha: as páginas de avisos de texto e, no lugar de cada aviso ligado, a imagem do evento/campanha
+    const urls = [];
+    let textos = [];
+    const soltarTextos = async () => { if (textos.length) urls.push(...await imagensDosAvisos(textos)); textos = []; };
+    for (const s of seq) {
+      if (s.ev) { await soltarTextos(); urls.push(await imagemEvento(s.ev)); }
+      else if (s.camp) { await soltarTextos(); urls.push(await imagemCampanha(s.camp)); }
+      else textos.push(s.texto);
+    }
+    await soltarTextos();
     const prefixo = descricaoCelebracao(cel).arquivo + ' (';
     const nomes = urls.map((_, i) => `${prefixo}${i + 1} de ${urls.length}).png`);
     $('#apcPrevia').innerHTML = urls.map((u, i) => `<img src="${u}" alt="${esc(nomes[i])}" title="${esc(nomes[i])}">`).join('');
@@ -529,6 +623,23 @@ function ligarAvisosPar() {
   $('#avApagarSalvo').addEventListener('click', apagarConvite);
 
   $('#apAdicionar').addEventListener('click', salvarAvisoParDoForm);
+  $('#apTipo').addEventListener('change', async () => {
+    const t = $('#apTipo').value;
+    // a lista de eventos/campanhas pode ter mudado na nuvem desde que o programa abriu
+    if (t === 'evento' && typeof carregarEventos === 'function') await carregarEventos().catch(() => {});
+    if (t === 'campanha' && typeof carregarCampanhas === 'function') await carregarCampanhas().catch(() => {});
+    renderLigadoAviso(t);
+    if (t !== 'aviso') $('#apLigado').focus();
+  });
+  // escolheu o evento/campanha e o texto está vazio: sugere um começo
+  $('#apLigado').addEventListener('change', () => {
+    const t = $('#apTipo').value, id = $('#apLigado').value;
+    const x = t === 'evento' ? listaEventosAv().find(e => e.id === id) : listaCampanhasAv().find(c => c.id === id);
+    if (x && !$('#apTexto').value.trim()) {
+      $('#apTexto').value = t === 'evento' ? `${x.titulo}: ${quandoEvento(x)}.` : `Campanha ${x.titulo}: ajude pelo Pix.`;
+      $('#apTexto').focus();
+    }
+  });
   $('#apCancelar').addEventListener('click', () => { limparFormAvisoPar(); renderAvisosPar(); });
   $('#apLista').addEventListener('click', async e => {
     const row = e.target.closest('.ap-item'), acao = e.target.closest('[data-ap]')?.dataset.ap;

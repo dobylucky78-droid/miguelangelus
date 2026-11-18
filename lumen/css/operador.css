@@ -773,6 +773,10 @@ big.m-g { font-size: 1.3em; } big.m-gg { font-size: 1.7em; } small.m-pq { font-s
 .ap-txt { grid-column: 1; white-space: pre-wrap; font-size: 13.5px; }
 .ap-info { grid-column: 1; font-size: 12px; color: var(--sutil); }
 .ap-sit { font-weight: 600; }
+.ap-ligado { font-weight: 600; color: var(--texto); }
+.ap-tipo-linha { align-items: flex-end; }
+.ap-ligado-campo select { min-width: 280px; }
+.apc-lista li .ap-info { margin-top: 2px; }
 .ap-bts { grid-column: 2; grid-row: 1 / span 2; display: flex; gap: 4px; align-items: center; }
 .ap-form { border: 1px solid var(--borda); border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 6px; }
 .ap-estilo summary { cursor: pointer; font-weight: 600; margin-bottom: 8px; }

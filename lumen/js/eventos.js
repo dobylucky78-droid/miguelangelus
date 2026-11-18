@@ -32,6 +32,7 @@ function slideDoEvento(e) {
       EvMA.imgs[k] = url;
       delete EvMA.gerando[k];
       if (S.atual && eventosDoItem(S.atual.item).includes(e)) atualizarSlides();
+      avisosComImagemPronta();          // (1.9.7) aviso ligado ao evento, no item Avisos
       // no ar com o texto provisório: troca pela imagem, sem mexer na contagem da apresentação
       const L = S.live;
       if (L.item && L.idx >= 0 && eventosDoItem(L.item)[L.idx] === e && !L.slide?.img) {

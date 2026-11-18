@@ -516,6 +516,7 @@ function slideDaCampanha(c) {
       Camp.imgs[k] = url;
       delete Camp.gerando[k];
       if (S.atual && campanhasDoItem(S.atual.item).includes(c)) atualizarSlides();
+      avisosComImagemPronta();          // (1.9.7) aviso ligado à campanha, no item Avisos
       const L = S.live;
       if (L.item && L.idx >= 0 && campanhasDoItem(L.item)[L.idx] === c && !L.slide?.img) {
         L.slide = gerarSlides(L.item)[L.idx];

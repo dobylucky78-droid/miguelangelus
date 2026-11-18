@@ -5,6 +5,9 @@
  * A versão mais nova fica em cima. Ao gerar uma versão nova, acrescente a entrada dela aqui.
  */
 const NOVIDADES = [
+  { versao: '1.9.7', data: '2026-11-19', itens: [
+    '📢 Avisos de evento e de campanha: no item Avisos, o aviso que a Secretaria ligou a um evento ou a uma campanha cadastrados aparece no telão como o slide pronto do evento (com o QR da agenda) ou da campanha (com o QR do Pix), no lugar do texto. A ordem é a mesma da folha que o leitor tem no ambão: primeiro os avisos comuns, depois os de evento e por último os de campanha. É só ir passando com o Próximo enquanto ele lê. Se o evento for apagado, ou a campanha pausada ou encerrada, o aviso volta a aparecer como texto.',
+  ] },
   { versao: '1.9.6', data: '2026-11-18', itens: [
     '💝 Campanhas de arrecadação no telão: novo item "💝 Campanhas" no roteiro (entra logo depois dos Avisos). Cada campanha vira um slide com a arte feita no Canva, quanto já foi arrecadado (percentual, barra e, se a campanha deixar, os valores) e o QR code do Pix da campanha com a chave, passando sozinhos como no "Apresentar eventos". As campanhas são feitas e atualizadas na Secretaria MiguelAngelus e chegam pela nuvem; aqui só se mostra. Com "Todas as campanhas abertas" marcado, a nova entra e a pausada ou encerrada sai sozinha; a encerrada pode virar um slide de agradecimento, se a Secretaria marcar. O botão "💝 Campanhas" só aparece quando há alguma campanha na nuvem.',
     '🎨 Eventos e campanhas não se confundem no telão: o evento tem a faixa azul "🎉 EVENTO" e o QR com moldura azul e "📅 SALVE NA AGENDA"; a campanha tem fundo vinho, faixa dourada "💝 CAMPANHA" e o QR com moldura dourada e "💠 DOE PELO PIX". A meta da campanha aparece em barra, termômetro, círculo, tijolos ou coração (a Secretaria escolhe).',
