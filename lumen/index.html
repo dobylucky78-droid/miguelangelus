@@ -8,7 +8,7 @@
 <script>try { if (localStorage.getItem('lumen.temaApp') === 'claro') document.documentElement.dataset.temaApp = 'claro'; } catch (_) {}
   // (Secretaria MiguelAngelus 1.0) o mesmo programa aberto no modo Secretaria: só Agenda e Avisos (index.html?app=secretaria)
   const SECRETARIA = new URLSearchParams(location.search).get('app') === 'secretaria';
-  const VERSAO_SECRETARIA = '1.1.0';   // versão da Secretaria (a do .iss e do .csproj precisam bater)
+  const VERSAO_SECRETARIA = '1.3.0';   // versão da Secretaria (a do .iss e do .csproj precisam bater)
   if (SECRETARIA) { document.documentElement.classList.add('app-secretaria'); document.title = 'Secretaria MiguelAngelus'; }</script>
 <link rel="icon" type="image/svg+xml" href="img/icone.svg">
 </head>
@@ -25,7 +25,7 @@
     </div>
     <div class="splash-info">
       <div class="splash-gratis"><b>Gratuito · uso livre</b></div>
-      <div data-versao>Versão 1.9.4</div>
+      <div data-versao>Versão 1.9.6</div>
       <div>© 2026</div>
       <div><b>PASCOM</b></div>
       <div><b>São José Operário Ilha</b></div>
@@ -182,6 +182,8 @@
       <span>As intenções de cada Missa, a folha para ler e o relatório das ofertas. Só entre as Secretarias.</span></button>
     <button type="button" data-sec="eventos"><span class="ic">🎉</span><b>Eventos com QR code</b>
       <span>Retiro, festa, curso… com cartaz e um QR code que põe o evento na agenda do celular.</span></button>
+    <button type="button" data-sec="campanhas"><span class="ic">💝</span><b>Campanhas de arrecadação</b>
+      <span>Reforma, festa, obra social… com o Pix da campanha, a meta e quanto já foi arrecadado, para o telão.</span></button>
     <button type="button" data-sec="nuvem"><span class="ic">☁</span><b>Nuvem da paróquia</b>
       <span>Conectar ao Google Drive da paróquia (o mesmo do MiguelAngelus) e sincronizar.</span></button>
   </div>
@@ -437,6 +439,7 @@
         <button data-add="imagem" title="Imagem (banner, flyer, cartaz…): só a imagem, ou com texto. Escolha o arquivo, cole (Ctrl+V) ou arraste para a janela">🖼 Imagem</button>
         <button data-add="avisos" title="Tela de avisos paroquiais: título chamativo e os avisos programados para a data">Avisos</button>
         <button data-add="eventos" title="Apresentar eventos: os eventos marcados (aba 🎉 Eventos), cada um com o cartaz e o QR code, passando sozinhos no telão">🎉 Apresentar eventos</button>
+        <button data-add="campanhas" title="Campanhas de arrecadação (feitas na Secretaria MiguelAngelus): a arte, o Pix e quanto já foi arrecadado, passando sozinhas no telão. Entra depois dos Avisos">💝 Campanhas</button>
         <button data-add="midia" title="Vídeo, áudio, apresentação ou câmera">Mídia</button>
       </div>
     </section>
@@ -833,6 +836,11 @@
               <input id="parLocPadroeiro" placeholder="Ex.: São José Operário"></label>
             <label class="campo par-pad-dia">Dia <input id="parLocPadDia" placeholder="dd/mm" maxlength="5"></label>
             <label class="campo par-pad-cor">Cor <select id="parLocPadCor"><option value="branco">Branco</option><option value="vermelho">Vermelho (mártir)</option></select></label>
+            <div id="parLocBVLinha" class="bv-linha">
+              <label class="campo" title="Vídeo (da aba Vídeos) que abre as Missas desta igreja">🎬 Vídeo de boas-vindas <select id="parLocBV"></select></label>
+              <label class="check pequeno" title="Só os roteiros criados daqui para frente (pela Agenda, Liturgia do dia ou folheto). Os que já existem não mudam."><input type="checkbox" id="parLocBVAuto">
+                Começar os roteiros novos de Missa desta igreja com este vídeo (1º item)</label>
+            </div>
             <button id="btnParLocal" class="primario">Adicionar</button>
             <button id="btnParLocalCancelar" hidden>Cancelar edição</button>
           </div>
@@ -1192,7 +1200,7 @@
       <a href="mailto:contato.miguelangelus@gmail.com" target="_blank" rel="noopener" class="mail" title="E-mail do MiguelAngelus: dúvidas, sugestões e outras paróquias">
         <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M3.5 6.5 12 13l8.5-6.5" fill="none" stroke="currentColor" stroke-width="2"/></svg>contato.miguelangelus@gmail.com</a>
     </div>
-    <p class="sutil pequeno" id="versaoApp">Versão 1.9.4</p>
+    <p class="sutil pequeno" id="versaoApp">Versão 1.9.6</p>
     <div class="linha"><span class="espaco"></span><button value="ok" class="primario">OK</button></div>
   </form>
 </dialog>
@@ -1565,6 +1573,8 @@
 <script src="js/secretariacadastros.js"></script>
 <script src="js/secretariaagendag.js"></script>
 <script src="js/eventos.js"></script>
+<script src="js/campanhas.js"></script>
+<script src="js/boasvindas.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>

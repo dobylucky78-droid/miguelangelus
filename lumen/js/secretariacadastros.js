@@ -96,6 +96,12 @@ const HTML_COMO_USAR_SEC = `
         A Secretaria monta a <b>imagem para o Holyrics</b> (cartaz à esquerda, QR à direita) e o <b>cartaz A4 com QR</b> para o mural.</p>
       <p><b>Cartaz no Canva:</b> faça em pé, no tamanho <b>1080 × 1350 px</b> (use o modelo da paróquia: Arquivo → Fazer uma cópia),
         baixe em <b>PNG</b> e escolha o arquivo em <b>🖼 Escolher cartaz…</b>. Não ponha QR no cartaz: a Secretaria já coloca.</p>
+      <h3>5. Campanhas de arrecadação</h3>
+      <p><b>💝 Campanhas</b>: a arte do Canva, o QR code do Pix da campanha (salve a imagem do QR que o banco gera) e a chave,
+        a meta e quanto já foi arrecadado. Atualize o "Arrecadado até agora" sempre que quiser: o telão do MiguelAngelus mostra o andamento novo.
+        Desmarque "Mostrar os valores" para aparecer só o percentual. <b>⏸ Pausar</b> tira do telão por um tempo; <b>■ Encerrar</b> tira de vez
+        (ou deixa o slide de agradecimento, se marcado); <b>▶ Reabrir</b> volta.</p>
+      <p>O QR e a chave de cada campanha têm uma <b>senha de 4 números</b>, criada ao salvar: guarde com a coordenação. Sem ela ninguém troca o Pix da campanha.</p>
       <h3>Dúvidas e sugestões</h3>
       <p>Escreva para <b>contato.miguelangelus@gmail.com</b> (Ajuda → Dúvidas e sugestões por e-mail).</p>
     </div>
@@ -111,7 +117,7 @@ const lerReais = s => { const n = parseFloat(String(s || '').replace(/[^\d,.-]/g
 const nomeIgreja = id => { const l = localDe(id); return l ? `${l.tipo} ${l.nome}` : '—'; };
 
 // ---------------------------------------------------------------- itens compartilhados entre as Secretarias
-const PREF_SEC = { marc: 'secm-', int: 'seci-', ev: 'sece-', usu: 'secu-' };   // usu: pessoas da 📆 agenda (secretariaagendag.js)
+const PREF_SEC = { marc: 'secm-', int: 'seci-', ev: 'sece-', usu: 'secu-', camp: 'secc-' };   // usu: pessoas da 📆 agenda (secretariaagendag.js); camp: 💝 campanhas (campanhas.js)
 const horaCurta = t => new Date(t).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
 
 // versao = quando o item foi gravado pela última vez (o "atualizado" do registro), para conferir conflitos
@@ -146,11 +152,13 @@ function avisarMudancaSec() { clearTimeout(timerSec); timerSec = setTimeout(() =
 
 // chegou coisa de outro computador (sincronia.js → recarregarDadosDaNuvem): atualiza as listas abertas, sem mexer no formulário
 async function recarregarCadastrosSecretaria() {
-  await Promise.all([carregarMarcacoes(), carregarIntencoes(), carregarEventos()]);
+  await Promise.all([carregarMarcacoes(), carregarIntencoes(), carregarEventos(), carregarCampanhas()]);
   if ($('#dlgMarcacoes')?.open) renderMarcacoes();
   if ($('#dlgIntencoes')?.open) { renderCelebracoesInt(); renderResumoInt(); }
   if ($('#dlgEventos')?.open) renderEventos();
+  if ($('#dlgCampanhas')?.open) renderCampanhas();
   aposMudarEventos();
+  aposMudarCampanhas();      // (1.9.6) campanhas.js: o item 💝 Campanhas do roteiro mostra o andamento novo
 }
 
 // MiguelAngelus (aba 🎉 Eventos, eventos.js): a lista da aba e o slide aberto/no ar acompanham as mudanças
@@ -758,16 +766,26 @@ function localDoEvento(e) {
   return l ? [`${l.tipo} ${l.nome}`, l.endereco].filter(Boolean).join(', ') : '';
 }
 
+// (1.9.5) Evento de vários dias no mesmo horário (novena, semana missionária): cada dia das "hora" às "horaFim"
+const eventoDiario = e => !!(e.diario && e.dataFim && e.dataFim > e.data);
+const diasDoEvento = e => Math.round((deIso(e.dataFim) - deIso(e.data)) / 864e5) + 1;
+const hTxt = h => h.replace(':', 'h').replace(/h00$/, 'h');
+
 // Texto que vai dentro do QR (horário local, sem fuso: o celular usa o dele, que é o mesmo da paróquia)
 function veventDe(e) {
-  const fim = e.dataFim && e.horaFim ? { iso: e.dataFim, hora: e.horaFim } : e.hora ? somaHoras(e.data, e.hora, 2) : null;
+  const diario = eventoDiario(e);
+  // no diário o fim é no mesmo dia (a repetição leva aos outros dias)
+  const fim = diario ? (e.horaFim && e.horaFim > e.hora ? { iso: e.data, hora: e.horaFim } : e.hora ? somaHoras(e.data, e.hora, 1) : null)
+    : e.dataFim && e.horaFim ? { iso: e.dataFim, hora: e.horaFim } : e.hora ? somaHoras(e.data, e.hora, 2) : null;
   const par = Agenda.dados.paroquia?.nome || '';
   const linhas = ['BEGIN:VEVENT', 'SUMMARY:' + escIcs(e.titulo)];
   if (e.hora) { linhas.push('DTSTART:' + dataIcs(e.data, e.hora)); linhas.push('DTEND:' + dataIcs(fim.iso, fim.hora)); }
-  else { linhas.push('DTSTART;VALUE=DATE:' + dataIcs(e.data)); const d = deIso(e.dataFim || e.data); d.setDate(d.getDate() + 1); linhas.push('DTEND;VALUE=DATE:' + dataIcs(isoData(d))); }
+  else { linhas.push('DTSTART;VALUE=DATE:' + dataIcs(e.data)); const d = deIso(diario ? e.data : (e.dataFim || e.data)); d.setDate(d.getDate() + 1); linhas.push('DTEND;VALUE=DATE:' + dataIcs(isoData(d))); }
+  if (diario) linhas.push('RRULE:FREQ=DAILY;COUNT=' + diasDoEvento(e));
   const loc = localDoEvento(e);
   if (loc) linhas.push('LOCATION:' + escIcs(loc));
-  const desc = e.descricao || par;      // texto curto = QR menos denso
+  // no diário, a descrição começa dizendo que é todo dia (o celular que ignorar a repetição grava só o 1º dia, mas a pessoa lê)
+  const desc = [diario ? `Todos os dias, de ${dataBR(e.data).slice(0, 5)} a ${dataBR(e.dataFim).slice(0, 5)}${e.hora ? ', ' + hTxt(e.hora) : ''}.` : '', e.descricao || (diario ? '' : par)].filter(Boolean).join(' ');
   if (desc) linhas.push('DESCRIPTION:' + escIcs(desc));
   linhas.push('END:VEVENT');
   return linhas.join('\r\n');
@@ -795,6 +813,9 @@ function qrDataUrl(texto, lado = 600) {
 
 function quandoEvento(e) {
   const d = deIso(e.data);
+  if (eventoDiario(e))
+    return `Todos os dias, de ${DIAS[d.getDay()].toLowerCase()}, ${dataBR(e.data).slice(0, 5)} a ${DIAS[deIso(e.dataFim).getDay()].toLowerCase()}, ${dataBR(e.dataFim).slice(0, 5)}` +
+      (e.hora ? ` · ${hTxt(e.hora)}${e.horaFim && e.horaFim > e.hora ? ' às ' + hTxt(e.horaFim) : ''}` : '');
   let t = `${DIAS[d.getDay()]}, ${dataBR(e.data)}${e.hora ? ' · ' + e.hora.replace(':', 'h') : ''}`;
   if (e.dataFim && e.dataFim !== e.data) t += ` a ${DIAS[deIso(e.dataFim).getDay()].toLowerCase()}, ${dataBR(e.dataFim)}${e.horaFim ? ' · ' + e.horaFim.replace(':', 'h') : ''}`;
   else if (e.horaFim) t += ` às ${e.horaFim.replace(':', 'h')}`;
@@ -811,12 +832,19 @@ async function imagemEvento(e) {
   const fundo = S.config.corFundo || '#0f2742', corTxt = S.config.corTexto || '#ffffff';
   g.fillStyle = fundo; g.fillRect(0, 0, W, H);
   try { await document.fonts?.ready; } catch (_) {}
+  // (1.9.6) faixa azul "🎉 EVENTO" e QR com moldura azul e "📅 SALVE NA AGENDA": não confunde com o QR do Pix das campanhas
+  const AZUL = '#2f80ed', FX = 76;
+  g.fillStyle = AZUL; g.fillRect(0, 0, W, FX);
+  g.fillStyle = '#fff'; g.textBaseline = 'middle';
+  g.font = `800 42px ${FONTE}`; g.textAlign = 'left'; g.fillText('🎉 EVENTO', 50, FX / 2 + 2);
+  g.font = `600 32px ${FONTE}`; g.textAlign = 'right'; g.fillText('Salve na agenda do celular', W - 50, FX / 2 + 2);
+  g.textBaseline = 'alphabetic';
   let xTexto = 110, largTexto = W - 110 - 110 - 620;
   if (e.cartaz) {
     try {
       const img = await carregarImagem(e.cartaz);
-      const maxW = 820, maxH = H - 120, k = Math.min(maxW / img.width, maxH / img.height);
-      const w = img.width * k, h = img.height * k, x = 70, y = (H - h) / 2;
+      const maxW = 820, maxH = H - FX - 70, k = Math.min(maxW / img.width, maxH / img.height);
+      const w = img.width * k, h = img.height * k, x = 70, y = FX + (H - FX - h) / 2;
       g.save(); g.shadowColor = 'rgba(0,0,0,.45)'; g.shadowBlur = 30; g.shadowOffsetY = 10;
       g.drawImage(img, x, y, w, h); g.restore();
       xTexto = x + w + 70; largTexto = W - xTexto - 70;
@@ -824,24 +852,26 @@ async function imagemEvento(e) {
   }
   g.textAlign = 'center'; g.fillStyle = corTxt;
   const cx = xTexto + largTexto / 2;
-  let f = 76;
+  let f = 70;
   g.font = `800 ${f}px ${FONTE}`;
   let ls = linhasCanvas(g, e.titulo, largTexto);
   while ((ls.length > 2 || ls.some(l => g.measureText(l).width > largTexto)) && f > 36) { f *= .92; g.font = `800 ${f}px ${FONTE}`; ls = linhasCanvas(g, e.titulo, largTexto); }
-  let y = 70 + f;
+  let y = FX + 30 + f;
   for (const l of ls.slice(0, 3)) { g.fillText(l, cx, y); y += f * 1.12; }
   g.font = `600 ${Math.round(f * .5)}px ${FONTE}`; g.fillStyle = corComAlfa(corTxt, .9);
   for (const l of linhasCanvas(g, quandoEvento(e), largTexto).slice(0, 2)) { g.fillText(l, cx, y); y += f * .62; }
   const loc = localDoEvento(e);
   if (loc) { g.font = `400 ${Math.round(f * .42)}px ${FONTE}`; g.fillStyle = corComAlfa(corTxt, .75); for (const l of linhasCanvas(g, '📍 ' + loc, largTexto).slice(0, 2)) { g.fillText(l, cx, y); y += f * .55; } }
-  y += 4;
-  // QR: o maior que couber embaixo do texto (precisa ser lido do fundo da igreja); a sombra só no quadro branco,
+  // QR: o maior que couber embaixo do texto (precisa ser lido do fundo da igreja); a sombra só na moldura,
   // nunca nos quadradinhos (borrados, o celular não lê)
-  const yQr = y + 6, ladoQr = Math.max(300, Math.min(600, largTexto, H - yQr - 100)), xQr = cx - ladoQr / 2;
-  g.save(); g.shadowColor = 'rgba(0,0,0,.4)'; g.shadowBlur = 24; g.fillStyle = '#fff'; g.fillRect(xQr, yQr, ladoQr, ladoQr); g.restore();
+  const B = 16, yQr = y + 66, ladoQr = Math.max(280, Math.min(600, largTexto - 2 * B, H - yQr - B - 52)), xQr = cx - ladoQr / 2;
+  g.font = `800 44px ${FONTE}`; g.fillStyle = '#7db8ff'; g.fillText('📅 SALVE NA AGENDA', cx, yQr - B - 14);
+  g.save(); g.shadowColor = 'rgba(0,0,0,.4)'; g.shadowBlur = 24; g.fillStyle = AZUL;
+  g.beginPath(); g.roundRect(xQr - B, yQr - B, ladoQr + 2 * B, ladoQr + 2 * B, 18); g.fill(); g.restore();
+  g.fillStyle = '#fff'; g.fillRect(xQr, yQr, ladoQr, ladoQr);
   desenharQr(g, qrEvento(veventDe(e)), xQr, yQr, ladoQr);
-  g.font = `600 34px ${FONTE}`; g.fillStyle = corTxt;
-  g.fillText('📱 Aponte a câmera do celular e salve na sua agenda', cx, Math.min(H - 30, yQr + ladoQr + 58));
+  g.font = `600 28px ${FONTE}`; g.fillStyle = corTxt;
+  g.fillText('📱 Aponte a câmera do celular', cx, Math.min(H - 16, yQr + ladoQr + B + 36));
   return c.toDataURL('image/png');
 }
 
@@ -865,6 +895,13 @@ const HTML_EVENTOS = `
           <label class="campo">Termina <input type="date" id="evfDataFim"></label>
           <label class="campo">às <input type="time" id="evfHoraFim"></label>
         </div>
+        <p class="sutil pequeno ev-dica">💡 <b>Novena, tríduo, semana missionária</b> (um encontro por dia, no mesmo horário): em <b>Começa</b>, o 1º dia e a hora
+          de início; em <b>Termina</b>, o último dia e a hora em que <b>cada encontro</b> acaba; e deixe marcado "Todos os dias, no mesmo horário".
+          Ex.: novena de 15 a 23/11, 19h30 às 21h → 9 compromissos no celular.<br>
+          <b>Retiro, acampamento, festa de vários dias seguidos</b> (sem parar à noite): desmarque — vira um bloco só, do começo ao fim.
+          <b>Evento de um dia:</b> deixe "Termina" em branco ou no mesmo dia.</p>
+        <label class="check pequeno" id="evfDiarioRot" hidden><input type="checkbox" id="evfDiario">
+          <span><b>Todos os dias, no mesmo horário</b> (novena, semana missionária…): no celular vira um compromisso por dia, das <span id="evfDiarioHoras"></span>.</span></label>
         <div class="linha">
           <label class="campo">Igreja <select id="evfLocal"></select></label>
           <label class="campo ev-larga">ou outro local <input id="evfLocalTexto" placeholder="Ex.: Salão paroquial, Rua …"></label>
@@ -912,10 +949,15 @@ function renderEventos() {
 function lerFormEv() {
   return { titulo: $('#evfTitulo').value.trim(), data: $('#evfData').value, hora: $('#evfHora').value,
     dataFim: $('#evfDataFim').value, horaFim: $('#evfHoraFim').value, localId: $('#evfLocal').value,
+    diario: $('#evfDiario').checked && !!$('#evfDataFim').value && $('#evfDataFim').value > $('#evfData').value,
     localTexto: $('#evfLocalTexto').value.trim(), descricao: $('#evfDescricao').value.trim(), cartaz: Ev.cartaz };
 }
 
 function atualizarPreviaEv() {
+  const varios = !!$('#evfDataFim').value && $('#evfDataFim').value > $('#evfData').value;
+  $('#evfDiarioRot').hidden = !varios;
+  const h = $('#evfHora').value, hf = $('#evfHoraFim').value;
+  $('#evfDiarioHoras').textContent = h ? `${hTxt(h)} às ${hf && hf > h ? hTxt(hf) : hTxt(somaHoras($('#evfData').value || hojeIso(), h, 1).hora) + ' (ponha a hora em que termina)'}` : '(sem horário: dia inteiro)';
   const e = lerFormEv();
   $('#evfConta').textContent = `(${e.descricao.length}/200)`;
   $('#evfCartaz').innerHTML = Ev.cartaz ? `<img src="${Ev.cartaz}" alt="cartaz">` : 'sem cartaz';
@@ -933,6 +975,7 @@ function abrirFormEv(e) {
   $('#evfHora').value = e?.hora || '';
   $('#evfDataFim').value = e?.dataFim || '';
   $('#evfHoraFim').value = e?.horaFim || '';
+  $('#evfDiario').checked = !!e?.diario;
   $('#evfLocal').innerHTML = opcoesLocais(e?.localId || '', '— outro local —');
   $('#evfLocalTexto').value = e?.localTexto || '';
   $('#evfDescricao').value = e?.descricao || '';
@@ -1028,8 +1071,13 @@ function ligarEventosSec() {
   $('#evfCartazTirar').addEventListener('click', () => { Ev.cartaz = ''; atualizarPreviaEv(); });
   $('#evImagem').addEventListener('click', gerarImagemEvento);
   $('#evImprimir').addEventListener('click', imprimirEvento);
-  for (const id of ['evfTitulo', 'evfData', 'evfHora', 'evfDataFim', 'evfHoraFim', 'evfLocal', 'evfLocalTexto', 'evfDescricao'])
+  for (const id of ['evfTitulo', 'evfData', 'evfHora', 'evfDataFim', 'evfHoraFim', 'evfLocal', 'evfLocalTexto', 'evfDescricao', 'evfDiario'])
     $('#' + id).addEventListener('input', atualizarPreviaEv);
+  // (1.9.5) data fim noutro dia com horário: já marca "todos os dias" (o caso comum: novena); dá para desmarcar
+  $('#evfDataFim').addEventListener('change', () => {
+    const v = $('#evfDataFim').value;
+    if (v && v > $('#evfData').value && $('#evfHora').value && !Ev.editando) { $('#evfDiario').checked = true; atualizarPreviaEv(); }
+  });
   dlg.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.matches('input')) e.preventDefault(); });
   dlg.addEventListener('click', e => {
     const it = e.target.closest('.ev-item');
@@ -1050,10 +1098,11 @@ function ligarEventosSec() {
 // ================================================================ início
 function iniciarCadastrosSecretaria() {
   $('#menubar').innerHTML = MENU_SECRETARIA;
-  document.body.insertAdjacentHTML('beforeend', HTML_COMO_USAR_SEC + HTML_MARCACOES + HTML_INTENCOES + HTML_EVENTOS);
+  document.body.insertAdjacentHTML('beforeend', HTML_COMO_USAR_SEC + HTML_MARCACOES + HTML_INTENCOES + HTML_EVENTOS + HTML_CAMPANHAS);
   ligarMarcacoes();
   ligarIntencoes();
   ligarEventosSec();
+  ligarCampanhasSec();      // (1.9.6) 💝 campanhas de arrecadação (campanhas.js)
   if (typeof iniciarAgendaG === 'function') iniciarAgendaG();   // (protótipo) 📆 agenda da secretaria numa conta própria
   // F1 abre o "Como usar" da Secretaria (o manual do MiguelAngelus não serve aqui)
   document.addEventListener('keydown', e => {
@@ -1061,7 +1110,7 @@ function iniciarCadastrosSecretaria() {
     e.preventDefault(); e.stopImmediatePropagation();
     if (!$('#dlgComoUsarSec').open) abrirDialogo('dlgComoUsarSec');
   }, true);
-  Promise.all([carregarMarcacoes(), carregarIntencoes(), carregarEventos()]).then(() => typeof renderSecretaria === 'function' && renderSecretaria());
+  Promise.all([carregarMarcacoes(), carregarIntencoes(), carregarEventos(), carregarCampanhas()]).then(() => typeof renderSecretaria === 'function' && renderSecretaria());
   // as mudanças dos outros computadores da secretaria chegam sozinhas (a cada 2 minutos, se a nuvem estiver ligada)
   setInterval(() => { if (ligadaSync() && !Sync.ocupado) sincronizarAgora({ silencioso: true }).then(() => renderSecretaria()); }, 120000);
 }

@@ -18,6 +18,7 @@ const chaveImgEvento = e => `${e.id}:${e.versao || e.alterado || e.criado || 0}:
 function eventosDoItem(it) {
   if (it?.tipo === 'evento') return eventoDe(it) ? [eventoDe(it)] : [];
   if (it?.tipo !== 'eventos') return [];
+  if (it.todosPorVir) return eventosPorVir();       // (1.9.5) atualiza sozinho: entra o evento novo, sai o que passou
   const ids = new Set(it.eventoIds || []);
   return Ev.lista.filter(e => ids.has(e.id)).sort((a, b) => (a.data + (a.hora || '')).localeCompare(b.data + (b.hora || '')));
 }
@@ -155,13 +156,15 @@ async function iniciarEventosMA() {
     aposMudarShow(false);
   });
   $('#itemCab').addEventListener('click', e => {
-    if (e.target.closest('[data-show-audio-arq]') && S.atual?.item.tipo === 'eventos') return escolherArquivoAudioShow(S.atual.item);
+    if (e.target.closest('[data-show-audio-arq]') && ehShow(S.atual?.item)) return escolherArquivoAudioShow(S.atual.item);
     const b = e.target.closest('[data-show-todos]');
     if (!b || S.atual?.item.tipo !== 'eventos') return;
     S.atual.item.eventoIds = b.dataset.showTodos === '1' ? eventosPorVir().map(x => x.id) : [];
     aposMudarShow(true);
   });
-  await carregarEventos();
+  ligarCampanhasMA();                 // (1.9.6) 💝 Campanhas (campanhas.js)
+  await Promise.all([carregarEventos(), carregarCampanhas()]);
+  mostrarBotaoCampanhas();
   renderAbaEventos();
   // vira o dia: os que passaram saem da lista
   setInterval(renderAbaEventos, 30 * 60 * 1000);
@@ -173,6 +176,8 @@ async function iniciarEventosMA() {
 // A contagem pausa com o telão congelado e acaba se o operador projetar outra coisa, limpar ou apagar o telão.
 // ======================================================================
 const Show = { timer: 0, item: null, idx: -1, fim: 0, audioItem: null, audioId: null, fade: 0 };
+// (1.9.6) o "💝 Campanhas" (campanhas.js) passa pelo mesmo motor
+const ehShow = it => !!it && (it.tipo === 'eventos' || it.tipo === 'campanhas');
 const segundosShow = it => Math.min(600, Math.max(3, Math.round(+it.segundos || 10)));
 
 function slidesShowEventos(item) { return eventosDoItem(item).map(slideDoEvento); }
@@ -183,7 +188,8 @@ function resumoShowEventos(it) {
 }
 
 function htmlCabShowEventos(it) {
-  const marcados = new Set(it.eventoIds || []), hoje = hojeIso();
+  const todos = !!it.todosPorVir;
+  const marcados = new Set(todos ? eventosPorVir().map(e => e.id) : (it.eventoIds || [])), hoje = hojeIso();
   // os por vir e os já marcados que passaram (para poder desmarcar)
   const lista = eventosPorVir();
   for (const e of Ev.lista) if (marcados.has(e.id) && !lista.includes(e)) lista.push(e);
@@ -199,13 +205,17 @@ function htmlCabShowEventos(it) {
         <select data-campo="audioId" style="max-width:260px">${opcoesAudioShow(it.audioId || '')}</select></label>
       <button type="button" data-show-audio-arq title="Escolher um arquivo de áudio do computador (ele fica guardado na aba Áudios)">📂 Arquivo de áudio…</button>
       ${grupoLoop(it).length ? `<span class="sutil pequeno" title="Itens seguidos marcados para repetir passam um depois do outro e o conjunto recomeça">🔁 Repete em grupo: ${grupoLoop(it).map(nomeItemGrupo).map(esc).join(' → ')} → (volta)</span>` : ''}
+      ${typeof htmlIncluirEmTodos === 'function' ? htmlIncluirEmTodos(it) : ''}
+    </div>
+    <div class="cab-linha">
+      <label class="check" title="Marcado: entram sozinhos todos os eventos cadastrados que ainda não passaram (o evento novo aparece, o que passou sai). Serve em todos os roteiros sem mexer."><input type="checkbox" data-campo="todosPorVir" ${todos ? 'checked' : ''}> <b>Todos os eventos por vir</b> (atualiza sozinho)</label>
     </div>
     <div class="cab-linha show-evs">
       ${lista.length ? lista.map(e => `<label class="check show-ev ${(e.dataFim || e.data) < hoje ? 'passado' : ''}" title="${esc(quandoEvento(e))}${localDoEvento(e) ? ' · ' + esc(localDoEvento(e)) : ''}">
-        <input type="checkbox" data-show-ev="${e.id}" ${marcados.has(e.id) ? 'checked' : ''}>
+        <input type="checkbox" data-show-ev="${e.id}" ${marcados.has(e.id) ? 'checked' : ''} ${todos ? 'disabled' : ''}>
         ${e.cartaz ? `<img src="${e.cartaz}" alt="">` : '🎉'} ${esc(dataBR(e.data).slice(0, 5))} · ${esc(e.titulo)}</label>`).join('')
         : '<span class="sutil">Nenhum evento por vir. Cadastre na aba 🎉 Eventos (ou na Secretaria).</span>'}
-      ${lista.length > 1 ? `<span class="espaco"></span><button type="button" data-show-todos="1">Marcar todos</button><button type="button" data-show-todos="0">Nenhum</button>` : ''}
+      ${lista.length > 1 && !todos ? `<span class="espaco"></span><button type="button" data-show-todos="1">Marcar todos</button><button type="button" data-show-todos="0">Nenhum</button>` : ''}
     </div>
     <p class="sutil pequeno" style="margin:0">Clique no primeiro slide para começar: os outros passam sozinhos. Para parar, projete outra coisa ou use Limpar.</p>`;
 }
@@ -225,7 +235,7 @@ function mostrarStatusShow(t) { const el = $('#showStatus'); if (el) el.textCont
 function aoProjetarShow() {
   pararShow();
   const L = S.live, it = L.item;
-  if (!it || it.tipo !== 'eventos' || L.idx < 0) return pararAudioShow();   // projetou outra coisa: o som da apresentação para
+  if (!ehShow(it) || L.idx < 0) return pararAudioShow();   // projetou outra coisa: o som da apresentação para
   if (Show.audioItem && Show.audioItem !== it) pararAudioShow();
   const n = (S.atual?.item === it ? S.atual.slides : gerarSlides(it)).length;
   if (!n) return;
@@ -329,6 +339,7 @@ function pararAudioShow() {
 function repeteNoGrupo(it) {
   if (!it) return false;
   if (it.tipo === 'eventos') return !!it.repetir && eventosDoItem(it).length > 0;
+  if (it.tipo === 'campanhas') return !!it.repetir && campanhasDoItem(it).length > 0;
   if (it.tipo === 'midia') return !!it.loop && midiaDe(it)?.tipo === 'video';
   return false;
 }
@@ -360,6 +371,7 @@ const proximoDoGrupo = it => { const g = grupoLoop(it); return g.length ? g[(g.i
 // no grupo o vídeo passa uma vez só (quem repete é o grupo); sozinho, repete como antes
 const loopDoVideo = it => !!it?.loop && !grupoLoop(it).length;
 const nomeItemGrupo = it => it.tipo === 'eventos' ? `🎉 ${it.titulo || 'Apresentar eventos'}`
+  : it.tipo === 'campanhas' ? `💝 ${it.titulo || 'Campanhas'}`
   : (it.tipo === 'midia' ? '🎬 ' : '') + tirarMarcas(resumoItem(it).tit || resumoItem(it).rot || '');
 
 // o vídeo do grupo terminou sozinho (receberStatusMidia, midia.js)
@@ -382,7 +394,7 @@ function iniciarItemDoGrupo(it, deItem) {
     tocarPausar(m, it);
     return true;
   }
-  if (it.tipo === 'eventos') {
+  if (ehShow(it)) {
     if (seguir) { abrirItem(it, rIdx); projetar(0); return true; }
     const slides = gerarSlides(it);
     if (!slides.length) return false;

@@ -11,6 +11,15 @@
 // VERSAO_SECRETARIA fica no <head> do index.html (o splash usa antes deste arquivo carregar)
 
 const NOVIDADES_SECRETARIA = [
+  { versao: '1.3.0', data: '2026-11-18', itens: [
+    '💝 Campanhas de arrecadação (reforma, festa, obra social…): título, descrição, a arte feita no Canva, o QR code do Pix da campanha e a chave, a meta e quanto já foi arrecadado (ou só o percentual). Você escolhe se os valores aparecem no telão ou só o percentual. Botões ⏸ Pausar, ■ Encerrar e ▶ Reabrir; encerrada sai do telão, ou vira um slide "Muito obrigado!" com o resultado, se marcar "🙏 Agradecimento no telão". Vai pela nuvem para o MiguelAngelus, que mostra no item 💝 Campanhas do roteiro; só a Secretaria atualiza o andamento.',
+    '🎨 Mostrador da meta de cada campanha: barra, termômetro, círculo, tijolos (cada tijolo = 10%) ou coração enchendo. O slide da campanha tem fundo vinho e faixa dourada "💝 CAMPANHA", com "💠 DOE PELO PIX" no QR; o do evento ganhou a faixa azul "🎉 EVENTO" e "📅 SALVE NA AGENDA" no QR, para ninguém confundir os dois.',
+    '🔒 O QR code e a chave Pix de cada campanha ficam protegidos por uma senha de 4 números da própria campanha (criada ao salvar): ninguém troca o Pix da campanha por outro sem a senha. Atualizar o andamento não pede senha.',
+  ] },
+  { versao: '1.2.0', data: '2026-11-17', itens: [
+    '🙏 Eventos de vários dias no mesmo horário (novena, tríduo, semana missionária): marque "Todos os dias, no mesmo horário" e o QR vira um compromisso por dia na agenda do celular (ex.: novena de 15 a 23/12, 19h30 às 21h → 9 compromissos), em vez de um bloco só. Uma dica no formulário explica como preencher cada caso.',
+    '📆 (Em teste) Agenda da secretaria: liga a agenda compartilhada do Google da secretaria, numa conta própria, em Ajustes → 📆 Agenda da secretaria. Ver é livre; para criar, mudar ou apagar, a pessoa entra com nome e senha. Quem não liga não vê nada diferente.',
+  ] },
   { versao: '1.1.0', data: '2026-11-14', itens: [
     '☰ Menu no alto da janela: Ajustes (nuvem, pasta do Holyrics, paróquia e comunidades, aparência) e Ajuda (Como usar com F1, vídeos, site, e-mail de contato, novidades, atualização, Sobre).',
     '📒 Marcações por igreja: batizados, casamentos, 15 anos, 7º dia, crismas, 1ª comunhão, bênçãos. Visão por dia, semana e mês, filtros, busca, aviso de choque de horário e impressão. O 7º dia escolhe a Missa e já cria a intenção.',
@@ -84,6 +93,7 @@ function abrirSecretaria(qual) {
     case 'marcacoes': return abrirMarcacoes();
     case 'intencoes': return abrirIntencoes();
     case 'eventos': return abrirEventos();
+    case 'campanhas': return abrirCampanhas();     // (1.9.6) campanhas.js
     case 'agendaG': return abrirAgendaG();
   }
 }

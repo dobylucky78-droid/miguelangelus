@@ -17,13 +17,16 @@ const Sync = { estado: { vistos: {}, enviados: {}, removidos: [] }, pedidos: {},
 // (secm-/seci-/sece-), compartilhados entre os computadores da secretaria.
 // O MiguelAngelus lê e grava SÓ a pasta "eventos/" (aba 🎉 Eventos); marcações e intenções nunca chegam a ele.
 // (protótipo da Agenda Google) secu- = pessoas que podem mexer na agenda (nome + senha com hash), também só entre as Secretarias
-const ehItemSecretaria = id => /^sec[mieu]-/.test(id || '');
+// (1.9.6) secc- = campanhas de arrecadação, na pasta "campanhas/": a Secretaria cria e atualiza; o MiguelAngelus só lê e mostra
+const ehItemSecretaria = id => /^sec[mieuc]-/.test(id || '');
 const ehEvento = id => /^sece-/.test(id || '');
+const ehCampanha = id => /^secc-/.test(id || '');
 const GRUPOS_SYNC = typeof SECRETARIA !== 'undefined' && SECRETARIA ? [
   { sub: 'config', store: 'config', filtro: r => ['agenda', 'avisos'].includes(r.id) },
   { sub: 'secretaria', store: 'config', filtro: r => /^sec[miu]-/.test(r.id || '') },   // marcações e intenções: só a Secretaria
   // eventos numa pasta própria: o MiguelAngelus também lê (aba 🎉 Eventos) e pode criar, como nos avisos
   { sub: 'eventos', store: 'config', filtro: r => ehEvento(r.id) },
+  { sub: 'campanhas', store: 'config', filtro: r => ehCampanha(r.id) },
 ] : [
   { sub: 'config', store: 'config', filtro: r => ['agenda', 'eucaristia', 'pix', 'avisos', 'perfis', 'ordinario', 'links', 'joyPerfis', 'classificacoes', 'tercos'].includes(r.id) },
   { sub: 'roteiros', store: 'roteiros' },
@@ -33,6 +36,7 @@ const GRUPOS_SYNC = typeof SECRETARIA !== 'undefined' && SECRETARIA ? [
   { sub: 'biblias', store: 'biblias', filtro: r => !r.junto },   // a Bíblia que vem com o programa não sobe (todos já a têm)
   { sub: 'partituras', store: 'partituras' },                   // (1.8.6) páginas da partitura de cada canto (JPEG)
   { sub: 'eventos', store: 'config', filtro: r => ehEvento(r.id) },   // (1.9) 🎉 eventos, os mesmos da Secretaria
+  { sub: 'campanhas', store: 'config', filtro: r => ehCampanha(r.id) },   // (1.9.6) 💝 campanhas: só lê (quem mexe é a Secretaria)
 ];
 const ligadaSync = () => NO_APP && (S.config.syncModo === 'google' || (S.config.syncModo === 'pasta' && S.config.syncPasta));
 

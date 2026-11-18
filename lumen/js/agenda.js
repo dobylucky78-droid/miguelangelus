@@ -120,6 +120,7 @@ function ocorrencias(d) {
 function renderParoquia() {
   const p = Agenda.dados.paroquia;
   for (const c of CAMPOS_PAROQUIA) { const el = $(`[data-par="${c}"]`); if (el && document.activeElement !== el) el.value = p[c] || ''; }
+  if (typeof preencherBoasVindasForm === 'function' && document.activeElement !== $('#parLocBV')) preencherBoasVindasForm();   // (1.9.6) lista de vídeos atualizada
   const locais = [...Agenda.dados.locais].sort((a, b) => TIPOS_LOCAL.indexOf(a.tipo) - TIPOS_LOCAL.indexOf(b.tipo) || a.nome.localeCompare(b.nome, 'pt-BR'));
   $('#parLocais').innerHTML = locais.length ? locais.map(l => {
     const usos = Agenda.dados.regras.filter(r => r.localId === l.id).length;
@@ -127,7 +128,7 @@ function renderParoquia() {
       <span class="par-cor" style="background:${l.cor}"></span>
       <div class="par-local-txt">
         <div><b>${esc(l.tipo)} ${esc(l.nome)}</b>${l.sigla ? ` <span class="sutil">(${esc(l.sigla)})</span>` : ''}</div>
-        <div class="sutil pequeno">${esc(l.endereco || 'sem endereço')} · ${usos} celebração(ões) na semana${l.padroeiro ? ` · padroeiro(a): ${esc(l.padroeiro.nome)} (${l.padroeiro.dia.split('-').reverse().join('/')})` : ''}</div>
+        <div class="sutil pequeno">${esc(l.endereco || 'sem endereço')} · ${usos} celebração(ões) na semana${l.padroeiro ? ` · padroeiro(a): ${esc(l.padroeiro.nome)} (${l.padroeiro.dia.split('-').reverse().join('/')})` : ''}${l.boasVindas?.midiaId && !SECRETARIA ? ` · 🎬 boas-vindas${l.boasVindas.auto ? ' (nos roteiros novos)' : ''}` : ''}</div>
       </div>
       <button data-par-layout title="Apresentação desta comunidade (imagens nos cantos)" ${l.layout && Object.keys(l.layout).length ? 'class="on"' : ''}>🖼</button>
       <button data-par-editar title="Editar">✎</button>
@@ -144,6 +145,7 @@ function limparFormLocal() {
   $('#parLocCor').value = CORES_LOCAL[Agenda.dados.locais.length % CORES_LOCAL.length];
   $('#btnParLocal').textContent = 'Adicionar';
   $('#btnParLocalCancelar').hidden = true;
+  if (typeof preencherBoasVindasForm === 'function') { preencherBoasVindasForm(null); delete $('#parLocBVAuto').dataset.mexeu; }
   renderParoquia();
 }
 
@@ -157,6 +159,9 @@ function salvarLocalDoForm() {
   const padroeiro = padNome ? { nome: padNome, dia: `${md[2].padStart(2, '0')}-${md[1].padStart(2, '0')}`, cor: $('#parLocPadCor').value } : null;
   const l = { tipo: $('#parLocTipo').value, nome, sigla: $('#parLocSigla').value.trim().toUpperCase(),
     endereco: $('#parLocEndereco').value.trim(), cor: $('#parLocCor').value, padroeiro };
+  // (1.9.6) 🎬 vídeo de boas-vindas (boasvindas.js); na Secretaria não mexe no que já existe
+  const bv = typeof lerBoasVindasForm === 'function' ? lerBoasVindasForm() : undefined;
+  if (bv !== undefined) l.boasVindas = bv;
   if (Agenda.editandoLocal) Object.assign(localDe(Agenda.editandoLocal), l);
   else Agenda.dados.locais.push({ id: uid(), ...l });
   salvarAgenda();
@@ -436,6 +441,8 @@ async function criarRoteiroDaCelebracao(o, itens) {
       : [];
   }
   if (ehMissa(o.tipo) && typeof comAvisos === 'function') r.itens = comAvisos(r.itens);   // item Avisos antes da bênção
+  // (1.9.6) Missa de igreja com vídeo de boas-vindas marcado: o vídeo é o 1º item (boasvindas.js)
+  if (ehMissa(o.tipo) && typeof comBoasVindas === 'function') r.itens = comBoasVindas(r.itens, o.localId);
   r.celebracao = o.chave;
   r.data = o.iso;
   r.hora = o.hora;
@@ -520,6 +527,10 @@ function ligarAgenda() {
       $('#parLocPadroeiro').value = l.padroeiro?.nome || '';
       $('#parLocPadDia').value = l.padroeiro?.dia ? l.padroeiro.dia.split('-').reverse().join('/') : '';
       $('#parLocPadCor').value = l.padroeiro?.cor || 'branco';
+      if (typeof preencherBoasVindasForm === 'function') {
+        preencherBoasVindasForm(l);
+        if (l.boasVindas?.midiaId) $('#parLocBVAuto').dataset.mexeu = '1'; else delete $('#parLocBVAuto').dataset.mexeu;
+      }
       $('#btnParLocal').textContent = 'Salvar alteração';
       $('#btnParLocalCancelar').hidden = false;
       renderParoquia();

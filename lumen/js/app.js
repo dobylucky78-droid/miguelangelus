@@ -750,6 +750,8 @@ function gerarSlidesBase(item) {
       return slidesEvento(item);          // (1.9) eventos.js: cartaz + QR
     case 'eventos':
       return slidesShowEventos(item);     // (1.9) eventos.js: os eventos marcados, um slide cada, passando sozinhos
+    case 'campanhas':
+      return slidesCampanhas(item);       // (1.9.6) campanhas.js: arte + andamento + QR do Pix, passando sozinhos
     case 'imagem': {
       // Slide híbrido: a mesma imagem em todos os slides do item; linha em branco separa os textos
       if (!item.imagem) return dividir(item.texto).map(t => ({ texto: t, rodape: item.titulo || '' }));
@@ -1640,6 +1642,9 @@ function renderCabecalho() {
     case 'eventos':
       h = htmlCabShowEventos(it);                   // (1.9) eventos.js
       break;
+    case 'campanhas':
+      h = htmlCabCampanhas(it);                     // (1.9.6) campanhas.js
+      break;
     case 'prefacio':
     case 'eucaristica': {
       const pref = it.tipo === 'prefacio', id = pref ? it.prefId : it.oeId;
@@ -1666,7 +1671,7 @@ function renderCabecalho() {
     }
   }
   if (noRoteiro && it.partituraId) h += htmlPartituraDoItem(it);
-  if (noRoteiro && !['imagem', 'midia', 'avisos', 'evento', 'eventos'].includes(it.tipo)) h += htmlFundoItem(it);
+  if (noRoteiro && !['imagem', 'midia', 'avisos', 'evento', 'eventos', 'campanhas'].includes(it.tipo)) h += htmlFundoItem(it);
   el.innerHTML = h;
   atualizarStatusRef();
 }
@@ -1716,12 +1721,14 @@ function resumoItem(it) {
     }
     case 'evento': return resumoEvento(it);      // (1.9) eventos.js
     case 'eventos': return resumoShowEventos(it);
+    case 'campanhas': return resumoCampanhas(it);   // (1.9.6) campanhas.js
     case 'prefacio': return { rot: 'Prefácio', tit: nomeEuc(it.prefId), vazio: !temTexto(it.prefId) };
     case 'eucaristica': return { rot: 'Or. Eucarística', tit: nomeEuc(it.oeId), vazio: !temTexto(it.oeId) };
     case 'midia': {
       const m = midiaDe(it);
       if (m?.tipo === 'apresentacao') return { rot: 'Apresentação', tit: m.nome, vazio: !m.slides.length };
       if (m?.tipo === 'camera') return { rot: 'Câmera', tit: m.nome, vazio: false };
+      if (it.boasVindas) return { rot: 'Boas-vindas', tit: m ? m.nome : 'vídeo de boas-vindas (não encontrado)', vazio: !m };   // (1.9.6)
       return { rot: m?.tipo === 'audio' ? 'Áudio' : m ? 'Vídeo' : 'Mídia', tit: m ? m.nome : 'escolher vídeo ou áudio…', vazio: !m };
     }
   }
@@ -1831,7 +1838,12 @@ function novoItem(tipo) {
     // (1.9) evento da aba 🎉 Eventos: já vem com o próximo (dá para trocar no cabeçalho)
     case 'evento': return { ...base, eventoId: eventosPorVir()[0]?.id || '' };
     // (1.9) "Apresentar eventos": os eventos por vir já marcados; 10 s cada; recomeça do início ao terminar
-    case 'eventos': return { ...base, titulo: 'Apresentar eventos', eventoIds: eventosPorVir().map(e => e.id), segundos: 10, repetir: true };
+    // (1.9.5) o item novo vem com a última configuração usada (segundos, recomeçar, som, todos por vir)
+    case 'eventos': { const p = S.config.showEventosPadrao || {};
+      return { ...base, titulo: 'Apresentar eventos', eventoIds: eventosPorVir().map(e => e.id), segundos: p.segundos ?? 10, repetir: p.repetir ?? true,
+        ...(p.audioId ? { audioId: p.audioId } : {}), ...(p.todosPorVir ? { todosPorVir: true } : {}) }; }
+    // (1.9.6) 💝 Campanhas: todas as abertas (atualiza sozinho), 12 s cada, recomeça do início
+    case 'campanhas': return { ...base, titulo: 'Campanhas', todasAtivas: true, campanhaIds: [], segundos: 12, repetir: true };
   }
 }
 
@@ -2626,7 +2638,7 @@ async function distribuirFolheto(modo) {
   for (const o of marcadas) {
     let r = roteiroDaCelebracao(o);
     if (r) {
-      r.itens = comAvisos(pacote.itens.map(i => ({ ...structuredClone(i), id: uid() })));
+      r.itens = manterBoasVindas(r.itens, comAvisos(pacote.itens.map(i => ({ ...structuredClone(i), id: uid() }))));   // (1.9.6) o vídeo de boas-vindas fica
       r.atualizado = Date.now();
       substituidos++;
     } else {
@@ -2866,10 +2878,18 @@ function ligarEventos() {
     if (campo === 'cantoId' || campo === 'momento') { BuscaCanto.item = null; BuscaCanto.termo = ''; }      // escolheu: a busca limpa
     if (it.tipo === 'terco') aoMudarTerco(it, campo);
     if (campo === 'usarFundo' || campo === 'fundoEscurecer') { if (campo === 'fundoEscurecer') it[campo] = +it[campo]; return aposMudarFundoItem(); }
+    // (1.9.5) "Apresentar eventos": lembra a configuração para o próximo item; "todos por vir" redesenha as caixinhas
+    if (it.tipo === 'eventos' && ['segundos', 'repetir', 'audioId', 'todosPorVir'].includes(campo)) {
+      S.config.showEventosPadrao = { segundos: segundosShow(it), repetir: !!it.repetir, audioId: it.audioId || '', todosPorVir: !!it.todosPorVir };
+      salvarConfig();
+      if (campo === 'todosPorVir') { if (!it.todosPorVir) it.eventoIds = eventosPorVir().map(x => x.id); if (S.atual.rIdx >= 0) { salvarRoteiro(); renderRoteiroLista(); } atualizarSlides(); return renderCabecalho(); }
+    }
+    // (1.9.6) 💝 Campanhas: ao desligar "todas as abertas", ficam marcadas as que estavam aparecendo
+    if (it.tipo === 'campanhas' && campo === 'todasAtivas' && !it.todasAtivas) it.campanhaIds = Camp.lista.filter(campanhaNoTelao).map(c => c.id);
     if (S.atual.rIdx >= 0) { salvarRoteiro(); renderRoteiroLista(); }
     if (it.tipo === 'terco' && e.target.type === 'checkbox') { atualizarSlides(); return renderCabecalho(); }
     atualizarSlides();
-    if (e.target.tagName === 'SELECT' || (it.tipo === 'eventos' && campo === 'repetir')) renderCabecalho();   // (1.9) a nota 🔁 do grupo muda
+    if (e.target.tagName === 'SELECT' || (ehShow(it) && ['repetir', 'todasAtivas'].includes(campo))) renderCabecalho();   // (1.9) a nota 🔁 do grupo muda
     else if (campo === 'ref') atualizarStatusRef();
   });
   $('#itemCab').addEventListener('click', e => {
@@ -3077,7 +3097,9 @@ function ligarEventos() {
   for (const b of $$('[data-add]')) b.addEventListener('click', () => {
     if (b.dataset.add === 'terco') return adicionarTercoAoRoteiro();
     const it = novoItem(b.dataset.add);
-    const pos = adicionarAoRoteiro(it);
+    // (1.9.6) 💝 Campanhas entra logo depois dos Avisos (se o roteiro tiver)
+    const kAv = it.tipo === 'campanhas' ? S.roteiro.itens.findIndex(x => x.tipo === 'avisos') : -1;
+    const pos = kAv >= 0 ? (S.roteiro.itens.splice(kAv + 1, 0, it), salvarRoteiro(), kAv + 1) : adicionarAoRoteiro(it);
     abrirItem(it, pos);
     $(it.intencoes || it.antifona ? '#itemCab textarea' : '#itemCab input:not([type=checkbox]), #itemCab select, #itemCab textarea')?.focus();
   });
@@ -3331,6 +3353,7 @@ async function iniciar() {
   ligarApresentacoes();
   renderMidias();
   if (!SECRETARIA) await iniciarEventosMA();     // (1.9) aba 🎉 Eventos (eventos.js)
+  if (!SECRETARIA) ligarBoasVindas();            // (1.9.6) vídeo de boas-vindas e "pôr nos outros roteiros" (boasvindas.js)
   ligarOracoes();
   ligarEditorOrdinario();
   renderOracoes();

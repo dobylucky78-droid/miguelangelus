@@ -462,7 +462,7 @@ async function montarRoteirosDaLiturgia() {
   for (const o of marcadas) {
     const itens = itensDaLiturgia(r, domingo, comOE2, ora);
     let rot = roteiroDaCelebracao(o);
-    if (rot) { rot.itens = itens; rot.atualizado = Date.now(); }
+    if (rot) { rot.itens = manterBoasVindas(rot.itens, itens); rot.atualizado = Date.now(); }   // (1.9.6) o vídeo de boas-vindas fica
     else rot = await criarRoteiroDaCelebracao(o, itens);
     marcarLiturgia(rot, r);
     await DB.salvar('roteiros', rot);
