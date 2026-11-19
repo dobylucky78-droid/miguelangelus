@@ -24,6 +24,20 @@ const opcoesTipoCel = () => TIPOS_CELEBRACAO.map(t => `<option value="${t}">${NO
 const TIPOS_LOCAL = ['Matriz', 'Capela', 'Comunidade', 'Santuário', 'Outro'];
 const SEMANAS = [['todas', 'Todas'], ['1', '1ª'], ['2', '2ª'], ['3', '3ª'], ['4', '4ª'], ['ultima', 'Última']];
 const CORES_LOCAL = ['#d4a93a', '#4f95ec', '#57b36f', '#e0609a', '#b784e6', '#e67e3a', '#3ac2c2', '#c0c0c0'];
+// (1.9.11) (Arqui)dioceses cujos folhetos o MiguelAngelus já sabe buscar e montar (🌐 Folhetos). As outras: "Outra diocese",
+// com a página onde ficam os PDFs, ou baixar o PDF e usar 📄 Folheto
+const DIOCESES_FOLHETOS = [
+  { id: 'rio', rotulo: 'Rio de Janeiro (RJ) — A Missa', nome: 'Arquidiocese de São Sebastião do Rio de Janeiro', site: 'https://arqrio.org.br/folhetos/' },
+  { id: 'sp', rotulo: 'São Paulo (SP) — O Povo de Deus', nome: 'Arquidiocese de São Paulo', site: 'https://arquisp.org.br/folheto-povo-de-deus/' },
+  { id: 'brasilia', rotulo: 'Brasília (DF) — O Povo de Deus (versão telão)', nome: 'Arquidiocese de Brasília', site: 'https://arqbrasilia.com.br/o-povo-de-deus-2/' },
+  { id: 'goiania', rotulo: 'Goiânia (GO) — Comunhão e Participação', nome: 'Arquidiocese de Goiânia', site: 'https://arquidiocesedegoiania.org.br/liturgias/subsidios-liturgicos/folheto-comunhao-e-participacao/' },
+  { id: 'campanha', rotulo: 'Campanha (MG) — O Dia do Senhor', nome: 'Diocese da Campanha', site: 'https://diocesedacampanha.org.br/' },   // lista pela API do WordPress (folhetosonline.js)
+  { id: 'santoandre', rotulo: 'Santo André (SP) — ABC Litúrgico', nome: 'Diocese de Santo André', site: 'https://diocesesa.org.br/abc-liturgico/' },
+  { id: 'sjc', rotulo: 'São José dos Campos (SP) — Nova Aliança', nome: 'Diocese de São José dos Campos', site: 'https://diocese-sjc.org.br/' },   // API do WordPress
+];
+const semBarra = u => (u || '').trim().replace(/^https?:\/\/(www\.)?/i, '').replace(/\/+$/, '').toLowerCase();
+const dioceseDoSite = site => DIOCESES_FOLHETOS.find(d => semBarra(d.site) === semBarra(site));
+
 const CAMPOS_PAROQUIA = ['nome', 'padroeiro', 'diocese', 'siteFolhetos', 'endereco', 'telefone', 'contato', 'paroco'];
 
 const Agenda = {
@@ -117,9 +131,43 @@ function ocorrencias(d) {
 
 // ---------- Aba Paróquia ----------
 
+// Lista de (arqui)dioceses: a escolhida preenche a página dos folhetos; "Outra" mostra o campo para colar a página
+function renderDioceseFolhetos() {
+  const sel = $('#parDioceseFolhetos');
+  if (!sel) return;
+  const site = Agenda.dados.paroquia.siteFolhetos || '';
+  if (!sel.options.length) sel.innerHTML = DIOCESES_FOLHETOS.map(d => `<option value="${d.id}">${esc(d.rotulo)}</option>`).join('') +
+    '<option value="outra">Outra (arqui)diocese — informar a página dos folhetos</option>';
+  if (document.activeElement !== sel && !sel.dataset.outra) sel.value = (dioceseDoSite(site) || (site ? { id: 'outra' } : DIOCESES_FOLHETOS[0])).id;
+  const outra = sel.value === 'outra';
+  $('#parSiteFolhetosCampo').hidden = !outra;
+  $('#parDioceseDica').innerHTML = outra
+    ? 'Cole o endereço da página onde a sua (arqui)diocese publica os folhetos em PDF. Se a página não listar os PDFs, baixe o folheto e use o botão 📄 Folheto. Se algum não montar bem, o MiguelAngelus oferece mandar o link para avaliarmos.'
+    : 'O botão 🌐 Folhetos busca os folhetos publicados e monta o roteiro. Sua (arqui)diocese não está na lista? Escolha "Outra" ou baixe o PDF e use 📄 Folheto.';
+}
+
+function escolherDioceseFolhetos(id) {
+  const p = Agenda.dados.paroquia, sel = $('#parDioceseFolhetos');
+  if (id === 'outra') {
+    sel.dataset.outra = '1';
+    if (dioceseDoSite(p.siteFolhetos)) p.siteFolhetos = '';
+  } else {
+    delete sel.dataset.outra;
+    const d = DIOCESES_FOLHETOS.find(x => x.id === id);
+    // trocou de uma diocese da lista para outra (ou o nome está vazio): o nome acompanha; nome escrito para "Outra" fica
+    const vinhaDaLista = !!dioceseDoSite(p.siteFolhetos || DIOCESES_FOLHETOS[0].site);
+    p.siteFolhetos = d.site;
+    if (!p.diocese || vinhaDaLista) p.diocese = d.nome;
+  }
+  salvarAgenda();
+  renderParoquia();
+  if (id === 'outra') $('[data-par="siteFolhetos"]').focus();
+}
+
 function renderParoquia() {
   const p = Agenda.dados.paroquia;
   for (const c of CAMPOS_PAROQUIA) { const el = $(`[data-par="${c}"]`); if (el && document.activeElement !== el) el.value = p[c] || ''; }
+  renderDioceseFolhetos();
   if (typeof preencherBoasVindasForm === 'function' && document.activeElement !== $('#parLocBV')) preencherBoasVindasForm();   // (1.9.6) lista de vídeos atualizada
   const locais = [...Agenda.dados.locais].sort((a, b) => TIPOS_LOCAL.indexOf(a.tipo) - TIPOS_LOCAL.indexOf(b.tipo) || a.nome.localeCompare(b.nome, 'pt-BR'));
   $('#parLocais').innerHTML = locais.length ? locais.map(l => {
@@ -499,6 +547,7 @@ function ligarAgenda() {
   for (const c of CAMPOS_PAROQUIA) {
     $(`[data-par="${c}"]`).addEventListener('input', e => { Agenda.dados.paroquia[c] = e.target.value.trim(); salvarAgenda(); });
   }
+  $('#parDioceseFolhetos')?.addEventListener('change', e => escolherDioceseFolhetos(e.target.value));
   $('#btnParLocal').addEventListener('click', salvarLocalDoForm);
   $('#btnLayoutParoquia').addEventListener('click', () => abrirEditorLayout({}));
   // ao fechar o editor de apresentação, atualiza os 🖼 da lista

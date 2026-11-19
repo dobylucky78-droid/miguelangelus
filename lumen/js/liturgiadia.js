@@ -208,7 +208,11 @@ function comOracoesDoDia(itens, ora, temAntEntrada) {
   return itens;
 }
 
-// Itens do roteiro montados com os textos da liturgia
+// (1.9.11, aviso do Luciano) Solenidade num dia de semana (ex.: Imaculada Conceição, 8/12): Creio ou 2ª leitura →
+// o roteiro sai com o modelo dominical/solenidade (Glória, 2ª leitura, Creio), como num domingo.
+const liturgiaSolene = (r, d) => d.getDay() === 0 || !!r.creio || r.leituras.some(l => l.nome === 'Segunda Leitura');
+
+// Itens do roteiro montados com os textos da liturgia ("domingo" = modelo dominical/solenidade)
 function itensDaLiturgia(r, domingo, comOE2, ora) {
   const itens = Ordinario.modelos[domingo ? 'dominical' : 'semanal'].map(x => ({ id: uid(), ...structuredClone(x) }));
   const achar = f => itens.findIndex(f);
@@ -397,10 +401,11 @@ function renderLiturgiaReconhecida() {
   const r = LitDia.lida;
   if (!r) return;
   const d = deIso($('#litData').value);
-  const domingo = d.getDay() === 0;
-  $('#litOE2').checked = !domingo;
+  const solene = liturgiaSolene(r, d);
+  $('#litOE2').checked = !solene;
   $('#litResumo').innerHTML = `
     <div><b>${esc(r.titulo)}</b> <span class="sutil">· ${esc(r.cor)}${r.gloria ? ' · Glória' : ''}${r.creio ? ' · Creio' : ''}</span></div>
+    ${solene && d.getDay() !== 0 ? '<div class="sutil">⛪ Solenidade: o roteiro sai com o modelo de Missa dominical/solenidade (2ª leitura e Creio).</div>' : ''}
     <ul class="lit-lista">
       ${r.antifona ? '<li>✓ Antífona de entrada</li>' : ''}
       ${r.leituras.map(l => `<li>✓ ${esc(l.nome)}: ${esc(l.ref)}${l.breve ? ` <span class="sutil">(forma breve: ${esc(l.breve.ref)} — escolha na hora)</span>` : ''}</li>`).join('')}
@@ -445,7 +450,7 @@ function pedirOracoesDoDia(d) {
 async function montarRoteirosDaLiturgia() {
   const r = LitDia.lida;
   const d = deIso($('#litData').value);
-  const domingo = d.getDay() === 0;
+  const domingo = liturgiaSolene(r, d);
   const comOE2 = $('#litOE2').checked;
   let ora = null;
   try { ora = await pedirOracoesDoDia(d); } catch { /* sem as orações do dia: fica a Coleta padrão */ }

@@ -33,7 +33,7 @@ const Folheto = (() => {
 
   const SECOES = /^(ritos iniciais|liturgia da palavra|liturgia eucar[ií]stica|rito da comunh[aã]o|ritos finais)$/i;
   // ("REFRÃO" sem dois-pontos também: folheto feito no Word)
-  const ROTULO = /^(?:([PTLCD])\.\s*(?=\S)|(REFR[ÃA]O)(?:\s*:\s*|\s+(?=\S)|\s*$)|(\d+)\.\s*(?=[^\d\s]))/i;
+  const ROTULO = /^(?:([PTLCD])\.\s*(?=\S)|(REFR[ÃA]O)(?!\s+orante)(?:\s*:\s*|\s+(?=\S)|\s*$)|(\d+)\.\s*(?=[^\d\s]))/i;
   const REF = /^\(.*\d.*\)$/;   // "(Ez 18,25-28)", "(Cf. Sl 118,49-50)"
   const SO_ROTULO = /^(?:[PTLCD]\.|REFR[ÃA]O:?|\d+\.)$/i;
   const CLITICOS = /^(nos|vos|lhe|lhes|se|me|te|o|a|os|as|lo|la|los|las|no|na)\b/;
@@ -63,12 +63,24 @@ const Folheto = (() => {
   // "Pres.:" → P. · "Ass.:"/"Todos:" → T. · "L1."/"L2 (Leitor 2):"/"Narrador:" → L. · "Com.:"/"Anim.:" → C. · "Solo:" sai
   function normalizarRotulo(t) {
     return t
+      // (1.9.11) SP, Advento 2026: o comentário vem como "P. (ou Anim.) Irmãos e irmãs…" → comentarista
+      .replace(/^P\.\s*\(ou\s+Anim(?:ador)?\.?\)\s*/i, 'C. ')
       .replace(/^(?:Pres(?:idente)?|Sac(?:erdote)?|Cel(?:ebrante)?|Padre|Diác(?:ono)?|†|\+)\s*\.?\s*:?\s+/i, 'P. ')
       .replace(/^(?:Ass(?:embl[eé]ia)?|Todos|Povo)\s*\.?\s*:\s*/i, 'T. ')
+      // (1.9.11) Itabira: "PR:" (presidente) e "AS:" (assembleia)
+      .replace(/^PR\s*:\s*/, 'P. ').replace(/^AS\s*:\s*/, 'T. ')
       // ("N." sozinho não: no folheto do Rio é o nome do Papa/Bispo — "o nosso Papa N." — e pode cair no começo da linha)
       .replace(/^(?:L\d|Leitor\s*\d?|Narrador)\s*(?:\([^)]*\))?\s*[.:]+\s*/, 'L. ')
       .replace(/^(?:Com(?:entarista)?|Anim(?:ador)?|An)\s*\.?\s*:\s*/i, 'C. ')
-      .replace(/^Solo\s*:\s*/i, '');
+      .replace(/^Solo\s*:\s*/i, '')
+      // (1.9.11) Campanha: refrão "R/." e versículo "V/." ("R." sozinho não: nas preces das Laudes é a resposta)
+      .replace(/^R\s*\/\s*\.\s*(?=\S)/, 'Refrão: ')
+      // (1.9.11) Brasília: "P. :", "T. :" e o refrão "R.:"
+      .replace(/^([PTLCD])\.\s*:\s*/, '$1. ')
+      .replace(/^R\.\s*:\s*(?=\S)/, 'Refrão: ')
+      .replace(/^V\s*\/\s*\.\s*(?=\S)/, '')
+      // (1.9.11) São José dos Campos: quem fala vem num ícone que não é texto — sobra um "- " ou "_ " no começo da fala
+      .replace(/^[-_]\s+(?=[A-ZÀ-Ý])(?!Palavra d)/, '');
   }
 
   function estiloDaFonte(nome) {
@@ -173,6 +185,14 @@ const Folheto = (() => {
     return { ...fora, formas: { completa: { titulo: titC, texto: completo }, breve: { titulo: titB, texto: breve } }, breve: false };
   }
 
+  // (1.9.11) Militar (DF): título em "negrito falso" (cada letra desenhada duas vezes) chega como "LLIITTUURRGGIIAA DDAA" —
+  // só quando TODAS as letras vêm em pares
+  // (quase todas: "RRIITTOO DDAA COMMUUNNHHÃÃOO"; só em caixa alta, que é onde aparece)
+  const desdobrar = s => {
+    const letras = s.replace(/\s/g, '').length, pares = (s.match(/(\S)\1/g) || []).length * 2;
+    return letras >= 6 && pares / letras >= 0.8 && s === s.toUpperCase() && /\p{Lu}/u.test(s) ? s.replace(/(\S)\1/g, '$1') : s;
+  };
+
   async function lerRuns(pdf) {
     const runs = [], paginasDaFonte = {};
     let capa = '', tudo = '';
@@ -191,7 +211,7 @@ const Folheto = (() => {
         if (!it.str || !it.str.trim()) continue;
         const fonte = nomes[it.fontName] || it.fontName;
         // NFC: alguns PDFs trazem o acento separado da letra ("A" + "~"); juntando, "REMISSÃO", "Glória"… batem com o resto
-        runs.push({ p, y: it.transform[5], x: it.transform[4], w: it.width, h: it.height, s: it.str.normalize('NFC'), fonte, estilo: estiloDaFonte(fonte) });
+        runs.push({ p, y: it.transform[5], x: it.transform[4], w: it.width, h: it.height, s: desdobrar(it.str.normalize('NFC').replace(/꞉/g, ':').replace(/‑/g, '-')), fonte, estilo: estiloDaFonte(fonte) });
         (paginasDaFonte[fonte] ||= new Set()).add(p);
       }
       pg.cleanup();
@@ -235,6 +255,28 @@ const Folheto = (() => {
   // Folhetos de outras dioceses vêm em 2 ou 3 colunas (e às vezes duas páginas lado a lado): sem separar as colunas,
   // cada linha juntaria pedaços de colunas diferentes. Coluna = faixa vertical da página separada por um "corredor" sem
   // texto, com texto de verdade dos dois lados. O folheto do Rio (Celular) tem uma coluna só: fica tudo na coluna 0.
+  // (1.9.11) SP, Advento 2026: corredor estreito demais (menos de 4 pt) entre duas colunas da última página — a Bênção e o
+  // Canto Final iam parar na mesma linha ("Deus vos torne sobre vós e permaneça…"). "Vale" = faixa (quase) vazia com muito
+  // texto dos dois lados, ainda que mais estreita que o corredor normal: entra como candidato e passa pelas mesmas conferências.
+  function valesDaPagina(rs, corpo) {
+    const so = rs.filter(r => !r.verso && r.h > corpo * 0.9 && r.h < corpo * 1.1);
+    if (so.length < 40) return [];
+    const passo = 2, x0 = Math.min(...so.map(r => r.x)), x1 = Math.max(...so.map(r => r.x + (r.w || 0)));
+    const n = Math.ceil((x1 - x0) / passo) + 1;
+    if (!isFinite(n) || n < 30) return [];
+    const cob = new Float64Array(n);
+    for (const r of so) for (let i = Math.floor((r.x - x0) / passo); i <= Math.floor((r.x + (r.w || 0) - x0) / passo) && i < n; i++) cob[i]++;
+    const viz = Math.ceil(corpo * 2 / passo), vales = [];
+    for (let i = viz; i < n - viz; i++) {
+      const e = Math.max(...cob.slice(i - viz, i)), d = Math.max(...cob.slice(i + 1, i + 1 + viz)), m = Math.min(e, d);
+      if (m >= 15 && cob[i] <= Math.max(2, m * 0.1) && cob[i] <= cob[i - 1] && cob[i] <= cob[i + 1]) {
+        const x = x0 + (i + 0.5) * passo;
+        if (!vales.length || x - vales[vales.length - 1] > corpo * 2) vales.push(x);
+      }
+    }
+    return vales;
+  }
+
   function marcarColunas(runs, corpo) {
     const porPag = {};
     for (const r of runs) (porPag[r.p] ||= []).push(r);
@@ -292,6 +334,9 @@ const Folheto = (() => {
           ini = -1;
         }
       }
+      // (1.9.11) corredor estreito demais para a conta acima (valesDaPagina)
+      for (const v of valesDaPagina(rs, corpo)) if (!cortes.some(c => Math.abs(c - v) < corpo * 2)) cortes.push(v);
+      cortes.sort((a, b) => a - b);
       // corredor de verdade tem linhas dos dois lados na mesma altura; texto que contorna uma figura (só de um lado) não conta
       for (let i = cortes.length - 1; i >= 0; i--) {
         const c = cortes[i], antes = cortes[i - 1] ?? -Infinity, depois = cortes[i + 1] ?? Infinity;
@@ -309,26 +354,44 @@ const Folheto = (() => {
         for (const r of rs) { const c = col(r.x + 1); soma[c] += r.s.length; lo[c] = Math.min(lo[c], r.y); hi[c] = Math.max(hi[c], r.y); }
         const nota = soma.map((s, c) => (hi[c] - lo[c]) / alturaTexto < 0.4 ? 0 : s);
         const k = nota.indexOf(Math.min(...nota));
-        if (nota[k] >= total * 0.12) break;
+        // (1.9.11) Goiânia: página A3 deitada com 6 colunas — cada uma tem ~1/6 do texto; a mais curta ficava abaixo de 12%
+        if (nota[k] >= total * Math.min(0.12, 0.6 / nota.length)) break;
         // tira o corredor do lado da coluna vizinha menor (junta a coluna pequena com ela)
         const lado = k === 0 ? 0 : k === nota.length - 1 ? k - 1 : (nota[k - 1] < nota[k + 1] ? k - 1 : k);
         cortes.splice(lado, 1);
       }
       if (!cortes.length) continue;
       for (const r of rs) r.col = col(r.x + 1);
+      // (1.9.11) Militar (DF): o "P." / "T." e o número da parte ficam numa margem, logo antes do corredor, e a fala começa
+      // depois dele, na mesma altura — o rótulo vai para a coluna da fala (senão ficava solto no fim da coluna anterior)
+      for (const r of rs) {
+        if (!/^\s*(?:\d{1,2}\.?|[PTALCD]{1,2}\.:?)\s*$/.test(r.s)) continue;
+        const fim = r.x + (r.w || 0), c = cortes.find(c => c >= fim - 1 && c - fim < corpo * 2.5);
+        if (c == null) continue;
+        const fala = rs.find(u => u !== r && Math.abs(u.y - r.y) <= corpo * 0.4 && u.x >= c && u.x - fim < corpo * 3);
+        if (fala) r.col = fala.col ?? col(fala.x + 1);
+      }
       // faixa do alto que atravessa colunas (a capa do folheto da Assembleia: título + comentário inicial sobre duas colunas):
       // tudo o que está nela, no trecho de largura que ela ocupa, fica junto — antes das colunas — em vez de ser repartido
       const cruza = r => cortes.some(c => r.x + 1 < c && r.x + (r.w || 0) - 1 > c);
       // só o bloco de CIMA (linhas seguidas, sem buraco grande): um rodapé que também atravessa (créditos dos cantos) não conta
       const todasAtravessam = rs.filter(r => cruza(r) && ((r.w || 0) > largo || r.h >= corpo * 1.2 || r.h <= corpo * 0.9)).sort((a, b) => b.y - a.y);
       const bloco = lista => { const b = []; for (const r of lista) { if (b.length && Math.abs(b[b.length - 1].y - r.y) > corpo * 6) break; b.push(r); } return b; };
-      const atravessam = bloco(todasAtravessam).filter(r => r.h > corpo * 0.9);    // capa: título e comentário (não letra miúda)
+      // (1.9.11) a faixa cruza sempre os mesmos corredores que o 1º trecho dela: SP, Natal 2026, o quadro do "Anúncio do Natal"
+      // (à direita) seguido do título do artigo (que atravessa também a coluna do Canto Final) puxava o Canto Final para o quadro
+      const cruzados = r => cortes.filter(c => r.x + 1 < c && r.x + (r.w || 0) - 1 > c).join();
+      const bloco0 = bloco(todasAtravessam), ate = bloco0.findIndex(r => cruzados(r) !== cruzados(bloco0[0]));
+      const atravessam = (ate < 0 ? bloco0 : bloco0.slice(0, ate)).filter(r => r.h > corpo * 0.9);    // capa: título e comentário (não letra miúda)
       // rodapé (bloco de BAIXO que atravessa): vai para o fim da página, depois de todas as colunas
       const rodape = bloco([...todasAtravessam].reverse());
       if (rodape.length && !rodape.some(r => atravessam.includes(r))) {
         const yTopo = Math.max(...rodape.map(r => r.y)) + corpo * 0.5;
         const xa = Math.min(...rodape.map(r => r.x)) - 1, xb = Math.max(...rodape.map(r => r.x + (r.w || 0))) + 1;
-        if (rs.some(r => r.y > yTopo && r.x >= xa && r.x < xb))
+        // (1.9.11) Apucarana: linha miúda no MEIO da página (crédito de canto) não é rodapé — abaixo dela ainda há texto
+        // comum em mais de uma coluna (antes tudo isso ia para uma coluna só, misturando as duas)
+        const yBaixo = Math.min(...rodape.map(r => r.y)) - corpo * 0.5;
+        const colsAbaixo = new Set(rs.filter(r => r.y < yBaixo && !rodape.includes(r) && r.h > corpo * 0.9 && r.h < corpo * 1.1).map(r => r.col));
+        if (colsAbaixo.size < 2 && rs.some(r => r.y > yTopo && r.x >= xa && r.x < xb))
           for (const r of rs) if (r.y <= yTopo && r.x >= xa && r.x + (r.w || 0) <= xb) r.col = cortes.length;
       }
       if (atravessam.length) {
@@ -336,11 +399,17 @@ const Folheto = (() => {
         const xa = Math.min(...atravessam.map(r => r.x)) - 1, xb = Math.max(...atravessam.map(r => r.x + (r.w || 0))) + 1;
         const colTopo = col(xa + 2);
         // só se a faixa está mesmo no alto: abaixo dela tem que haver texto nas colunas que ela cobre
-        if (rs.some(r => r.y < yBase && r.x >= xa && r.x < xb))
+        // (1.9.11) e acima dela, nada das colunas — SP, Advento 2026: o título do artigo do bispo atravessa o MEIO da
+        // última página; acima dele, lado a lado, o fim da Bênção e o Canto Final (antes iam parar na mesma linha)
+        const yTopoFaixa = Math.max(...atravessam.map(r => r.y)) + corpo;
+        const temAcima = rs.some(r => r.y > yTopoFaixa && r.x >= xa && r.x < xb && !atravessam.includes(r) && r.h > corpo * 0.9);
+        if (!temAcima && rs.some(r => r.y < yBase && r.x >= xa && r.x < xb))
           for (const r of rs) if (r.y >= yBase && r.x >= xa && r.x + (r.w || 0) <= xb) r.col = colTopo;
       }
     }
   }
+
+  const RX_ANTIFONA_ROMANO = /^(?:[IVX]+\.\s*)?ant[ií]fona d[ae]\s+(?:entrada|comunh[aã]o)\s*(?:\([^)]*\))?$/i;
 
   function montarLinhas({ runs, paginasDaFonte }) {
     // tamanho do corpo do texto = tamanho mais usado (ponderado por caracteres)
@@ -366,9 +435,22 @@ const Folheto = (() => {
     const RUBRICA = /^\s*\((?:de p[eé]|sentad[oa]s?|pausa|de joelhos|ajoelhad[oa]s?|em sil[eê]ncio|sil[eê]ncio)\)\s*$/i;
 
     // Letra miúda é descartada, exceto referências bíblicas entre parênteses (ficam nos títulos)
+    // fonte de capa/propaganda = usada em menos de 3 páginas. (1.9.11) SP, Advento 2026: o "P. (ou Anim.)" do comentário
+    // vem numa fonte que só aparece numa página — a letra de fonte rara fica quando está na mesma linha de texto comum
+    // (só sai a linha que é toda de fonte rara: capa, propaganda)
+    // (1.9.11) Goiânia, Erechim…: folheto de 2 páginas (A3 dobrado) — nenhuma fonte chega a 3 páginas; lá não há fonte "rara"
+    const minPagsFonte = new Set(runs.map(r => r.p)).size >= 4 ? 3 : 0;
+    // (1.9.11) Erechim: as leituras vêm todas em negrito-itálico, fonte que só aparece na página das leituras — fonte com
+    // muito texto (4%+ do folheto, no tamanho do corpo) é texto de verdade, não capa — só em folheto curto (até 4 páginas);
+    // no folheto do Presidente (PE), a carta da contracapa também tem muito texto numa fonte só dela
+    const charsDaFonte = {}, poucasPags = new Set(runs.map(r => r.p)).size <= 4;
+    for (const r of runs) if (Math.abs(r.h - corpo) < corpo * 0.25) charsDaFonte[r.fonte] = (charsDaFonte[r.fonte] || 0) + r.s.length;
+    const fonteRara = f => paginasDaFonte[f].size < minPagsFonte && !(poucasPags && (charsDaFonte[f] || 0) >= totalChars * 0.04);
+    const raras = [];
     const uteis = [];
     for (let r of runs) {
-      if (r.s.trim() === '=' || paginasDaFonte[r.fonte].size < 3 || RUBRICA.test(r.s)) continue;
+      if (r.s.trim() === '=' || RUBRICA.test(r.s)) continue;
+      if (fonteRara(r.fonte)) { if (r.h >= corpo * 0.75 && r.h < corpo * 1.25) raras.push(r); continue; }
       if (falaGrande.size && falaGrande.has(r.fonte + '|' + Math.round(r.h))) r = { ...r, h: corpo, estilo: 'regular' };
       // (1.7.8) nº do versículo nas leituras: algarismos em letra menor (~metade da letra) no meio do texto → <v>23</v>
       // (só fica nas leituras e no Evangelho: limparItem; número sozinho na linha, como o da página, sai)
@@ -382,6 +464,13 @@ const Folheto = (() => {
     }
 
     marcarColunas(uteis, corpo);
+    // letra de fonte rara colada (até ~1 letra de distância) num trecho comum da mesma linha: entra, na coluna dele
+    for (const r of raras) {
+      if (!/\p{L}/u.test(r.s)) continue;   // só algarismos/sinais ("13", "27(26)"): número de outra fonte, fica fora
+      const viz = uteis.find(u => u.p === r.p && !u.verso && Math.abs(u.y - r.y) <= corpo * 0.3 &&
+        (Math.abs(u.x - (r.x + (r.w || 0))) <= corpo * 1.2 || Math.abs(r.x - (u.x + (u.w || 0))) <= corpo * 1.2));
+      if (viz) uteis.push({ ...r, col: viz.col });
+    }
     const linhas = [];
     const vistos = new Set();
     for (const r of uteis) {
@@ -411,6 +500,22 @@ const Folheto = (() => {
       const semCapitular = l.runs.filter(r => r.s.trim().length > 1);
       l.h = Math.max(...(semCapitular.length ? semCapitular : l.runs).map(r => r.h));
       l.grande = l.h >= corpo * 1.25 || tituloEmCaixaAlta(l.texto);
+      // (1.9.11) Militar (DF): letras dobradas no título inteiro (o PDF quebra em pedaços) e número da parte sem ponto
+      if (l.grande) {
+        l.texto = desdobrar(l.texto);
+        l.texto = l.texto.replace(/^(\d{1,2})\s+(?=[A-ZÀ-ÖØ-Þ]{3})/, '$1. ');
+      }
+      // (1.9.11) Brasília (telão): "14. APRESENTAÇÃO DOS DONS – L. e M.: …" — nome da parte em caixa alta e, depois do
+      // travessão, os créditos do canto: vira título "14. APRESENTAÇÃO DOS DONS (L. e M.: …)"
+      if (!l.grande && l.runs[0]?.estilo === 'forte') {
+        const m = /^(\d{1,2}\.\s+[A-ZÀ-ÖØ-Þ][A-ZÀ-ÖØ-Þ ]{3,60}?)\s+[–—-]\s+(.{2,120})$/.exec(l.texto);
+        if (m) { l.grande = true; l.texto = `${m[1]} (${m[2].replace(/[()]/g, '')})`; }
+      }
+      // (1.9.11) SP, Advento 2026: "II. Antífona da Entrada" em negrito do tamanho do texto, com número romano
+      if (!l.grande && /^(forte|refrao)$/.test(l.runs[0]?.estilo) && RX_ANTIFONA_ROMANO.test(l.texto)) {
+        l.grande = true;
+        l.texto = l.texto.replace(/^[IVX]+\.\s*/, '');
+      }
       l.soRef = l.runs.every(r => r.ref);
       l.soSub = l.runs.every(r => r.sub);
       const cont = {};
@@ -420,17 +525,130 @@ const Folheto = (() => {
       }
       l.estilo = Object.entries(cont).sort((a, b) => b[1] - a[1])[0]?.[0] || 'regular';
     }
-    return linhas;
+    // (1.9.11) SP, Advento 2026: na última página, um artigo (título bem maior que o das partes, sem número) ocupa a
+    // metade de baixo, em colunas; em cima, lado a lado, o fim da Bênção e o Canto Final. Lê-se a faixa de cima inteira
+    // (todas as colunas) e depois a de baixo, começando pelo título do artigo — senão o artigo entrava no meio da Bênção.
+    // (1.9.11) Erechim: as seções vêm numeradas ("1. RITOS INICIAIS") — o número sai, ficam como seção
+    // (só quando as partes não são numeradas: em SP "17. RITO DA COMUNHÃO" é parte)
+    if (linhas.filter(l => l.grande && /^\d+\.\s/.test(l.texto) && !SECOES.test(l.texto.replace(/^\d+\.\s*/, ''))).length < 5)
+      for (const l of linhas) if (l.grande) { const sem = l.texto.replace(/^\d+\.\s*/, ''); if (sem !== l.texto && SECOES.test(sem)) l.texto = sem; }
+    // (1.9.11) Apucarana (PR): partes numeradas com 2 algarismos e o texto começando na mesma linha do nome
+    // ("08. LEITURA DA PROFECIA DE SOFONIAS - Buscai…", "17. ORAÇÃO EUCARÍSTICA V com prefácio…"). Antes das leituras,
+    // centralizada, a referência: "I LEITURA - Sf 2,3;3,12-13", "EVANGELHO - MT 5,1-12A" — ela vira o título
+    const NUM2 = /^\d{2}\.\s+[A-ZÀ-ÖØ-Þ]{2}/;
+    if (linhas.filter(l => NUM2.test(l.texto)).length >= 8) {
+      const REF_LEIT = /^(?:(II|I|1ª|2ª)\s*LEITURA|(EVANGELHO))\s*[-–]\s*([1-3]?\s?[A-Za-zÀ-ÿ]{1,4}\.?\s?\d[\d,;.\-–\s]*[a-eA-E]?)$/;
+      const refBonita = r => r === r.toUpperCase() ? r.toLowerCase().replace(/[a-zà-ÿ]/, c => c.toUpperCase()) : r;   // "MT 5,1-12A" → "Mt 5,1-12a"
+      const EH_REF = /^[1-3]?\s?[A-Z][A-Za-z]{0,3}\.?\s?\d/;
+      for (let i = 0; i < linhas.length; i++) {
+        const l = linhas[i], m = REF_LEIT.exec(l.texto);
+        if (m) {
+          l.grande = true;
+          l.texto = `${m[2] ? 'Evangelho' : /^(II|2ª)$/.test(m[1]) ? '2ª Leitura' : '1ª Leitura'} (${refBonita(m[3].trim())})`;
+          // a linha numerada logo abaixo ("08. LEITURA DA PROFECIA…") é o começo da leitura
+          const prox = linhas.slice(i + 1, i + 4).find(u => u.p === l.p && u.col === l.col && NUM2.test(u.texto));
+          if (prox) { prox.texto = prox.texto.replace(/^\d{2}\.\s+/, ''); prox.grande = false; prox.inicioLeitura = true; }
+          continue;
+        }
+        if (l.grande || l.inicioLeitura || !NUM2.test(l.texto)) continue;
+        // nome da parte (maiúsculas) + resto: depois de " - " ou a partir da 1ª palavra em minúscula
+        const s = /^(\d{2}\.\s+[A-ZÀ-ÖØ-Þ][A-ZÀ-ÖØ-Þ ]{3,60}?)(?:\s+[-–]\s+|\s+(?=[a-zà-ÿ]))(.+)$/.exec(l.texto);
+        if (!s) continue;
+        if (EH_REF.test(s[2]) && s[2].length <= 30) { l.grande = true; l.texto = `${s[1]} (${s[2]})`; continue; }   // "09. SALMO RESPONSORIAL – Sl 145"
+        l.grande = true; l.texto = s[1];
+        linhas.splice(i + 1, 0, { ...l, y: l.y - 0.01, grande: false, texto: s[2] });
+      }
+    }
+    // (1.9.11) Campanha (MG): folheto sem números nas partes, título em negrito só um pouco maior que o texto (11 pt sobre
+    // 9 ou 10 pt). Só quando não há partes numeradas e há várias linhas assim com nome de parte da Missa — e só essas viram título
+    if (linhas.filter(l => l.grande && /^\d+\.\s/.test(l.texto)).length < 5) {
+      const INICIO_PARTE = /^(processional|canto|ant[ií]fona|sauda[cç]|ato penitencial|hino|gl[oó]ria|ora[cç][aã]o|coleta|\dª leitura|primeira leitura|segunda leitura|leitura|salmo|aclama[cç]|evangelho|homilia|profiss|creio|preces|convite|apresenta[cç]|pref[aá]cio|santo\b|pai[- ]nosso|abra[cç]o|rito|cordeiro|fra[cç][aã]o|comunh|avisos|b[eê]n[cç][aã]o|despedida|coment[aá]rio)/i;
+      // Erechim (RS): mesmo tamanho do texto, mas em negrito e centralizado na coluna ("Saudação")
+      const margem = {}, borda = {}, fimDe = l => { const u = l.runs[l.runs.length - 1]; return u.x + (u.w || 0); };
+      for (const l of linhas) { const k = l.p + ':' + l.col; margem[k] = Math.min(margem[k] ?? Infinity, l.runs[0].x); borda[k] = Math.max(borda[k] ?? -Infinity, fimDe(l)); }
+      // centralizada: recuo grande, ou recuo dos dois lados quase igual (título curto no meio da coluna)
+      const centrada = l => {
+        const k = l.p + ':' + l.col, esq = l.runs[0].x - margem[k], dir = borda[k] - fimDe(l);
+        return esq >= corpo * 2.5 || (esq >= corpo * 1.2 && Math.abs(esq - dir) < corpo * 2);
+      };
+      const parenteses = t => (t.match(/\(/g) || []).length === (t.match(/\)/g) || []).length;   // "Fração do Pão)" é resto de linha
+      const cand = linhas.filter(l => !l.grande && (l.h >= corpo * 1.08 || centrada(l) || /^(salmo responsorial\b|\dª leitura\s*:|evangelho\s*:)/i.test(l.texto)) && parenteses(l.texto) && l.runs.every(r => r.estilo === 'forte' || r.h < corpo * 1.05) &&
+        l.texto.length <= 70 && !/[,;:.]$/.test(l.texto) && INICIO_PARTE.test(l.texto));
+      if (cand.length >= 6) cand.forEach(l => { l.grande = true; });
+    }
+    const hNum = linhas.filter(l => l.grande && /^\d+\.\s/.test(l.texto)).map(l => l.h).sort((a, b) => a - b);
+    const hTit = hNum.length >= 5 ? hNum[hNum.length >> 1] : 0;
+    if (hTit) {
+      const primeiraParte = linhas.findIndex(l => l.grande && /^\d+\.\s/.test(l.texto));
+      let mudou = false;
+      for (const p of new Set(linhas.map(l => l.p))) {
+        const daPag = linhas.filter(l => l.p === p);
+        const tits = daPag.filter(l => l.grande && !/^\d+\./.test(l.texto) && !SECOES.test(l.texto) && l.h > hTit * 1.15 && linhas.indexOf(l) > primeiraParte);
+        if (!tits.length) continue;
+        const yT = Math.max(...tits.map(l => l.y));
+        // só quando há texto acima do título (senão o artigo já começa no alto e a ordem normal serve)
+        if (!daPag.some(l => !tits.includes(l) && l.y > yT + corpo)) continue;
+        const colsTit = new Set(tits.map(l => l.col));
+        for (const l of tits) l.banda = 1;
+        for (const c of new Set(daPag.map(l => l.col))) {
+          const col = daPag.filter(l => l.col === c && !tits.includes(l)).sort((a, b) => b.y - a.y);
+          // na coluna do título: o que está abaixo dele. Nas outras: a partir de um vão grande (a caixa do artigo) perto
+          // da altura do título — sem vão, a coluna é uma parte só, de cima a baixo (a Bênção, no 1º Domingo)
+          let k = -1;
+          if (colsTit.has(c)) k = col.findIndex(l => l.y < yT);
+          else k = col.findIndex((l, i) => i > 0 && l.y < yT + corpo * 1.5 && l.y > yT - corpo * 8 && col[i - 1].y - l.y >= corpo * 3);
+          if (k >= 0) col.slice(k).forEach(l => { l.banda = 2; });
+        }
+        mudou = true;
+      }
+      if (mudou) linhas.sort((a, b) => a.p - b.p || (a.banda || 0) - (b.banda || 0) || a.col - b.col || b.y - a.y);
+    }
+    return ordenarPelaNumeracao(linhas);
+  }
+
+  // (1.9.11) Goiânia: folha A3 dobrada (livreto) — a 1ª página do PDF traz a contracapa (partes 30–44) e a capa (1–8) lado a
+  // lado; a 2ª, o miolo (9–29). Lido página a página, a Missa começava pelo fim. Quando as partes são numeradas e a
+  // numeração aparece fora de ordem (sem repetir número), os blocos voltam para a ordem dos números. O que vem antes da
+  // 1ª parte (capa) fica no começo; o título de seção logo antes de uma parte ("RITOS INICIAIS") vai junto com ela.
+  function ordenarPelaNumeracao(linhas) {
+    const num = l => { const m = l.grande && /^(\d{1,2})\.\s/.exec(l.texto); return m ? +m[1] : null; };
+    const ini = [];
+    linhas.forEach((l, i) => { if (num(l) != null) ini.push(i); });
+    if (ini.length < 5) return linhas;
+    const nums = ini.map(i => num(linhas[i]));
+    if (new Set(nums).size !== nums.length || nums.every((n, k) => !k || n > nums[k - 1])) return linhas;
+    // começo de cada bloco: recua sobre os títulos de seção grudados na parte
+    // (com o comentário entre o título da seção e a parte, na mesma coluna: "LITURGIA DA PALAVRA" / "A – Irmãos…" / "7.")
+    const comeco = ini.map(i => {
+      for (let j = i - 1; j >= 0 && linhas[j].p === linhas[i].p && linhas[j].col === linhas[i].col && num(linhas[j]) == null; j--)
+        if (linhas[j].grande && SECOES.test(linhas[j].texto)) return j;
+      return i;
+    });
+    const blocos = comeco.map((c, k) => ({ n: nums[k], ls: linhas.slice(c, comeco[k + 1] ?? linhas.length) }));
+    blocos.sort((a, b) => a.n - b.n);
+    return [...linhas.slice(0, comeco[0]), ...blocos.flatMap(b => b.ls)];
   }
 
   // livre = veio de .docx/.txt: cada linha já é uma linha de verdade (sem hifenização nem títulos quebrados)
   function estruturar(linhas, livre = false) {
     const partes = [];
     let parte = null, par = null;
+    // (1.9.11) altura dos títulos numerados ("5. PRIMEIRA LEITURA"): título bem maior, sem número, depois que as partes
+    // começaram, é um artigo/reflexão (SP, Advento 2026: "AH! SE ROMPESSES OS CÉUS…", do bispo) — fica fora do roteiro
+    const hNum = linhas.filter(l => l.grande && l.h && /^\d+\.\s/.test(l.texto)).map(l => l.h).sort((a, b) => a - b);
+    const hTitulo = hNum.length >= 5 ? hNum[hNum.length >> 1] : 0;
     for (const l of linhas) {
       const t = l.grande ? l.texto : normalizarRotulo(l.texto || '');
       if (!t) continue;
       const temParteReal = partes.some(p => !p.comentario);
+      // (1.9.11) Goiânia: depois da Missa, o folheto traz a "Celebração da Palavra (onde não houver Missa)" — fica de fora
+      if (l.grande && !livre && temParteReal && /^celebra[cç][aã]o da palavra$/i.test(t)) break;
+      if (l.grande && !livre && hTitulo && temParteReal && l.h > hTitulo * 1.15 && !/^\d+\./.test(t) && !SECOES.test(t) && !NOME_PARTE.test(t)) {
+        par = null;
+        parte = { titulo: t, pars: [], fora: true };
+        partes.push(parte);
+        continue;
+      }
       if (l.grande) {
         par = null;
         if (SECOES.test(t)) {
@@ -453,7 +671,7 @@ const Folheto = (() => {
         continue;
       }
       // título em maiúsculas que continua na linha de baixo ("APRESENTAÇÃO DAS" / "OFERENDAS (MR, p. 313)")
-      if (parte && !parte.comentario && !parte.pars.length && !/[a-zà-ÿ]/.test(t.replace(/\([^)]*\)/g, '')) && /[A-ZÀ-Ý]{3}/.test(t) && t.length <= 60) {
+      if (parte && !l.inicioLeitura && !parte.comentario && !parte.pars.length && !/[a-zà-ÿ]/.test(t.replace(/\([^)]*\)/g, '')) && /[A-ZÀ-Ý]{3}/.test(t) && t.length <= 60) {
         const ref = t.match(/\([^)]*\)/)?.[0] || '';
         parte.titulo += ' ' + semCaixaAlta(t.replace(/\s*\([^)]*\)/g, '')) + (ref ? ' ' + ref : '');
         continue;
@@ -489,7 +707,22 @@ const Folheto = (() => {
     // A lista das leituras da semana ("23/2 – 2ª-FEIRA: Lv 19,1-2…; Sl 18; Mt 25,31-46"), às vezes sem o título "Leituras da
     // semana" (folheto do Presidente): dali para a frente nada é da Missa
     const iSemana = partes.findIndex(p => SEMANA.test(p.titulo) || /^leituras da semana\b/i.test(p.titulo));
-    return (iSemana > 0 ? partes.slice(0, iSemana) : partes).filter(p => p.pars.length && !FORA_DA_MISSA.test(p.titulo));
+    // (1.9.11) SP, Advento 2026: "16. RITO DA COMUNHÃO" só com o título → entra o Pai-Nosso e Rito da Paz das partes fixas
+    // (app.js separarPaiNosso troca o "T. Pai nosso..." por ele)
+    for (const p of partes) if (!p.pars.length && !p.comentario && !p.fora && /^rito da comunh[aã]o\b/i.test(p.titulo))
+      p.pars.push({ rotulo: 'T', estilo: 'forte', texto: 'Pai nosso...' });
+    // (1.9.11) São José dos Campos: "9. EVANGELHO (Mt 25,31-46)" vem ANTES de "10. ACLAMAÇÃO AO EVANGELHO" (sem nada entre
+    // os dois) e o Evangelho em si fica dentro da Aclamação, a partir do "O Senhor esteja convosco" — reparte
+    for (let i = 0; i + 1 < partes.length; i++) {
+      const ev = partes[i], acl = partes[i + 1];
+      if (ev.pars.length || !/^evangelho\b/i.test(ev.titulo.replace(/^\d+\.\s*/, '')) || !/aclama[cç][aã]o/i.test(acl.titulo)) continue;
+      const k = acl.pars.findIndex(p => /^[-–—_\s]*(o senhor esteja convosco|proclama[cç][aã]o do evangelho)/i.test(p.texto));
+      if (k <= 0) continue;
+      ev.pars = acl.pars.slice(k);
+      acl.pars = acl.pars.slice(0, k);
+      partes[i] = acl; partes[i + 1] = ev;
+    }
+    return (iSemana > 0 ? partes.slice(0, iSemana) : partes).filter(p => p.pars.length && !p.fora && !FORA_DA_MISSA.test(p.titulo));
   }
   const SEMANA = /\d{1,2}\/\d{1,2}\s*[-–]?\s*\d?[ªa]?\s*[-–]?\s*feira|\bfeira\s*:|s[aá]bado\s*:|;\s*Sl \d+\s*(?:\(\d+\))?\s*;/i;
   const FORA_DA_MISSA = /^(leituras da semana|vivamos a semana santa|participe das celebra[cç][oõ]es|hino da (cf|campanha)|avisos|expediente|com aprova[cç][aã]o eclesi[aá]stica)\b/i;
@@ -505,23 +738,34 @@ const Folheto = (() => {
     return partes.map(pt => {
       const mRef = pt.titulo.match(/\(([^)]*\d[^)]*)\)/);
       const ref = mRef ? mRef[1].trim() : '';
-      let nome = pt.titulo.replace(/\s*\([^)]*\)/g, '').trim();
-      const temRefrao = pt.pars.some(p => p.rotulo === 'REFRAO');
+      let nome = pt.titulo.replace(/\s*\([^)]*\)/g, '').trim().replace(/\s*\)$/, '');   // "Salmo Responsorial)" (SJC): parêntese órfão
+      // (o "R/." das respostas do Ato Penitencial cantado não faz dele um canto)
+      const temRefrao = pt.pars.some(p => p.rotulo === 'REFRAO') && !/ato penitencial|kyrie|tende piedade/i.test(nome);
       // seção que já começa com a fala do padre ("RITO DA COMUNHÃO" / "P. Guiados pelo Espírito…") não é comentário: é o rito
       if (pt.comentario && pt.pars[0]?.rotulo === 'P') nome = nome.replace(/^Coment[aá]rio\s+—\s+/, '');
       // outros folhetos: "Apresentação das Oferendas" é o canto do ofertório
       if (/^apresenta[cç][aã]o das oferendas$/i.test(nome)) nome = 'Canto das Oferendas';
 
-      if (temRefrao || /canto|aclama|salmo/i.test(nome)) {
+      // (1.9.11) antífona cantada, com estrofes numeradas (SP, Advento 2026), é canto
+      if (temRefrao || /canto|aclama|salmo|processional|apresenta[cç][aã]o dos dons/i.test(nome) || (/^ant[ií]fona d[ae] (entrada|comunh)/i.test(nome) && pt.pars.some(p => p.rotulo === 'N'))) {
         // Canto/salmo: refrão + estrofes. Trechos sem rótulo continuam a estrofe anterior.
+        // (1.9.11) Campanha: a estrofe do salmo termina com "(R/.)" e vem em letra comum depois do refrão em negrito —
+        // as duas coisas abrem estrofe nova (antes o salmo inteiro virava refrão)
+        const R_FIM = /\s*\(R\s*\/?\s*\.?\)\s*$/;
         const blocos = [];
-        for (const p of pt.pars) {
-          if (p.rotulo || !blocos.length || p.novo) blocos.push({ ...p });   // novo: depois de linha em branco (.docx/.txt)
-          else { const ult = blocos[blocos.length - 1]; ult.texto = p.quebra ? juntarVerso(ult.texto, p.texto) : juntar(ult.texto, p.texto); }
+        let refDoTexto = '';
+        for (const p0 of pt.pars) {
+          const p = { ...p0, texto: p0.texto.replace(/<v>[^<]*<\/v>\s*/g, '') };   // nº de versículo não vai para canto/salmo
+          if (!p.rotulo && !blocos.length && !ref && /^\([^()]*(?:\([^()]*\)[^()]*)*\d[^()]*(?:\([^()]*\)[^()]*)*\)$/.test(p.texto.trim())) { refDoTexto = p.texto.trim().slice(1, -1); continue; }
+          const ult = blocos[blocos.length - 1];
+          const virou = ult && ult.rotulo === 'REFRAO' && p.estilo !== ult.estilo && p.estilo === 'regular';
+          if (p.rotulo || !ult || p.novo || virou || R_FIM.test(ult.texto)) blocos.push({ ...p, rotulo: virou && !p.rotulo ? '' : p.rotulo });   // novo: depois de linha em branco (.docx/.txt)
+          else ult.texto = p.quebra ? juntarVerso(ult.texto, p.texto) : juntar(ult.texto, p.texto);
         }
-        const refrao = blocos.filter(b => b.rotulo === 'REFRAO').map(b => versos(b.texto))[0] || '';
-        const estrofes = blocos.filter(b => b.rotulo !== 'REFRAO').map(b => versos(b.texto)).filter(Boolean);
-        return { tipo: 'salmo', rotulo: /salmo/i.test(nome) ? 'Salmo' : 'Canto', titulo: nome, ref, refrao, texto: estrofes.join('\n\n') };
+        const R_MEIO = /\s*\(R\s*\/?\s*\.?\)\s*/;   // "(R/.)" no meio do parágrafo: fim de uma estrofe
+        const refrao = blocos.filter(b => b.rotulo === 'REFRAO').map(b => versos(b.texto.split(R_MEIO)[0]))[0] || '';
+        const estrofes = blocos.filter(b => b.rotulo !== 'REFRAO').flatMap(b => b.texto.split(R_MEIO)).map(versos).filter(Boolean);
+        return { tipo: 'salmo', rotulo: /salmo/i.test(nome) ? 'Salmo' : 'Canto', titulo: nome, ref: ref || refDoTexto, refrao, texto: estrofes.join('\n\n') };
       }
 
       // Oração dos Fiéis: convite (P.) → resposta (T.) → preces numeradas → conclusão (P. … T. Amém)
@@ -683,7 +927,7 @@ const Folheto = (() => {
   // ===================================================================
 
   const NOME_PARTE = new RegExp('^(?:\\d+\\.\\s*)?(?:' + [
-    'canto(\\s+(de|da|do|das|dos|final|para)\\b[^.!?]{0,40})?', 'ant[ií]fona(\\s+(de|da|do)\\b[^.!?]{0,40})?', 'sauda[cç][aã]o', 'ato penitencial', 'kyrie',
+    'canto(\\s+(de|da|do|das|dos|final|para)\\b[^.!?]{0,40})?', 'processional(\\s+(de|da|do)\\b[^.!?]{0,40})?','ant[ií]fona(\\s+(de|da|do)\\b[^.!?]{0,40})?', 'sauda[cç][aã]o', 'ato penitencial', 'kyrie',
     'senhor,? tende piedade', 'gl[oó]ria', 'hino de louvor', 'ora[cç][aã]o do dia', 'coleta',
     'primeira leitura', 'segunda leitura', 'leitura', 'salmo( responsorial)?', 'aclama[cç][aã]o ao evangelho',
     'aclama[cç][aã]o', 'evangelho', 'homilia', 'profiss[aã]o de f[eé]', 'creio', 'ora[cç][aã]o dos fi[eé]is', 'preces',

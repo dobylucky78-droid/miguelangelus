@@ -25,7 +25,7 @@
     </div>
     <div class="splash-info">
       <div class="splash-gratis"><b>Gratuito · uso livre</b></div>
-      <div data-versao>Versão 1.9.10</div>
+      <div data-versao>Versão 1.9.11</div>
       <div>© 2026</div>
       <div><b>PASCOM</b></div>
       <div><b>São José Operário Ilha</b></div>
@@ -220,7 +220,7 @@
         <button id="btnAgenda" title="Agenda: calendário e celebrações">📅 Agenda</button>
       </div>
       <button id="btnFolhetoOnline" class="euc-atalho" title="Baixar o folheto &quot;A Missa&quot; (versão Celular) direto do site da Arquidiocese e montar os roteiros">🌐 Baixar folheto da Arquidiocese</button>
-      <button id="btnLiturgiaDia" class="euc-atalho" title="Monta os roteiros do dia com as leituras da Liturgia Diária (Paulus)">📖 Liturgia do dia (Missas de semana)</button>
+      <button id="btnLiturgiaDia" class="euc-atalho" title="Monta os roteiros do dia com as leituras da Liturgia Diária (Paulus ou API) — Missas sem folheto: dias de semana e solenidades">📖 Liturgia do dia (Missas sem folheto)</button>
       <button id="btnPartFolheto" class="euc-atalho" title="Lê o PDF de partituras do domingo inteiro (ex.: Folheto Povo de Deus, São Paulo), separa as músicas e liga cada uma ao canto do roteiro aberto, para os músicos verem no celular">🎼 Partituras do folheto</button>
       <input type="file" id="arqFolheto" accept=".pdf,.docx,.txt,.doc" hidden>
 
@@ -811,7 +811,9 @@
           <label class="campo">Nome da paróquia <input data-par="nome" placeholder="Ex.: Paróquia São José Operário"></label>
           <label class="campo">Padroeiro(a) <input data-par="padroeiro" placeholder="Ex.: São José Operário"></label>
           <label class="campo">(Arqui)diocese <input data-par="diocese" placeholder="Ex.: Arquidiocese de São Sebastião do Rio de Janeiro"></label>
-          <label class="campo">Página dos folhetos da (arqui)diocese <input data-par="siteFolhetos" type="url" placeholder="https://arqrio.org.br/folhetos/"></label>
+          <label class="campo">Folhetos da (arqui)diocese <select id="parDioceseFolhetos"></select></label>
+          <label class="campo" id="parSiteFolhetosCampo" hidden>Página dos folhetos da (arqui)diocese <input data-par="siteFolhetos" type="url" placeholder="https://… (a página onde ficam os folhetos em PDF)"></label>
+          <p class="sutil pequeno" id="parDioceseDica"></p>
           <label class="campo">Endereço da secretaria <input data-par="endereco"></label>
           <div class="linha">
             <label class="campo">Telefone <input data-par="telefone"></label>

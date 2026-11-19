@@ -1,4 +1,4 @@
-; Instalador do MiguelAngelus (Inno Setup 6).
+﻿; Instalador do MiguelAngelus (Inno Setup 6).
 ; Gerar: "%LOCALAPPDATA%\Programs\Inno Setup 6\ISCC.exe" MiguelAngelus.iss
 ; Antes, gere o aplicativo: cd ..\app && dotnet publish -c Release -o "..\MiguelAngelus App"
 ;
@@ -7,7 +7,7 @@
 ;   nem ao instalar uma versão nova por cima.
 
 #define Nome "MiguelAngelus"
-#define Versao "1.9.10"
+#define Versao "1.9.11"
 #define Editor "Paróquia São José Operário — PASCOM"
 
 [Setup]

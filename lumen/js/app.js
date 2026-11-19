@@ -713,6 +713,14 @@ function refsLeituras(itens) {
 // Põe o item "Homilia" logo depois do Evangelho (se ainda não houver um)
 function comHomilia(itens) {
   if (itens.some(i => i.tipo === 'homilia')) return itens;
+  // (1.9.11) Goiânia, Campanha: o folheto traz a parte "Homilia" só com a rubrica ("(Após a homilia, pausa para reflexão.)"):
+  // vira o item de Homilia (com a capa), em vez de ficar um texto ao lado de outra Homilia
+  const h = itens.findIndex(i => i.tipo === 'texto' && /^homilia$/i.test((i.titulo || '').trim()) && (i.texto || '').length < 200);
+  if (h >= 0) {
+    const novo = itens.slice();
+    novo[h] = { tipo: 'homilia', titulo: 'Homilia', texto: '', usarCapa: true, mostrarRef: true, ...(itens[h].numFolheto ? { numFolheto: itens[h].numFolheto } : {}) };
+    return novo;
+  }
   const k = itens.findIndex(i => (i.tipo === 'leitura' && i.evangelho) || (i.tipo === 'texto' && /^evangelho/i.test(i.titulo || '')));
   if (k < 0) return itens;
   const novo = itens.slice();
@@ -2435,6 +2443,60 @@ function completarEisCordeiro(itens) {
 }
 // A aclamação do folheto (refrão + versículo) vira item de canto "rezado" com o mesmo refrão e versículo:
 // assim dá para trocar por um canto de aclamação, como no Santo
+// ---------- (1.9.11, aviso do Luciano) Aplicar modelo sem perder o que já está no roteiro ----------
+// Antes, "Aplicar modelo" trocava tudo: num roteiro montado com a liturgia do dia (API/Paulus), as leituras sumiam.
+// Agora cada lugar do modelo recebe a parte que já existe (1ª leitura, salmo, Evangelho, cantos, Coleta…) e o que não
+// tem lugar no modelo (antífonas, orações do dia, boas-vindas, avisos…) fica perto de onde estava.
+function chaveNoModelo(i) {
+  const t = semAcento(i.titulo || '').toLowerCase().replace(/^\d+\.\s*/, '');
+  const MESMA = { santo: 'santo', cordeiro: 'cordeiro', gloria: 'gloria' };
+  if (i.tipo === 'canto') return { 'Santo': 'santo', 'Cordeiro': 'cordeiro', 'Glória': 'gloria' }[i.momento] || 'canto:' + i.momento;
+  if (i.tipo === 'ordinario') return MESMA[i.parte] || 'ord:' + i.parte;
+  if (i.tipo === 'leitura' || i.tipo === 'texto') {
+    if (i.evangelho || /^evangelho/.test(t)) return 'ev';
+    if (/^(1ª|1a|primeira)\s*leitura/.test(t)) return 'l1';
+    if (/^(2ª|2a|segunda)\s*leitura/.test(t)) return 'l2';
+    if (/^oracao da coleta/.test(t)) return 'ord:coleta';
+  }
+  if (i.tipo === 'salmo' && !/aclama/.test(t)) return 'salmo';
+  if (i.tipo === 'homilia' || i.tipo === 'preces') return i.tipo;
+  return null;
+}
+function temConteudoNoModelo(i) {
+  if (i.tipo === 'ordinario') return false;
+  if (i.tipo === 'canto') return !!(i.cantoId || i.textoRezado || i.refraoRezado || i.midiaId);
+  if (i.tipo === 'leitura') return !!(i.ref || '').trim();
+  if (i.tipo === 'salmo') return !!((i.ref || '') + (i.refrao || '') + (i.texto || '')).trim();
+  if (i.tipo === 'homilia') return !!(i.texto || '').trim();
+  if (i.tipo === 'preces') return !!((i.texto || '') + (i.convite || '')).trim();
+  return true;
+}
+function mesclarComModelo(atuais, modelo) {
+  const usados = new Set();
+  const res = modelo.map(x => {
+    const k = chaveNoModelo(x);
+    const achado = k && atuais.find(a => !usados.has(a) && chaveNoModelo(a) === k);
+    if (achado) {
+      usados.add(achado);
+      // mesmo tipo (ou parte já preenchida): fica a do roteiro; senão (ex.: Santo rezado → cantado), a do modelo
+      if (achado.tipo === x.tipo || temConteudoNoModelo(achado)) return achado;
+    }
+    return { id: uid(), ...structuredClone(x) };
+  });
+  const noRes = new Set(res);
+  atuais.forEach((a, p) => {
+    if (usados.has(a) || !temConteudoNoModelo(a)) return;           // partes fixas e espaços vazios do modelo antigo saem
+    const ant = atuais.slice(0, p).reverse().find(x => noRes.has(x));
+    const prox = atuais.slice(p + 1).find(x => usados.has(x) && noRes.has(x));
+    // orações (Coleta, sobre as Oferendas, depois da Comunhão) vão antes da parte seguinte; o resto, logo depois da anterior
+    const antesDaProxima = /^oracao/.test(semAcento(a.titulo || '').toLowerCase()) && prox;
+    const pos = antesDaProxima ? res.indexOf(prox) : ant ? res.indexOf(ant) + 1 : 0;
+    res.splice(pos, 0, a);
+    noRes.add(a);
+  });
+  return res;
+}
+
 function aclamacaoRezada(it) {
   const refrao = (it.refrao || '').trim(), texto = (it.texto || '').trim();
   return { id: it.id || uid(), tipo: 'canto', momento: 'Aclamação ao Evangelho', cantoId: '',
@@ -2501,7 +2563,30 @@ function itemAbertura(r) {
     texto: texto.replace(/\n\n/g, '\n') }];
 }
 
-// dica: {nome, data} de quem baixou o folheto (🌐 site da diocese), para quando o PDF não traz a data no título
+// (1.9.11) Folheto que não montou bem: o MiguelAngelus confere as partes principais e oferece mandar o link (ou o nome do
+// arquivo) para a equipe avaliar. Abre o e-mail da própria pessoa com a mensagem pronta — ela confere e envia; nada sai sozinho.
+const PARTES_ESSENCIAIS = [['1ª Leitura', /primeira leitura|^1ª leitura|^leitura\b|leituras b[ií]blicas/i], ['Evangelho', /^evangelho|proclama[cç][aã]o do evangelho/i],
+  ['Oração Eucarística', /ora[cç][aã]o eucar|pref[aá]cio/i], ['Comunhão', /comunh/i]];
+function partesQueFaltam(itens) {
+  const tit = itens.map(i => i.titulo || '');
+  return PARTES_ESSENCIAIS.filter(([, rx]) => !tit.some(t => rx.test(t))).map(([n]) => n);
+}
+function oferecerAvaliacaoFolheto(arquivo, dica, problema) {
+  const link = dica.url || '';
+  if (!confirm(`${problema}\n\nQuer mandar ${link ? 'o link deste folheto' : 'o nome deste folheto'} para a equipe do MiguelAngelus avaliar?\n\n` +
+    'Abre o seu e-mail com a mensagem pronta; você confere e envia. Vão só o link (ou o nome do arquivo), a (arqui)diocese e a versão do programa.')) return;
+  const p = Agenda.dados.paroquia || {};
+  const corpo = [
+    'Olá! Este folheto não montou bem no MiguelAngelus:', '',
+    link ? `Link: ${link}` : `Arquivo: ${arquivo.name} (se puder, anexe o PDF a este e-mail)`,
+    `(Arqui)diocese: ${p.diocese || '—'}`, `Página dos folhetos: ${p.siteFolhetos || '—'}`,
+    `O que aconteceu: ${problema}`, `MiguelAngelus — ${(document.querySelector('[data-versao]')?.textContent || '').trim()}`,
+  ].join('\n');
+  abrirEndereco('mailto:contato.miguelangelus@gmail.com?subject=' + encodeURIComponent('Folheto para avaliar — ' + (p.diocese || arquivo.name)) +
+    '&body=' + encodeURIComponent(corpo));
+}
+
+// dica: {nome, data, url} de quem baixou o folheto (🌐 site da diocese), para quando o PDF não traz a data no título
 async function importarFolheto(arquivo, dica = {}) {
   try {
     toast('Lendo o folheto…');
@@ -2517,6 +2602,10 @@ async function importarFolheto(arquivo, dica = {}) {
       tituloLiturgico: r.tituloLiturgico,            // ex.: "Assunção da Bem-aventurada Virgem Maria — Solenidade"
       msgEuc: capturarEucaristia(r.eucaristia),   // guarda a oração eucarística e o prefácio do dia no catálogo
     };
+    // (1.9.11) faltando 2 ou mais partes principais, ao terminar (concluirFolheto) oferece mandar para avaliação
+    const faltam = partesQueFaltam(r.itens);
+    if (faltam.length >= 2) pacote.avaliar = { arquivo, dica, problema: `O roteiro foi montado, mas faltaram partes importantes: ${faltam.join(', ')}. ` +
+      'Pode ser que o folheto não traga essas partes, ou que o MiguelAngelus não tenha entendido o jeito dele.' };
     // avisa já (mesmo que a janela de distribuição seja cancelada, a oração eucarística fica guardada)
     if (pacote.msgEuc) toast(pacote.msgEuc.trim());
     const candidatas = pacote.data ? celebracoesDoFolheto(pacote.data) : [];
@@ -2526,6 +2615,8 @@ async function importarFolheto(arquivo, dica = {}) {
   } catch (err) {
     console.error(err);
     alert('Não foi possível importar o folheto:\n' + err.message);
+    // PDF só de imagem não tem o que avaliar; o resto (não achou as partes, deu erro na leitura) vale mandar
+    if (!/s[oó] imagem/i.test(err.message) && /\.pdf$/i.test(arquivo.name || '')) oferecerAvaliacaoFolheto(arquivo, dica, 'Não foi possível montar o roteiro: ' + err.message);
   }
 }
 
@@ -2579,7 +2670,9 @@ function concluirFolheto(pacote, msg) {
   const msgCantos = c.novos || c.existentes ? ` Cantos: ${c.novos} novo(s) no banco${c.existentes ? `, ${c.existentes} já existia(m)` : ''}.` : '';
   toast(msg + msgCantos + (pacote.msgEuc || ''));
   if (typeof atualizarEtiquetaFolheto === 'function') atualizarEtiquetaFolheto();     // o "novo" do botão Baixar folheto some
-  if (pacote.aviso) alert(pacote.aviso);
+  // (o aviso "use a versão Celular" é do folheto do Rio; Goiânia, Erechim… não têm versão celular)
+  if (pacote.aviso && (typeof ehSiteRio !== 'function' || ehSiteRio())) alert(pacote.aviso);
+  if (pacote.avaliar) oferecerAvaliacaoFolheto(pacote.avaliar.arquivo, pacote.avaliar.dica, pacote.avaliar.problema);
   if (c.cantosNovos.length) abrirNomeacao(c.cantosNovos);
 }
 
@@ -2990,8 +3083,9 @@ function ligarEventos() {
     const m = Ordinario.modelos[e.target.value];
     e.target.value = '';
     if (!m) return;
-    if (S.roteiro.itens.length && !confirm('Substituir os itens deste roteiro pelo modelo?')) return;
-    S.roteiro.itens = m.map(x => ({ id: uid(), ...structuredClone(x) }));
+    const temAlgo = S.roteiro.itens.some(i => temConteudoNoModelo(i));
+    if (temAlgo && !confirm('Aplicar o modelo neste roteiro?\n\nA ordem das partes passa a ser a do modelo. As leituras, o salmo, os cantos escolhidos, as orações e as antífonas que já estão nele continuam.')) return;
+    S.roteiro.itens = mesclarComModelo(S.roteiro.itens, m);
     salvarRoteiro();
     S.atual = null;
     renderRoteiroLista(); renderCabecalho(); renderSlides();

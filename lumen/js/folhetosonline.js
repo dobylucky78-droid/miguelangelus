@@ -28,7 +28,8 @@ const ehSiteRio = () => /(^|\.)arqrio\.org\.br$/i.test(new URL(siteFolhetos(), l
 const nomeDiocese = () => (Agenda.dados.paroquia?.diocese || '').trim() || (ehSiteRio() ? 'Arquidiocese' : 'Diocese');
 
 // Data escrita no texto do link ou no nome do arquivo: 12/10/2026, 12.10.26, 12-10-2026, 2026-10-12, 12 de outubro de 2026
-const MESES_EXT = ['janeiro', 'fevereiro', 'mar[cç]o', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
+// (1.9.11) também abreviado, como no nome dos arquivos de Goiânia: "22-nov-26"
+const MESES_EXT = ['jan(?:eiro)?', 'fev(?:ereiro)?', 'mar(?:[cç]o)?', 'abr(?:il)?', 'mai(?:o)?', 'jun(?:ho)?', 'jul(?:ho)?', 'ago(?:sto)?', 'set(?:embro)?', 'out(?:ubro)?', 'nov(?:embro)?', 'dez(?:embro)?'];
 function dataNoTexto(s) {
   try { s = decodeURIComponent(s || ''); } catch (_) { s = s || ''; }
   s = s.replace(/[_+]/g, ' ');
@@ -38,10 +39,10 @@ function dataNoTexto(s) {
   if (m) return ok(m[1], m[2], m[3]);
   m = s.match(/(?<!\d)(\d{1,2})[/.\-](\d{1,2})[/.\-](20\d\d|\d\d)(?!\d)/);
   if (m) return ok(ano(m[3]), m[2], m[1]);
-  m = s.replace(/-/g, ' ').match(new RegExp(`(?<!\\d)(\\d{1,2})(?:º)?\\s*(?:de\\s*)?(${MESES_EXT.join('|')})\\s*(?:de\\s*)?(20\\d\\d)?`, 'i'));
+  m = s.replace(/-/g, ' ').match(new RegExp(`(?<!\\d)(\\d{1,2})(?:º)?\\s*(?:de\\s*)?(${MESES_EXT.join('|')})(?![a-zç])\\s*(?:de\\s*)?(20\\d\\d|\\d\\d(?!\\d))?`, 'i'));
   if (m) {
     const mes = MESES_EXT.findIndex(x => new RegExp('^' + x + '$', 'i').test(m[2])) + 1;
-    let y = m[3];
+    let y = m[3] && ano(m[3]);
     if (!y) { const hoje = new Date(); y = hoje.getFullYear() + (mes < hoje.getMonth() - 5 ? 1 : 0); }
     return ok(y, mes, m[1]);
   }
@@ -56,7 +57,11 @@ function listarPdfsDaPagina(html, base) {
   for (const a of doc.querySelectorAll('a[href]')) {
     let url;
     try { url = new URL(a.getAttribute('href'), base).href; } catch (_) { continue; }
-    if (!/^https?:/i.test(url) || !/\.pdf($|[?#])|[?&/]pdf\b/i.test(url) || vistos.has(url)) continue;
+    if (!/^https?:/i.test(url) || !/\.pdf($|[?#])|[?&/]pdf\b/i.test(url)) continue;
+    // (1.9.11) Santo André: dois links para o mesmo PDF (imagem e "Folheto"); só um deles tem a data por perto — o
+    // repetido entra no lugar do primeiro se este ficou sem data
+    const jaVisto = vistos.has(url) ? lista.findIndex(f => f.url === url) : -1;
+    if (vistos.has(url) && (jaVisto < 0 || lista[jaVisto].iso)) continue;
     vistos.add(url);
     let arquivo = url.split(/[?#]/)[0].split('/').pop() || '';
     try { arquivo = decodeURIComponent(arquivo); } catch (_) { /* nome com % solto */ }
@@ -66,24 +71,89 @@ function listarPdfsDaPagina(html, base) {
     if (/partitura|cifra|caderno|cancioneiro|pre[cç]os?\b|tabela|assinatura|formul[aá]rio|boleto/i.test(texto + ' ' + arquivo)) continue;
     // o texto em volta do link (a linha da tabela/lista) costuma ter o nome da celebração e a data
     let volta = '';
-    for (let el = a.parentElement, n = 0; el && n < 4 && !volta; el = el.parentElement, n++) {
+    // (1.9.11) Santo André: lista do Elementor — a data fica 5–6 níveis acima do link "Folheto"
+    for (let el = a.parentElement, n = 0; el && n < 7 && !volta; el = el.parentElement, n++) {
       const t = textoSeparado(el).replace(/\s+/g, ' ').trim();
       if (t.length > texto.length + 5 && t.length < 300) volta = t;
     }
     const generico = !texto || texto.length < 14 || /^(baixar|download|clique aqui|pdf|aqui|ver|abrir|folheto)\b/i.test(texto);
     const titulo = !generico ? texto : volta && volta.length < 120
-      ? volta.replace(/\b(folheto|partituras?|baixar|download|pdf)\b/gi, '').replace(/^\s*\d{1,2}\/\d{1,2}\/\d{2,4}\s*[-–]?\s*/, '').replace(/\s+/g, ' ').trim()
-      : arquivo.replace(/[_-]+/g, ' ').replace(/\s+/g, ' ').trim();
+      ? volta.replace(/\b(folheto|partituras?|baixar|download|pdf)\b/gi, '').replace(/^\s*\d{1,2}\/\d{1,2}\/\d{2,4}\s*[-–]?\s*/, '')
+        .replace(new RegExp(`\\s*\\d{1,2}º?\\s+de\\s+(${MESES_EXT.join('|')})\\s+de\\s+20\\d\\d\\s*`, 'i'), ' ').replace(/[\s.|]+$/, '').replace(/\s+/g, ' ').trim()
+      : arquivo.replace(/[_-]+/g, ' ').replace(/\s+/g, ' ').trim()
+        // (1.9.11) Goiânia: "54 Sol. Todos os Santos Ano A n. 2482 1 nov 26" → "Sol. Todos os Santos Ano A"
+        .replace(/^\d{1,3}\s+(?=\d{1,2}[ºoª]\s|\D)/, '').replace(/\s+n\.?\s*\d{3,5}\b/i, '')
+        .replace(new RegExp(`\\s+\\d{1,2}\\s+(${MESES_EXT.join('|')})(?![a-zç])\\s*(20\\d\\d|\\d\\d)?\\s*\\d?$`, 'i'), '')
+        // (1.9.11) Campanha: "Folheto II DOMINGO DO ADVENTO ANO B 06 12 2026" → "II Domingo do Advento Ano B"
+        .replace(/^folheto\s+/i, '').replace(/\s+\d{1,2}\s+\d{1,2}\s+(?:20)?\d\d(?:\s+\d)?$/, '')
+        // São José dos Campos: "22 de novembro de 2026 Solenidade de…" → "Solenidade de…"
+        .replace(new RegExp(`^(?:\\d{1,2}\\s+)?de\\s+(${MESES_EXT.join('|')})\\s+de\\s+20\\d\\d\\s+`, 'i'), '').trim();
+    const tituloFinal = (/[a-zà-ÿ]/.test(titulo) ? titulo : titulo.toLowerCase().replace(/(^|\s)(\p{L})/gu, (m, s, l) => s + l.toUpperCase())
+      .replace(/\s(De|Da|Do|Das|Dos|E|Em|Na|No|Os|As)(?=\s)/g, m => m.toLowerCase()).replace(/(^|\s)([IVXL][ivxl]*)(?=\s|$)/g, (m, s, r) => s + r.toUpperCase()))
+      // "– II Domingo do Advento – Ano B – 06-12-2026" → "II Domingo do Advento – Ano B"
+      .replace(/^[\s–—.|-]+/, '').replace(/\s*[–—-]\s*\d{1,2}[-/.]\d{1,2}[-/.]\d{2,4}\s*$/, '').trim() || titulo;
     const iso = dataNoTexto(texto) || dataNoTexto(arquivo) || dataNoTexto(volta);
-    lista.push({ url, id: '', titulo, iso, nome: titulo,
-      versao: /celular/i.test(titulo + arquivo) ? 'celular' : /assembl[eé]ia/i.test(titulo + arquivo) ? 'assembleia' : 'pdf' });
+    const item = { url, id: '', titulo: tituloFinal, iso, nome: tituloFinal,
+      versao: /celular/i.test(titulo + arquivo) ? 'celular' : /assembl[eé]ia/i.test(titulo + arquivo) ? 'assembleia' : 'pdf' };
+    if (jaVisto >= 0) { if (iso) lista[jaVisto] = item; } else lista.push(item);
   }
   // datados em ordem de data, só do último mês para a frente (a página pode ter o arquivo de anos);
   // sem data vêm depois, na ordem da página, no máximo 20
+  // (1.9.11) Campanha: na mesma data, o "Folheto-…pdf" e outro PDF (partituras sem a palavra no nome) — fica o folheto
+  for (let i = lista.length - 1; i >= 0; i--) {
+    const f = lista[i];
+    if (f.iso && !/folheto/i.test(f.url) && lista.some(g => g !== f && g.iso === f.iso && /folheto/i.test(g.url))) lista.splice(i, 1);
+    // o mesmo arquivo enviado de novo ("…-01-11-2026-1.pdf", "…-Comum-.pdf"): mesma data e mesmo nome — fica o primeiro
+    else if (f.iso && lista.some((g, j) => j < i && g.iso === f.iso && g.nome.toLowerCase().replace(/\W+/g, '') === f.nome.toLowerCase().replace(/\W+|\d$/g, ''))) lista.splice(i, 1);
+  }
   const corte = isoData(new Date(Date.now() - 30 * 864e5));
   const datados = lista.filter(f => f.iso).sort((a, b) => a.iso.localeCompare(b.iso));
   const recentes = datados.filter(f => f.iso >= corte);
   return [...(recentes.length ? recentes : datados.slice(-10)), ...lista.filter(f => !f.iso).slice(0, 20)];
+}
+
+// (1.9.11) Brasília: a página é um calendário (Elementor) — os folhetos vêm nos dados do calendário, um por data:
+// {"title":"TODOS OS SANTOS | SOLENIDADE","description":"<a href=…pdf>DOWNLOAD DO FOLHETO</a>…<a …>VERSÃO EM TELÃO</a>…",
+// "start":"2026-11-01"}. A versão do folheto e a de celular são imagem (sem texto): vai a de telão; sem ela, a de celular.
+function listarPdfsDoCalendario(html) {
+  const des = s => { try { return JSON.parse('"' + s + '"'); } catch (_) { return s; } };
+  const lista = [];
+  for (const m of html.matchAll(/"title":"((?:[^"\\]|\\.)*)","description":"((?:[^"\\]|\\.)*)","start":"(\d{4}-\d\d-\d\d)"/g)) {
+    const links = [...des(m[2]).matchAll(/href="([^"]+\.pdf)"[^>]*>([^<]*)</gi)].map(x => ({ url: x[1], rot: x[2] }))
+      .filter(l => !/partitura|caderno|cifra/i.test(l.rot));
+    const l = links.find(x => /tel[aã]o/i.test(x.rot)) || links.find(x => /celular/i.test(x.rot)) || links[0];
+    if (!l) continue;
+    const titulo = des(m[1]).replace(/\s*\|\s*/g, ' — ').replace(/\s+/g, ' ').trim();
+    lista.push({ url: l.url, id: '', titulo, iso: m[3], nome: titulo, versao: /celular/i.test(l.rot) ? 'celular' : 'pdf' });
+  }
+  const corte = isoData(new Date(Date.now() - 30 * 864e5));
+  lista.sort((a, b) => a.iso.localeCompare(b.iso));
+  const recentes = lista.filter(f => f.iso >= corte);
+  return recentes.length ? recentes : lista.slice(-10);
+}
+
+// (1.9.11) Campanha (MG) e outros sites WordPress: a página só tem links para páginas de download (com um visualizador),
+// sem o PDF. A API pública de mídia do WordPress lista os PDFs enviados com "folheto" no nome — direto, com a data no nome.
+async function listarPdfsDoWordPress(site) {
+  const u = new URL(site);
+  let itens;
+  try {
+    const r = await httpApp(`${u.origin}/wp-json/wp/v2/media?search=folheto&mime_type=application/pdf&per_page=50&_fields=source_url`);
+    itens = JSON.parse(r.texto);
+  } catch (_) { return []; }
+  if (!Array.isArray(itens)) return [];
+  const html = lst => lst.filter(i => typeof i?.source_url === 'string').map(i => `<a href="${esc(i.source_url)}"></a>`).join('');
+  let lista = listarPdfsDaPagina(html(itens), u.origin);
+  // São José dos Campos: os folhetos não têm "folheto" no nome, mas têm a data ("22-de-novembro-de-2026-Solenidade…"):
+  // os últimos PDFs enviados, só os que têm data no nome
+  if (lista.filter(f => f.iso).length < 3) {
+    try {
+      const r = await httpApp(`${u.origin}/wp-json/wp/v2/media?mime_type=application/pdf&per_page=60&_fields=source_url`);
+      const recentes = listarPdfsDaPagina(html(JSON.parse(r.texto) || []), u.origin).filter(f => f.iso && !/informativo|boletim|agenda|calend[aá]rio|escala|missas-/i.test(f.url));
+      if (recentes.length >= 3) lista = recentes;
+    } catch (_) { /* fica a lista anterior */ }
+  }
+  return lista;
 }
 
 // Texto de um elemento com espaço entre os pedaços (textContent junta "12/10/2026" com "Nossa Senhora" sem espaço)
@@ -99,6 +169,12 @@ async function listarFolhetosOnline() {
     const r = await httpApp(siteFolhetos());
     FolOnline.cdf = null;
     FolOnline.lista = listarPdfsDaPagina(r.texto, siteFolhetos());
+    if (!FolOnline.lista.length && /"start":"\d{4}-\d\d-\d\d"/.test(r.texto)) FolOnline.lista = listarPdfsDoCalendario(r.texto);
+    // sem nenhum folheto com data na página (só um PDF solto, como "folheto-Eleicoes-municipais"): tenta a API do WordPress
+    if (!FolOnline.lista.some(f => f.iso) && /wp-content|wp-json/.test(r.texto)) {
+      const wp = await listarPdfsDoWordPress(siteFolhetos());
+      if (wp.some(f => f.iso)) FolOnline.lista = wp;
+    }
     return FolOnline.lista;
   }
   const r = await httpApp(URL_FOLHETOS);
@@ -179,7 +255,7 @@ async function baixarFolhetoOnline(f, botao) {
     const d = f.iso ? f.iso.split('-').reverse().join('.').replace(/^(\d\d\.\d\d\.)\d\d(\d\d)$/, '$1$2') : '';
     const arquivo = new File([bytes], `A Missa - ${f.nome}_${f.versao === 'assembleia' ? 'ASSEMBLEIA' : f.versao === 'celular' ? 'CELULAR' : 'FOLHETO'} - ${d}.pdf`.replace(/[\\/:*?"<>|]/g, '-'), { type: 'application/pdf' });
     $('#dlgFolhetoOnline').close();
-    await importarFolheto(arquivo, { nome: f.nome, data: f.iso });
+    await importarFolheto(arquivo, { nome: f.nome, data: f.iso, url: f.url });
     if (f.versao === 'assembleia') toast('Montado com a versão da ASSEMBLEIA do folheto (a de celular ainda não saiu). Dê uma conferida no roteiro.');
   } catch (e) {
     alert('Não foi possível baixar o folheto:\n' + e.message);
