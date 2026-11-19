@@ -46,7 +46,7 @@ const GRUPOS_PREF = [
   { grupo: 'Espírito Santo', itens: [['es1', 'Espírito Santo I'], ['es2', 'Espírito Santo II']] },
   { grupo: 'Nossa Senhora', itens: [['nsra1', 'Virgem Maria I'], ['nsra2', 'Virgem Maria II'], ['imac', 'Imaculada Conceição'], ['assun', 'Assunção de Nossa Senhora']] },
   { grupo: 'Santos', itens: [['jose', 'São José'], ['joaob', 'São João Batista'], ['pedropaulo', 'São Pedro e São Paulo'], ['apost1', 'Apóstolos I'], ['apost2', 'Apóstolos II'],
-    ['santos1', 'Santos I'], ['santos2', 'Santos II'], ['martires', 'Santos Mártires'], ['pastores', 'Santos Pastores'], ['virgens', 'Santas Virgens e Santos Religiosos'], ['anjos', 'Anjos']] },
+    ['santos1', 'Santos I'], ['santos2', 'Santos II'], ['todossantos', 'Todos os Santos'], ['martires', 'Santos Mártires'], ['pastores', 'Santos Pastores'], ['virgens', 'Santas Virgens e Santos Religiosos'], ['anjos', 'Anjos']] },
   { grupo: 'Outras ocasiões', itens: [['unidade', 'Unidade dos Cristãos'], ['ded1', 'Dedicação de uma igreja I'], ['ded2', 'Dedicação de uma igreja II']] },
   { grupo: 'Defuntos', itens: romanos(5).map((r, i) => [`def${i + 1}`, `Defuntos ${r}`]) },
 ];
@@ -127,16 +127,165 @@ function prefaciosPermitidos(oe) {
   return [...(oe.proprio ? [prefDe(oe.proprio)] : []), ...livres];
 }
 
-// Grupos sugeridos pelo tempo litúrgico da data do roteiro aberto (ou de hoje)
-function gruposSugeridos() {
-  const d = (S.roteiro && infoRoteiro(S.roteiro).data) || new Date();
-  const lit = Liturgia.info(d);
-  const mapa = {
-    'Advento': ['Advento'], 'Natal': ['Natal'], 'Quaresma': ['Quaresma', 'Domingos da Quaresma', 'Paixão do Senhor'],
-    'Tríduo Pascal': ['Paixão do Senhor', 'Páscoa'], 'Páscoa': ['Páscoa'],
-    'Comum': d.getDay() === 0 ? ['Domingos do Tempo Comum'] : ['Comuns'],
-  };
-  return { titulo: lit.titulo, grupos: mapa[lit.tempo] || [] };
+// ---------- (1.9.13, pedido do Luciano) Regras do dia: qual prefácio e quais orações ----------
+// Baseado na IGMR 364–365 e nas rubricas dos prefácios do Missal Romano. Não depende do ano par/ímpar; do ano A/B/C só
+// os 3º, 4º e 5º domingos da Quaresma (prefácios ligados aos evangelhos do Ano A).
+// modo: 'rigido' = só os prefácios do dia (domingos dos tempos fortes, solenidades, Semana Santa, Tríduo, oitava da Páscoa);
+//       'aviso'  = os do dia, outro só com confirmação (Missa votiva, de exéquias…); 'livre' = só sugestão.
+// fixasOk: as orações de prefácio fixo (IV, V, Diversas Circunstâncias) só cabem em dia sem prefácio próprio (Tempo Comum).
+const idsEuc = (p, n) => Array.from({ length: n }, (_, i) => p + (i + 1));
+const PREF_PROPRIOS = [
+  [/Domingo de Ramos/, ['ramos']], [/Natal do Senhor/, idsEuc('nat', 3)], [/Sagrada Família/, idsEuc('nat', 3)],
+  [/Santa Maria, Mãe de Deus/, ['nsra1']], [/Epifania do Senhor/, ['epif']], [/Batismo do Senhor/, ['batismo']],
+  [/Ascensão do Senhor/, ['asc1', 'asc2']], [/Pentecostes/, ['pent']], [/Santíssima Trindade/, ['trin']],
+  [/Corpo e Sangue/, ['euc1', 'euc2']], [/Sagrado Coração/, ['corac']], [/Cristo Rei/, ['cristorei']],
+  [/Apresentação do Senhor/, ['apres']], [/São José, Esposo/, ['jose']], [/Anunciação do Senhor/, ['anunc']],
+  [/Natividade de São João Batista/, ['joaob']], [/São Pedro e São Paulo/, ['pedropaulo']], [/Transfiguração do Senhor/, ['transf']],
+  [/Assunção de Nossa Senhora/, ['assun']], [/Exaltação da Santa Cruz/, ['cruz']], [/Aparecida/, ['nsra1', 'nsra2']],
+  [/Fiéis Defuntos/, idsEuc('def', 5)], [/Todos os Santos/, ['todossantos']], [/Basílica do Latrão/, ['ded2', 'ded1']],
+  [/Imaculada Conceição/, ['imac']], [/São Sebastião/, ['martires']],
+];
+const SOLENIDADES_EUC = /Natal do Senhor|Santa Maria, Mãe de Deus|Epifania do Senhor|Ascensão do Senhor|Pentecostes|Santíssima Trindade|Corpo e Sangue|Sagrado Coração|Cristo Rei|São José, Esposo|Anunciação do Senhor|Natividade de São João Batista|São Pedro e São Paulo|Assunção de Nossa Senhora|Aparecida|Todos os Santos|Imaculada Conceição|Fiéis Defuntos|Domingo de Ramos/;
+
+// Prefácios dos santos pelo nome do dia (memórias e festas do santoral; padroeiro)
+function prefsDoSanto(nome) {
+  const n = semAcento(nome);
+  if (/sao joao batista/.test(n)) return ['joaob'];
+  if (/arcanjo|anjos/.test(n)) return ['anjos'];
+  if (/nossa senhora|virgem maria|mae da igreja|imaculado coracao|nome de maria/.test(n)) return ['nsra1', 'nsra2'];
+  if (/^sao jose( operario|,|$)/.test(n)) return ['jose'];
+  if (/dedicacao/.test(n)) return ['ded2', 'ded1'];
+  if (/jesus cristo|do senhor\b|nome de jesus/.test(n)) return null;
+  if (/apostol|evangelista/.test(n)) return ['apost1', 'apost2'];
+  if (/martir/.test(n)) return ['martires', 'santos1', 'santos2'];
+  if (/virge|religios|abade|abadessa|monge|eremita/.test(n)) return ['virgens', 'santos1', 'santos2'];
+  if (/\b(papa|bispo|presbitero|diacono|doutor)/.test(n)) return ['pastores', 'santos1', 'santos2'];
+  return ['santos1', 'santos2'];
+}
+
+function regraEuc(data = new Date(), padroeiro = null) {
+  const d = new Date(data.getFullYear(), data.getMonth(), data.getDate());
+  const lit = Liturgia.info(d, padroeiro);
+  const E = Liturgia.pascoa(d.getFullYear());
+  const dias = Math.round((d - E) / 864e5), m = d.getMonth() + 1, dia = d.getDate(), dom = d.getDay() === 0;
+  const t = lit.titulo || '', tt = lit.tituloTempo || t, tempo = lit.tempo;
+  const r = { titulo: lit.santo ? `${t} (${lit.santo.toLowerCase()})` : t, tempo, ciclo: lit.ciclo, prefs: [], modo: 'livre',
+    fixasOk: false, nota: '', notaOE1: '', semMissa: false };
+  const def = (prefs, modo, nota = '') => Object.assign(r, { prefs, modo, nota });
+  // Oração Eucarística I com partes próprias (Communicantes / Hanc igitur)
+  if ((m === 12 && dia >= 25) || (m === 1 && dia === 1) || /Epifania do Senhor|Ascensão do Senhor|Pentecostes/.test(t) || dias === -3 || (dias >= -1 && dias <= 7))
+    r.notaOE1 = 'Se for usada a Oração Eucarística I, hoje ela tem partes próprias: confira no Missal.';
+
+  if (tempo === 'Tríduo Pascal') {
+    if (dias === -2) return Object.assign(r, { semMissa: true, modo: 'rigido',
+      nota: 'Na Sexta-feira da Paixão não se celebra a Missa: não há prefácio nem Oração Eucarística.' });
+    return def(dias === -3 ? ['euc1'] : ['pas1'], 'rigido');
+  }
+  const proprio = PREF_PROPRIOS.find(([re]) => re.test(t));
+  const pas = idsEuc('pas', 5), nat = idsEuc('nat', 3), qua = idsEuc('qua', 4);
+  if (proprio) return def(proprio[1], SOLENIDADES_EUC.test(t) || (dom && tempo !== 'Comum') ? 'rigido' : 'aviso');
+  if (/Semana Santa/.test(tt)) return def(['pai2'], 'rigido');
+  if (dias >= 0 && dias <= 7) return def(['pas1'], 'rigido', 'Na oitava da Páscoa usa-se o Prefácio da Páscoa I.');
+  if ((m === 12 && dia >= 26) || (m === 1 && dia === 1)) return def(nat, 'aviso', 'Na oitava do Natal usa-se o prefácio do Natal, também nas festas dos santos.');
+
+  // prefácios do tempo
+  let doTempo = [], modoTempo = dom ? 'rigido' : 'aviso', nota = '';
+  const n = parseInt(tt, 10) || 0;
+  if (tempo === 'Advento') {
+    doTempo = m === 12 && dia >= 17 ? ['adv2'] : ['adv1'];
+    nota = m === 12 && dia >= 17 ? 'De 17 a 24 de dezembro: Advento II.' : 'Até 16 de dezembro: Advento I.';
+  } else if (tempo === 'Natal') {
+    const epi = new Date(d.getFullYear(), 0, 2); epi.setDate(2 + (7 - epi.getDay()) % 7);
+    doTempo = m === 1 && d > epi ? ['epif', ...nat] : nat;
+  } else if (tempo === 'Quaresma') {
+    if (/Quarta-feira de Cinzas/.test(tt)) return def(['qua3', 'qua4'], 'rigido');
+    if (dom && n >= 3 && n <= 5) {
+      const ev = ['a samaritana', 'o cego de nascença', 'Lázaro'][n - 3];
+      return def(lit.ciclo === 'A' ? [`qd${n}`, 'qua1', 'qua2'] : ['qua1', 'qua2', `qd${n}`], 'rigido',
+        `O prefácio próprio deste domingo (${ev}) acompanha o Evangelho do Ano A. ` + (lit.ciclo === 'A'
+          ? 'Neste ano (A) é o indicado.' : `No Ano ${lit.ciclo}, use-o só se forem lidas as leituras do Ano A; senão, Quaresma I ou II.`));
+    }
+    if (dom && n >= 1 && n <= 2) return def([`qd${n}`], 'rigido');
+    doTempo = n === 5 ? ['pai1', ...qua] : qua;
+    if (n === 5) nota = 'Na 5ª semana da Quaresma: de preferência, Paixão do Senhor I.';
+  } else if (tempo === 'Páscoa') {
+    doTempo = dias > 42 ? ['asc1', 'asc2', ...pas] : pas;
+  } else {                                          // Tempo Comum
+    r.fixasOk = !lit.padroeiro && lit.santo !== 'Festa';
+    doTempo = dom ? idsEuc('tc', 10) : idsEuc('com', 6);
+    modoTempo = dom ? 'aviso' : 'livre';
+  }
+  // santo do dia (festa, memória) ou padroeiro da comunidade (solenidade)
+  if (lit.santo && (!dom || lit.padroeiro)) {
+    const ps = prefsDoSanto(t) || doTempo;
+    if (lit.padroeiro) return def(ps, 'rigido', 'Solenidade do padroeiro da comunidade.');
+    if (lit.santo === 'Festa') return def(ps, 'aviso');
+    return def([...new Set([...ps, ...doTempo])], tempo === 'Comum' ? 'livre' : 'aviso', 'Memória: prefácio do santo ou do tempo.');
+  }
+  return def(doTempo, modoTempo, nota);
+}
+
+function regraDoRoteiro(r = S.roteiro) {
+  const inf = r ? infoRoteiro(r) : null;
+  return regraEuc(inf?.data || new Date(), inf?.localId ? localDe(inf.localId)?.padroeiro : null);
+}
+const nomesPrefsRegra = regra => regra.prefs.map(nomeEuc).join(' ou ');
+
+// O prefácio a usar com uma oração, no dia: o próprio (oração de prefácio fixo), o da OE II nos dias comuns,
+// ou o 1º do dia que já tem texto cadastrado
+function prefacioDoDia(oe, regra) {
+  if (!oe) return null;
+  if (oe.pref !== 'livre') return oe.proprio || null;
+  if (oe.proprio && regra.fixasOk && regra.modo === 'livre') return oe.proprio;
+  return regra.prefs.find(temTexto) || regra.prefs[0] || oe.proprio || null;
+}
+
+// Confere oração + prefácio no dia: { nivel: 'ok' | 'aviso' | 'bloq', msg }
+function checarEuc(oeId, prefId, regra = regraDoRoteiro()) {
+  const oe = oeDe(oeId), forte = regra.modo === 'rigido' ? 'bloq' : 'aviso';
+  if (regra.semMissa) return { nivel: 'bloq', msg: regra.nota };
+  if (oe && prefId) {
+    if (oe.pref === 'fixo' && prefId !== oe.proprio)
+      return { nivel: 'bloq', msg: `A ${oe.nome} tem prefácio próprio, que faz parte da oração e não se troca.` };
+    if (oe.pref === 'fixo-flex' && prefId !== oe.proprio && !/quaresma/i.test(prefDe(prefId)?.grupo || ''))
+      return { nivel: 'bloq', msg: `A ${oe.nome} usa o prefácio próprio ou um prefácio de tema penitencial (Quaresma).` };
+  }
+  if (oe && oe.pref !== 'livre' && !regra.fixasOk && !(oe.pref === 'fixo-flex' && regra.tempo === 'Quaresma'))
+    return { nivel: forte, msg: `A ${oe.nome} tem prefácio próprio e por isso não se usa neste dia (${regra.titulo}), que tem prefácio do dia (${nomesPrefsRegra(regra)}). Use a Oração Eucarística I, II ou III.` };
+  if (prefId && regra.modo !== 'livre' && !regra.prefs.includes(prefId) && !(oe && oe.pref !== 'livre' && prefId === oe.proprio)) {
+    if (prefId.startsWith('x-')) return { nivel: 'aviso', msg: `Confira: neste dia (${regra.titulo}) o prefácio indicado é ${nomesPrefsRegra(regra)}.` };
+    return { nivel: forte, msg: `Neste dia (${regra.titulo}) o prefácio é:${nomesPrefsRegra(regra)}.` };
+  }
+  return { nivel: 'ok', msg: '' };
+}
+
+// Pergunta/impede conforme o nível; true = pode seguir
+function confirmarEuc(oeId, prefId, regra = regraDoRoteiro()) {
+  const c = checarEuc(oeId, prefId, regra);
+  if (c.nivel === 'bloq') {
+    alert('⛔ ' + c.msg + (regra.semMissa ? '' : '\n\nSe a data do roteiro estiver errada, ou se a celebração foi transferida na sua comunidade, corrija a data do roteiro.'));
+    return false;
+  }
+  if (c.nivel === 'aviso') return confirm('⚠ ' + c.msg + '\n\nUsar mesmo assim? (por exemplo, numa Missa votiva, de exéquias ou de casamento)');
+  return true;
+}
+
+// Troca no cabeçalho do item do roteiro (select de prefácio ou de oração): confere com o outro item e com o dia.
+// Oração de prefácio fixo leva o prefácio dela junto; voltar para uma oração livre traz o prefácio do dia.
+function validarTrocaEuc(it, campo, valor) {
+  if (!S.roteiro || !S.roteiro.itens.includes(it)) return true;
+  const regra = regraDoRoteiro();
+  const itPref = S.roteiro.itens.find(i => i.tipo === 'prefacio'), itOE = S.roteiro.itens.find(i => i.tipo === 'eucaristica');
+  const oeId = campo === 'oeId' ? valor : itOE?.oeId;
+  let prefId = campo === 'prefId' ? valor : itPref?.prefId;
+  const oe = oeDe(oeId);
+  if (campo === 'oeId' && oe && itPref) {
+    if (oe.pref !== 'livre') prefId = oe.proprio;
+    else if (OES.some(o => o.pref !== 'livre' && o.proprio === prefId)) prefId = prefacioDoDia(oe, regra);
+  }
+  if (!confirmarEuc(oeId, prefId, regra)) return false;
+  if (campo === 'oeId' && itPref && prefId !== itPref.prefId) { itPref.prefId = prefId; toast(`Prefácio trocado junto: ${nomeEuc(prefId)}.`); }
+  return true;
 }
 
 // ---------- Captura automática pelos folhetos ----------
@@ -227,12 +376,14 @@ function mostrarEucaristia(sim) {
   if (S.modoEuc) renderEucaristia();
 }
 
-function linhaEuc(item, tipo, sel) {
+function linhaEuc(item, tipo, sel, chk = null) {
   const tem = temTexto(item.id);
   const regra = tipo === 'oe' ? ({ livre: 'prefácio à escolha', fixo: 'prefácio próprio', 'fixo-flex': 'próprio ou penitencial' }[item.pref]) : '';
-  return `<div class="euc-it ${sel ? 'sel' : ''}" data-${tipo}="${item.id}" title="${esc(item.obs || '')}">
+  const hoje = chk && chk.nivel !== 'ok' ? chk : null;
+  return `<div class="euc-it ${sel ? 'sel' : ''} ${hoje ? 'euc-' + hoje.nivel : ''}" data-${tipo}="${item.id}" title="${esc(hoje?.msg || item.obs || '')}">
     <span class="euc-status ${tem ? 'ok' : ''}" title="${tem ? 'Texto cadastrado' : 'Texto ainda não cadastrado'}">${tem ? '✓' : '—'}</span>
     <span class="tit">${esc(item.nome)}</span>
+    ${hoje ? `<span class="tag euc-tag-${hoje.nivel}">${hoje.nivel === 'bloq' ? '⛔ não hoje' : '⚠ confira'}</span>` : ''}
     ${regra ? `<span class="tag">${regra}</span>` : ''}
     <button data-euc-editar="${item.id}" title="${tem ? 'Ver / editar o texto' : 'Colar o texto'}">✎</button>
   </div>`;
@@ -242,14 +393,22 @@ function renderEucaristia() {
   const el = $('#painelEucaristia');
   if (!S.modoEuc) return;
   const oes = listaOEs(), oe = oeDe(Euc.sel.oe) || oes[0];
-  const permitidos = prefaciosPermitidos(oe);
+  const regra = regraDoRoteiro();
+  // dia rígido (domingo de tempo forte, solenidade…): com oração de prefácio à escolha, só aparecem os prefácios do dia
+  const todos = prefaciosPermitidos(oe);
+  const permitidos = regra.modo === 'rigido' && oe.pref === 'livre' && regra.prefs.length
+    ? todos.filter(p => regra.prefs.includes(p.id) || p.extra) : todos;
   if (Euc.sel.pref && !permitidos.some(p => p.id === Euc.sel.pref)) Euc.sel.pref = null;
-  if (!Euc.sel.pref && oe.pref !== 'livre') Euc.sel.pref = oe.proprio || null;
+  if (!Euc.sel.pref) Euc.sel.pref = prefacioDoDia(oe, regra);
   const termo = semAcento(Euc.filtro);
   const filtrados = permitidos.filter(p => !termo || semAcento(`${p.nome} ${p.grupo}`).includes(termo));
-  const sug = gruposSugeridos();
-  const sugeridos = filtrados.filter(p => sug.grupos.includes(p.grupo));
+  const sugeridos = regra.prefs.map(id => filtrados.find(p => p.id === id)).filter(Boolean);
   const grupos = [...new Set(filtrados.map(p => p.grupo))];
+  const rotModo = { rigido: 'só estes podem ser usados', aviso: 'outro, só em Missa votiva, de exéquias etc.', livre: 'sugestão; pode ser outro' }[regra.modo];
+  const caixaRegra = `<div class="euc-regra euc-regra-${regra.modo}">📅 <b>${esc(regra.titulo)}</b>${regra.semMissa ? '' : ` · prefácio do dia: <b>${esc(nomesPrefsRegra(regra))}</b> <span class="sutil">(${rotModo})</span>`}
+      ${regra.nota ? `<br>${esc(regra.nota)}` : ''}${regra.notaOE1 ? `<br>${esc(regra.notaOE1)}` : ''}
+      ${regra.fixasOk ? '' : '<br><span class="sutil">Hoje não se usam as orações de prefácio fixo (IV, V e Diversas Circunstâncias).</span>'}</div>`;
+  const chkOE = Object.fromEntries(oes.map(o => [o.id, checarEuc(o.id, null, regra)]));
   const total = oes.length + listaPrefacios().length;
   const comTexto = [...oes, ...listaPrefacios()].filter(x => temTexto(x.id)).length;
 
@@ -264,18 +423,20 @@ function renderEucaristia() {
     </div>
     <p class="sutil pequeno euc-ajuda">Os textos entram sozinhos quando um <b>folheto</b> traz a oração e o prefácio do dia. Os que faltarem (—), clique em ✎ e cole do Missal.
       No texto, linha em branco separa os slides e linha começando com <b>—</b> é resposta do povo.</p>
+    ${caixaRegra}
     <div class="euc-grade">
       <section class="euc-col">
         <div class="euc-tit">1. Oração Eucarística</div>
-        <div class="euc-lista">${oes.map(o => linhaEuc(o, 'oe', o.id === oe.id)).join('')}</div>
+        <div class="euc-lista">${oes.map(o => linhaEuc(o, 'oe', o.id === oe.id, chkOE[o.id])).join('')}</div>
         ${oe.obs ? `<p class="euc-nota">ℹ ${esc(oe.obs)}</p>` : ''}
       </section>
       <section class="euc-col">
         <div class="euc-tit">2. Prefácio <span class="sutil">(${permitidos.length} possível(is) com esta oração)</span></div>
         ${oe.pref === 'fixo' ? '' : `<input type="search" id="eucFiltro" placeholder="Buscar prefácio…" value="${esc(Euc.filtro)}">`}
         <div class="euc-lista">
-          ${sugeridos.length && !termo ? `<div class="grupo-ord euc-sug">Sugeridos para ${esc(sug.titulo)}</div>${sugeridos.map(p => linhaEuc(p, 'pref', p.id === Euc.sel.pref)).join('')}` : ''}
-          ${grupos.map(g => `<div class="grupo-ord">${esc(g)}</div>${filtrados.filter(p => p.grupo === g).map(p => linhaEuc(p, 'pref', p.id === Euc.sel.pref)).join('')}`).join('')}
+          ${sugeridos.length && !termo ? `<div class="grupo-ord euc-sug">Do dia: ${esc(regra.titulo)}</div>${sugeridos.map(p => linhaEuc(p, 'pref', p.id === Euc.sel.pref)).join('')}` : ''}
+          ${regra.modo === 'rigido' && permitidos.length < todos.length ? `<p class="euc-nota">Os outros prefácios não podem ser usados neste dia.</p>` : ''}
+          ${(regra.modo === 'rigido' && oe.pref === 'livre' && !termo ? grupos.filter(g => filtrados.some(p => p.grupo === g && p.extra)) : grupos).map(g => `<div class="grupo-ord">${esc(g)}</div>${filtrados.filter(p => p.grupo === g).map(p => linhaEuc(p, 'pref', p.id === Euc.sel.pref)).join('')}`).join('')}
         </div>
       </section>
     </div>
@@ -310,7 +471,9 @@ function inserirEucaristia(itens, oeId, prefId) {
 }
 
 function adicionarEucaristiaAoRoteiro() {
+  if (!S.roteiro) return toast('Abra um roteiro primeiro.');
   const itens = S.roteiro.itens, oe = oeDe(Euc.sel.oe), pref = Euc.sel.pref;
+  if (!confirmarEuc(oe.id, pref)) return;
   if (itens.some(i => i.tipo === 'texto' && /ora[cç][aã]o eucar[ií]stica/i.test(i.titulo || ''))
     && !confirm('Este roteiro já tem a Oração Eucarística do folheto. Adicionar esta também?')) return;
   const { trocou, removidos } = inserirEucaristia(itens, oe.id, pref);
@@ -400,7 +563,12 @@ function ligarEucaristia() {
     const ed = e.target.closest('[data-euc-editar]');
     if (ed) return abrirEditorEuc(ed.dataset.eucEditar);
     const o = e.target.closest('[data-oe]');
-    if (o) { Euc.sel.oe = o.dataset.oe; Euc.sel.pref = null; return renderEucaristia(); }
+    if (o) {
+      const c = checarEuc(o.dataset.oe, null);
+      if (c.nivel === 'bloq') return toast('⛔ ' + c.msg);
+      if (c.nivel === 'aviso') toast('⚠ ' + c.msg);
+      Euc.sel.oe = o.dataset.oe; Euc.sel.pref = null; return renderEucaristia();
+    }
     const p = e.target.closest('[data-pref]');
     if (p) { Euc.sel.pref = p.dataset.pref; return renderEucaristia(); }
     const ver = e.target.closest('[data-euc-ver]');

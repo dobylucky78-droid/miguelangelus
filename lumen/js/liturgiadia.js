@@ -213,7 +213,7 @@ function comOracoesDoDia(itens, ora, temAntEntrada) {
 const liturgiaSolene = (r, d) => d.getDay() === 0 || !!r.creio || r.leituras.some(l => l.nome === 'Segunda Leitura');
 
 // Itens do roteiro montados com os textos da liturgia ("domingo" = modelo dominical/solenidade)
-function itensDaLiturgia(r, domingo, comOE2, ora) {
+function itensDaLiturgia(r, domingo, comOE2, ora, d = new Date()) {
   const itens = Ordinario.modelos[domingo ? 'dominical' : 'semanal'].map(x => ({ id: uid(), ...structuredClone(x) }));
   const achar = f => itens.findIndex(f);
   // Glória e Creio conforme a página (ex.: festas na semana)
@@ -255,7 +255,11 @@ function itensDaLiturgia(r, domingo, comOE2, ora) {
     const item = aclamacaoRezada({ refrao: r.aclamacao.refrao, texto: r.aclamacao.verso });
     if (s >= 0) itens[s] = item;
   }
-  if (comOE2) inserirEucaristia(itens, 'oe2', 'p-oe2');
+  // (1.9.13) Oração Eucarística II nos dias de semana, III nos domingos e solenidades, com o prefácio do dia (regras do Missal)
+  if (comOE2) {
+    const regra = regraEuc(d), oe = domingo ? 'oe3' : 'oe2';
+    if (!regra.semMissa) inserirEucaristia(itens, oe, prefacioDoDia(oeDe(oe), regra));
+  }
   return comOracoesDoDia(itens, ora, !!r.antifona);
 }
 
@@ -459,13 +463,13 @@ async function montarRoteirosDaLiturgia() {
   if (!LitDia.ocs.length) {
     const rot = novoRoteiro(`${DIAS_CURTOS[d.getDay()]} ${dataCurta(d)} — ${cap1(r.titulo)}`);
     rot.data = isoData(d);
-    rot.itens = itensDaLiturgia(r, domingo, comOE2, ora);
+    rot.itens = itensDaLiturgia(r, domingo, comOE2, ora, d);
     marcarLiturgia(rot, r);
     S.roteiros.push(rot); await DB.salvar('roteiros', rot);
     primeiro = rot; n = 1;
   }
   for (const o of marcadas) {
-    const itens = itensDaLiturgia(r, domingo, comOE2, ora);
+    const itens = itensDaLiturgia(r, domingo, comOE2, ora, d);
     let rot = roteiroDaCelebracao(o);
     if (rot) { rot.itens = manterBoasVindas(rot.itens, itens); rot.atualizado = Date.now(); }   // (1.9.6) o vídeo de boas-vindas fica
     else rot = await criarRoteiroDaCelebracao(o, itens);
@@ -474,8 +478,9 @@ async function montarRoteirosDaLiturgia() {
     primeiro ||= rot; n++;
   }
   if (primeiro) { trocarRoteiro(primeiro); mostrarAba('roteiros'); }
-  const faltaOE = comOE2 && (!temTexto('oe2') || !temTexto('p-oe2'));
-  toast(`${n} roteiro(s) montado(s) com a liturgia de ${dataCurta(d)}.` + (faltaOE ? ' Cadastre o texto da Oração Eucarística II no catálogo (✝).' : ''));
+  const ro = primeiro?.itens || [], itOE = ro.find(i => i.tipo === 'eucaristica'), itPref = ro.find(i => i.tipo === 'prefacio');
+  const faltam = comOE2 ? [itPref?.prefId, itOE?.oeId].filter(id => id && !temTexto(id)).map(nomeEuc) : [];
+  toast(`${n} roteiro(s) montado(s) com a liturgia de ${dataCurta(d)}.` + (faltam.length ? ` Cadastre no catálogo (✝) o texto de: ${faltam.join(' e ')}.` : ''));
 }
 
 // Título em CAIXA ALTA (Paulus) vira "Só a primeira maiúscula"; o da API já vem escrito normalmente

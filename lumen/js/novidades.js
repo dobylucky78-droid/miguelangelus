@@ -5,6 +5,11 @@
  * A versão mais nova fica em cima. Ao gerar uma versão nova, acrescente a entrada dela aqui.
  */
 const NOVIDADES = [
+  { versao: '1.9.13', data: '2026-11-19', itens: [
+    '✝ Prefácio e Oração Eucarística pelas regras do Missal (ideia do Luciano, da Paróquia Santa Marina): o catálogo (✝) mostra, para a data do roteiro, qual é o prefácio do dia. Ex.: Advento I até 16/12 e Advento II de 17 a 24/12, os domingos da Quaresma, a oitava da Páscoa, as solenidades, os santos. Ele já vem escolhido.',
+    '⛔ Combinações que não podem são barradas, no catálogo e na troca pelo roteiro. Ex.: Oração Eucarística IV (e as outras de prefácio fixo) num dia com prefácio próprio, ou outro prefácio num domingo do Advento. Nos dias de semana dos tempos fortes e nas festas, o programa só pergunta, porque pode ser uma Missa votiva ou de exéquias. Trocar para a Oração IV leva o prefácio dela junto.',
+    '📖 Liturgia do dia: a opção "Incluir a Oração Eucarística" agora põe a II nos dias de semana e a III nos domingos e solenidades, sempre com o prefácio do dia (antes era sempre a II com o prefácio dela).',
+  ] },
   { versao: '1.9.12', data: '2026-11-19', itens: [
     '🕯 Intenções da Secretaria no roteiro: se a paróquia ligar, na Secretaria, a chave "Intenções no MiguelAngelus" (vem desligada), o item "Intenções da Missa" ganha o botão "🕯 Trazer da Secretaria", que preenche as intenções lançadas para aquela Missa, um slide por tipo (falecidos, ação de graças, saúde…). Vêm só o tipo e a intenção: quem pediu, telefone e oferta ficam na Secretaria.',
     '☁ Sincronização: um item apagado, que voltou a existir e foi apagado de novo, agora também some dos outros computadores.',

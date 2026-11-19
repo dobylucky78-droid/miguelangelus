@@ -635,6 +635,13 @@ big.m-g { font-size: 1.3em; } big.m-gg { font-size: 1.7em; } small.m-pq { font-s
 .euc-status.ok { color: var(--ok); }
 .euc-sug { color: var(--acento-claro); }
 .euc-nota { margin: 0; font-size: 12.5px; color: #f0c75e; }
+/* (1.9.13) regras do dia */
+.euc-regra { margin: 8px 0; padding: 8px 12px; border-radius: 8px; font-size: 13px; line-height: 1.45; background: var(--painel2); border-left: 4px solid var(--acento); }
+.euc-regra-rigido { border-left-color: #c62828; }
+.euc-regra-aviso { border-left-color: #f0a030; }
+.euc-it.euc-bloq { opacity: .45; cursor: not-allowed; }
+.euc-it .euc-tag-bloq { background: #c62828; color: #fff; }
+.euc-it .euc-tag-aviso { background: #f0a030; color: #222; }
 .euc-barra { display: flex; align-items: center; gap: 8px; background: var(--painel); border: 1px solid var(--borda); border-radius: 10px; padding: 10px 12px; flex-wrap: wrap; }
 #dlgTextoEuc { width: min(820px, 94vw); }
 #dlgLiturgia { width: min(760px, 94vw); }

@@ -2997,6 +2997,11 @@ function ligarEventos() {
       if (S.atual.rIdx >= 0) { salvarRoteiro(); renderRoteiroLista(); }
       atualizarSlides(); return renderCabecalho();
     }
+    // (1.9.13) prefácio / oração eucarística: confere com as regras do dia e com o outro item (eucaristia.js)
+    if ((campo === 'prefId' || campo === 'oeId') && typeof validarTrocaEuc === 'function' && !validarTrocaEuc(it, campo, e.target.value)) {
+      e.target.value = it[campo] || '';
+      return;
+    }
     it[campo] = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
     if (campo === 'cantoId' || campo === 'momento') { BuscaCanto.item = null; BuscaCanto.termo = ''; }      // escolheu: a busca limpa
     if (it.tipo === 'terco') aoMudarTerco(it, campo);
