@@ -156,7 +156,8 @@ window.addEventListener('message', e => {
   if (!m || m.app !== 'lumen') return;
   if (m.tipo === 'ola') {
     if (m.mini) { Minis.set(e.source, m.mini); return atualizarMini(e.source); }
-    if (m.preview) return enviarEstado(e.source);
+    // a prévia abriu (primeiro) ou voltou a aparecer; editando um texto, ela mostra o slide em edição e não muda
+    if (m.preview) { if (m.primeiro || Edicao.i < 0) enviarEstado(e.source); return; }
     const nova = S.projWin !== e.source;
     S.projWin = e.source;
     if (nova || m.primeiro) {

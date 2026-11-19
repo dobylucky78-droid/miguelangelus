@@ -535,7 +535,8 @@ function campanhasDoItem(it) {
 
 function slideDaCampanha(c) {
   const k = chaveImgCamp(c);
-  if (Camp.imgs[k]) return { img: Camp.imgs[k], layout: 'so', escurecer: 0, texto: '', rodape: '' };
+  // (1.9.9) semCantos: o telão tira o brasão/logos/padroeiro dos cantos, para não cobrir a arte da campanha
+  if (Camp.imgs[k]) return { img: Camp.imgs[k], layout: 'so', escurecer: 0, texto: '', rodape: '', semCantos: true };
   if (!Camp.gerando[k]) {
     Camp.gerando[k] = imagemCampanha(c).then(url => {
       Camp.imgs[k] = url;
@@ -549,7 +550,7 @@ function slideDaCampanha(c) {
       }
     }).catch(() => { delete Camp.gerando[k]; });
   }
-  return { texto: `${c.titulo}\n${andamentoTexto(c, !!c.mostrarValores)}`, rodape: 'Campanha' };
+  return { texto: `${c.titulo}\n${andamentoTexto(c, !!c.mostrarValores)}`, rodape: 'Campanha', semCantos: true };
 }
 
 function slidesCampanhas(item) { return campanhasDoItem(item).map(slideDaCampanha); }

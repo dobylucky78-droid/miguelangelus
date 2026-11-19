@@ -26,7 +26,8 @@ function eventosDoItem(it) {
 // o slide de um evento: a imagem pronta; enquanto ela é montada (1 a 2 s), o título e a data
 function slideDoEvento(e) {
   const k = chaveImgEvento(e);
-  if (EvMA.imgs[k]) return { img: EvMA.imgs[k], layout: 'so', escurecer: 0, texto: '', rodape: '' };
+  // (1.9.9) semCantos: o telão tira o brasão/logos/padroeiro dos cantos, para não cobrir a arte do evento
+  if (EvMA.imgs[k]) return { img: EvMA.imgs[k], layout: 'so', escurecer: 0, texto: '', rodape: '', semCantos: true };
   if (!EvMA.gerando[k]) {
     EvMA.gerando[k] = imagemEvento(e).then(url => {
       EvMA.imgs[k] = url;
@@ -41,7 +42,7 @@ function slideDoEvento(e) {
       }
     }).catch(() => { delete EvMA.gerando[k]; });
   }
-  return { texto: `${e.titulo}\n${quandoEvento(e)}`, rodape: 'Evento' };
+  return { texto: `${e.titulo}\n${quandoEvento(e)}`, rodape: 'Evento', semCantos: true };
 }
 
 // slides do item "evento" (app.js → gerarSlidesBase)

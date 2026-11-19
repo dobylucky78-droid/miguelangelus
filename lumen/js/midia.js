@@ -653,6 +653,10 @@ function receberStatusMidia(m) {
   const mv = midiaPorId(v.id); if (mv?.pasta && m.dur && !mv.duracao) mv.duracao = m.dur;   // arquivos da pasta: duração só ao tocar
   if (v.ativo && !m.ativo) {                     // terminou ou foi tirado da tela por um slide
     v.ativo = false;
+    // (1.9.9) a prévia muda pode estar atrasada ou parada (o Chromium pausa vídeo sem som com a janela escondida):
+    // o telão acabou, então a camada do vídeo sai da prévia também — senão ela cobre os eventos/campanhas que vêm depois
+    const pv = $('#preview')?.contentWindow;
+    if (pv && !m.preview) enviar({ tipo: 'midia', acao: 'parar', id: v.id }, [pv]);
     // terminou sozinho: o item do vídeo ainda é o que está no ar (um slide ou Limpar já teriam trocado S.live)
     const acabou = S.live.item?.tipo === 'midia' && midiaDe(S.live.item)?.id === v.id ? S.live.item : null;
     if (S.live.item?.tipo === 'midia') S.live.item = null;
@@ -665,7 +669,8 @@ function receberStatusMidia(m) {
 // Quando a projeção abre (ou reabre) no meio de um vídeo
 function enviarEstadoMidia(w) {
   const v = Midia.video;
-  if (!v.ativo) return;
+  // (1.9.9) com um slide no ar o vídeo já saiu do telão (o grupo pode ter passado para os eventos): não põe de volta
+  if (!v.ativo || S.live.slide) return;
   const m = midiaPorId(v.id);
   if (m) enviar({ tipo: 'midia', acao: 'carregar', id: m.id, blob: m.blob || null, url: m.url || null, loop: v.loop, volume: volumeMidia(), t: v.t, tocar: !v.pausado }, [w]);
 }

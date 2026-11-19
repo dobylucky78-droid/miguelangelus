@@ -19,6 +19,8 @@
   #terco-ie { bottom: 1.5vh; left: 1.5vw; height: 34vh; max-width: 22vw; object-position: left bottom; }
   #terco-id { bottom: 1.5vh; right: 1.5vw; height: 36vh; max-width: 22vw; object-position: right bottom; }
   body.terco #canto-ie, body.terco #canto-id { display: none !important; }
+  /* (1.9.9) slides de evento e de campanha: a arte já vem pronta, sem as imagens dos cantos por cima */
+  body.sem-cantos .canto { display: none !important; }
   body.terco #texto .contas { display: none; }     /* a dezena já aparece no desenho do terço */
   #area { position: fixed; inset: 5vh 5vw 12vh; display: flex; align-items: center; justify-content: center; }
   /* Slide com imagem (item "Imagem + texto") */
@@ -484,7 +486,8 @@ function harmonizar(lay) {
   const cx = pixOn ? { area: [.04, topoTexto, .96, .975] }
     : CAIXAS[lay] || { area: areaUtil() };     // texto comum (e imagem de fundo): também desvia dos cantos
   const W = innerWidth, H = innerHeight, folga = H * .02;
-  const cantos = [...document.querySelectorAll('.canto.on')].filter(c => c.naturalWidth).map(rectVisivel);
+  const cantos = document.body.classList.contains('sem-cantos') ? []
+    : [...document.querySelectorAll('.canto.on')].filter(c => c.naturalWidth).map(rectVisivel);
   const encaixar = (fr, encolher) => {
     let [l, t, r, b] = [fr[0] * W, fr[1] * H, fr[2] * W, fr[3] * H];
     if (encolher) { const dx = (r - l) * encolher, dy = (b - t) * encolher; l += dx; r -= dx; t += dy; b -= dy; }
@@ -579,6 +582,7 @@ function desenharTerco() {
 }
 
 function desenhar() {  aplicarFundo();
+  document.body.classList.toggle('sem-cantos', !!slide?.semCantos);     // (1.9.9) evento / campanha
   desenharTerco();
   desenharImagem();
   desenharAvisos();
@@ -706,7 +710,8 @@ function status(forcar) {
   } catch (_) {}
 }
 ['timeupdate', 'play', 'pause', 'loadedmetadata', 'seeked'].forEach(ev => video.addEventListener(ev, () => status(ev !== 'timeupdate')));
-video.addEventListener('ended', () => { if (!video.loop) sumirDevagar(video, () => { video.classList.remove('on'); status(true); }); });
+// (1.9.9) só o vídeo que está na tela: um que já saiu (e o Chromium retomou sozinho ao reaparecer a janela) não avisa "acabou"
+video.addEventListener('ended', () => { if (!video.loop && video.classList.contains('on')) sumirDevagar(video, () => { video.classList.remove('on'); status(true); }); });
 // Formato de imagem que o motor não decodifica (ex.: MPEG-4 Parte 2/"mp4v", Xvid): toca só o som. Avisa o operador.
 video.addEventListener('loadedmetadata', () => {
   if (video.videoWidth || PREVIEW || !alvo || alvo === window) return;
@@ -844,6 +849,9 @@ function ola(primeiro) {
   if (alvo && alvo !== window) try { alvo.postMessage({ app: 'lumen', tipo: 'ola', preview: PREVIEW, mini: MINI, primeiro }, '*'); } catch (_) {}
 }
 ola(true);
+// (1.9.9) a prévia ao vivo volta a ficar visível (janela do operador minimizada ou coberta pelo telão): enquanto
+// estava escondida o Chromium pausou o vídeo mudo e segurou as transições — pede o estado de agora ao painel
+if (PREVIEW && !MINI) document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') ola(false); });
 
 if (!PREVIEW) {
   setInterval(() => ola(false), 2000);

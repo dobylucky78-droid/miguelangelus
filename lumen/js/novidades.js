@@ -5,6 +5,10 @@
  * A versão mais nova fica em cima. Ao gerar uma versão nova, acrescente a entrada dela aqui.
  */
 const NOVIDADES = [
+  { versao: '1.9.9', data: '2026-11-19', itens: [
+    '🎉 Eventos e campanhas com a tela limpa: enquanto o slide de um evento ou de uma campanha está no telão (no item do evento, no "Apresentar eventos", no "💝 Campanhas" ou dentro dos Avisos), as imagens dos 4 cantos (brasão, logos, padroeiro) saem, para não cobrir a arte. No slide seguinte elas voltam sozinhas.',
+    '🖥 Prévia ao vivo depois de um vídeo: com a janela do programa minimizada ou coberta pelo telão, a prévia podia continuar mostrando o vídeo que já tinha acabado por cima dos eventos e campanhas seguintes. Agora ela tira o vídeo junto com o telão e, ao reaparecer, se atualiza com o que está no ar.',
+  ] },
   { versao: '1.9.8', data: '2026-11-18', itens: [
     '💠 Para quem vai o Pix: em Ajustes → 💠 Pix, embaixo do QR code, o programa mostra o recebedor que está dentro do próprio QR (nome, cidade e chave). Ao escolher um QR novo, ele pergunta "Este QR code manda o Pix para: … É isso mesmo?" antes de guardar. Um QR trocado ou errado aparece na hora com outro nome. O recebedor aparece também ao passar o mouse no botão 💠 Pix. Tudo é lido no próprio computador, sem internet.',
   ] },
