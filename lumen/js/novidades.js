@@ -5,6 +5,11 @@
  * A versão mais nova fica em cima. Ao gerar uma versão nova, acrescente a entrada dela aqui.
  */
 const NOVIDADES = [
+  { versao: '1.9.10', data: '2026-11-19', itens: [
+    '🔁 Ligar e desligar o conjunto que repete: ao passar o mouse num conjunto do roteiro (vídeos, "Apresentar eventos" e "Campanhas" seguidos, que repetem), aparece uma chavinha ao lado das setas. Ligada (como até hoje), a linha azul envolve os itens e eles passam sozinhos, um depois do outro. Desligada, a linha fica cinza (✋) e a passagem para o item seguinte é manual; cada item continua repetindo sozinho.',
+    '⛔ Escolher quem entra no conjunto: Ctrl+clique num item que repete tira ele do conjunto (ou põe de volta). Ex.: o vídeo de boas-vindas fica de fora e só os eventos e as campanhas passam em volta. O item de fora continua repetindo sozinho e aparece com ⛔ e uma linha tracejada.',
+    '🎬 Vídeo de boas-vindas que já repete: em Agenda → Paróquia e comunidades, ao editar a igreja, a caixinha "🔁 Repetir automaticamente" faz o vídeo já entrar nos roteiros novos com "Repetir" ligado.',
+  ] },
   { versao: '1.9.9', data: '2026-11-19', itens: [
     '🎉 Eventos e campanhas com a tela limpa: enquanto o slide de um evento ou de uma campanha está no telão (no item do evento, no "Apresentar eventos", no "💝 Campanhas" ou dentro dos Avisos), as imagens dos 4 cantos (brasão, logos, padroeiro) saem, para não cobrir a arte. No slide seguinte elas voltam sozinhas.',
     '🖥 Prévia ao vivo depois de um vídeo: com a janela do programa minimizada ou coberta pelo telão, a prévia podia continuar mostrando o vídeo que já tinha acabado por cima dos eventos e campanhas seguintes. Agora ela tira o vídeo junto com o telão e, ao reaparecer, se atualiza com o que está no ar.',

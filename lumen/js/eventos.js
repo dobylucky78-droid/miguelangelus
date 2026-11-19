@@ -338,7 +338,8 @@ function pararAudioShow() {
 // "Apresentar eventos" com ↻) formam um grupo. Cada um passa uma vez e chama o seguinte; depois do último
 // volta ao primeiro. Um item marcado sozinho continua repetindo só ele, como antes.
 // ======================================================================
-function repeteNoGrupo(it) {
+// o item repete sozinho (Repetir / ↻ ligado), dentro ou fora de conjunto
+function podeRepetir(it) {
   if (!it) return false;
   if (it.tipo === 'eventos') return !!it.repetir && eventosDoItem(it).length > 0;
   if (it.tipo === 'campanhas') return !!it.repetir && campanhasDoItem(it).length > 0;
@@ -346,8 +347,22 @@ function repeteNoGrupo(it) {
   return false;
 }
 
-// grupo (2 itens ou mais) em que o item está; [] se está fora de grupo
-function grupoLoop(it) {
+// (1.9.10) Ctrl+clique no roteiro tira o item do conjunto (ou põe de volta): ele continua repetindo sozinho, mas não
+// entra na passagem automática com os vizinhos. Ex.: vídeo de boas-vindas fora; só eventos e campanhas em volta.
+function alternarForaDoConjunto(it) {
+  if (!podeRepetir(it)) {
+    toast('🔁 Para entrar num conjunto, o item precisa estar repetindo: "Repetir" no vídeo ou ↻ nos eventos e campanhas.');
+    return false;
+  }
+  if (it.foraDoConjunto) { delete it.foraDoConjunto; toast(`🔁 "${nomeItemGrupo(it)}" voltou para o conjunto.`); }
+  else { it.foraDoConjunto = true; toast(`⛔ "${nomeItemGrupo(it)}" saiu do conjunto: repete sozinho; para ir ao item seguinte, é manual. Ctrl+clique de novo para pôr de volta.`); }
+  return true;
+}
+
+const repeteNoGrupo = it => !!it && !it.foraDoConjunto && podeRepetir(it);
+
+// o conjunto inteiro (2 itens ou mais) em que o item está, ligado ou desligado; [] se está fora de conjunto
+function conjuntoDoItem(it) {
   const itens = S.roteiro?.itens || [], i = itens.indexOf(it);
   if (i < 0 || !repeteNoGrupo(it)) return [];
   let a = i, b = i;
@@ -356,14 +371,35 @@ function grupoLoop(it) {
   return b > a ? itens.slice(a, b + 1) : [];
 }
 
-// marca de cada posição do roteiro para a lista: '' (fora de grupo), 'ini', 'meio', 'fim'
+// (1.9.10) conjunto desligado na chavinha do roteiro: a passagem de um item para o outro fica manual
+// (cada item volta a se comportar sozinho: o vídeo com "Repetir" repete ele mesmo, a apresentação recomeça nela mesma)
+const conjuntoDesligado = g => g.some(x => x.grupoManual);
+
+// grupo LIGADO (2 itens ou mais) em que o item está; [] se está fora de grupo ou se o conjunto foi desligado
+function grupoLoop(it) {
+  const g = conjuntoDoItem(it);
+  return g.length && !conjuntoDesligado(g) ? g : [];
+}
+
+// liga/desliga a passagem automática do conjunto do item (vale para todos os itens do conjunto)
+function alternarConjunto(it) {
+  const g = conjuntoDoItem(it);
+  if (!g.length) return;
+  const desligar = !conjuntoDesligado(g);
+  g.forEach(x => { if (desligar) x.grupoManual = true; else delete x.grupoManual; });
+  toast(desligar ? '✋ Conjunto desligado: a passagem de um item para o outro fica manual.'
+    : '🔁 Conjunto ligado: os itens voltam a passar sozinhos, um depois do outro.');
+}
+
+// marca de cada posição do roteiro para a lista: '' (fora de grupo), 'ini', 'meio', 'fim' (+ ' off' se desligado)
 function marcasGrupoLoop(itens) {
   const r = itens.map(() => '');
   for (let i = 0; i < itens.length;) {
     if (!repeteNoGrupo(itens[i])) { i++; continue; }
     let j = i;
     while (j + 1 < itens.length && repeteNoGrupo(itens[j + 1])) j++;
-    if (j > i) for (let k = i; k <= j; k++) r[k] = k === i ? 'ini' : k === j ? 'fim' : 'meio';
+    const off = conjuntoDesligado(itens.slice(i, j + 1)) ? ' off' : '';
+    if (j > i) for (let k = i; k <= j; k++) r[k] = (k === i ? 'ini' : k === j ? 'fim' : 'meio') + off;
     i = j + 1;
   }
   return r;

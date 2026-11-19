@@ -1335,6 +1335,18 @@ html[data-tema-app="claro"] .t-evento, html[data-tema-app="claro"] .t-eventos { 
 #roteiroItens .it.loop-ini { border-top: 1px dashed #3fb6a8; }
 #roteiroItens .it.loop-fim { border-bottom: 1px dashed #3fb6a8; }
 #roteiroItens .it .loop-ic { font-size: 12px; margin-right: 2px; }
+/* (1.9.10) conjunto desligado (passagem manual): a linha que envolve os itens fica cinza */
+#roteiroItens .it.loop-g.loop-off { box-shadow: inset 4px 0 0 #7d8590; }
+#roteiroItens .it.loop-ini.loop-off { border-top-color: #7d8590; }
+#roteiroItens .it.loop-fim.loop-off { border-bottom-color: #7d8590; }
+/* item tirado do conjunto com Ctrl+clique: risquinho cinza tracejado */
+#roteiroItens .it.loop-fora { box-shadow: inset 4px 0 0 transparent; border-left: 2px dashed #7d8590; }
+/* chavinha do conjunto (aparece com as setas ao passar o mouse) */
+#roteiroItens .loop-chave { width: 30px; padding: 0 3px; display: inline-flex; align-items: center; }
+#roteiroItens .loop-chave i { position: relative; width: 22px; height: 12px; border-radius: 6px; background: #7d8590; transition: background .15s; }
+#roteiroItens .loop-chave i::after { content: ''; position: absolute; top: 2px; left: 2px; width: 8px; height: 8px; border-radius: 50%; background: #fff; transition: left .15s; }
+#roteiroItens .loop-chave.on i { background: #3fb6a8; }
+#roteiroItens .loop-chave.on i::after { left: 12px; }
 #plGrupo:empty { display: none; }
 #evPrevia img { width: 384px; height: 216px; }
 /* (1.9.6) 💝 Campanhas de arrecadação (Secretaria) e o item "Campanhas" do roteiro */

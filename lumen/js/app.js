@@ -1754,13 +1754,23 @@ function renderRoteiroLista() {
   el.innerHTML = itens.map((it, i) => {
     const r = resumoItem(it);
     const sel = S.atual && S.atual.rIdx === i;
-    const g = grupos[i] ? ` loop-g loop-${grupos[i]}` : '';
-    return `<div class="it ${sel ? 'sel' : ''} ${r.vazio ? 'pendente' : ''}${g}" data-i="${i}" draggable="true" title="${g ? '🔁 Repete em grupo com os itens marcados ao lado. ' : ''}Arraste para mudar a ordem">
-      ${grupos[i] === 'ini' ? '<span class="loop-ic" title="Repete em grupo">🔁</span>' : ''}
+    const [pos, off] = (grupos[i] || '').split(' ');
+    const fora = !pos && it.foraDoConjunto && typeof podeRepetir === 'function' && podeRepetir(it);   // (1.9.10) Ctrl+clique
+    const g = pos ? ` loop-g loop-${pos}${off ? ' loop-off' : ''}` : fora ? ' loop-fora' : '';
+    const dica = !pos ? (fora ? '⛔ Fora do conjunto: repete sozinho (Ctrl+clique para pôr de volta). ' : '')
+      : (off ? '✋ Conjunto desligado: a passagem para o item seguinte é manual. ' : '🔁 Repete em grupo com os itens marcados ao lado. ') + 'Ctrl+clique tira o item do conjunto. ';
+    // (1.9.10) chavinha do conjunto: aparece ao passar o mouse; liga/desliga a passagem automática de todos os itens dele
+    const chave = pos ? `<button data-acao="conjunto" class="loop-chave${off ? '' : ' on'}" title="${off
+      ? 'Conjunto desligado (passagem manual). Clique para ligar: os itens passam sozinhos, um depois do outro'
+      : 'Conjunto ligado (passa sozinho). Clique para desligar: a passagem de um item para o outro fica manual'}"><i></i></button>` : '';
+    return `<div class="it ${sel ? 'sel' : ''} ${r.vazio ? 'pendente' : ''}${g}" data-i="${i}" draggable="true" title="${dica}Arraste para mudar a ordem">
+      ${pos === 'ini' ? `<span class="loop-ic" title="${off ? 'Conjunto desligado' : 'Repete em grupo'}">${off ? '✋' : '🔁'}</span>` : ''}
+      ${fora ? '<span class="loop-ic" title="Fora do conjunto (Ctrl+clique para pôr de volta)">⛔</span>' : ''}
       <span class="tag t-${it.tipo}">${esc(r.rot)}</span>
       <span class="tit">${esc(tirarMarcas(r.tit || ''))}</span>
       ${S.live.item === it ? '<span class="pt-vivo" title="No ar"></span>' : ''}
       <span class="acoes">
+        ${chave}
         <button data-acao="subir" title="Subir">↑</button>
         <button data-acao="descer" title="Descer">↓</button>
         <button data-acao="remover" title="Remover">✕</button>
@@ -3026,7 +3036,16 @@ function ligarEventos() {
     if (!row) return;
     const i = +row.dataset.i, itens = S.roteiro.itens;
     const acao = e.target.closest('button')?.dataset.acao;
+    if (!acao && (e.ctrlKey || e.metaKey) && typeof alternarForaDoConjunto === 'function') {   // (1.9.10) Ctrl+clique: entra/sai do conjunto
+      if (alternarForaDoConjunto(itens[i])) { salvarRoteiro(); renderRoteiroLista(); renderCabecalho(); }
+      return;
+    }
     if (acao) {
+      if (acao === 'conjunto') {               // (1.9.10) liga/desliga a passagem automática do conjunto
+        alternarConjunto(itens[i]);
+        salvarRoteiro(); renderRoteiroLista(); renderCabecalho();
+        return;
+      }
       if (acao === 'remover') {
         if (!confirm('Remover este item do roteiro?')) return;
         const [rem] = itens.splice(i, 1);

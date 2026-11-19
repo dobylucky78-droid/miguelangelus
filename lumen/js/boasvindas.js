@@ -38,17 +38,18 @@ function preencherBoasVindasForm(l) {
   linha.hidden = !!SECRETARIA;               // a Secretaria não tem vídeos (o que já estiver configurado continua)
   if (SECRETARIA) return;
   $('#parLocBV').innerHTML = opcoesVideoBV(l === undefined ? $('#parLocBV').value : l?.boasVindas?.midiaId || '');
-  if (l !== undefined) $('#parLocBVAuto').checked = !!l?.boasVindas?.auto;
-  $('#parLocBVAuto').disabled = !$('#parLocBV').value;
+  if (l !== undefined) { $('#parLocBVAuto').checked = !!l?.boasVindas?.auto; $('#parLocBVRepetir').checked = !!l?.boasVindas?.repetir; }
+  $('#parLocBVAuto').disabled = $('#parLocBVRepetir').disabled = !$('#parLocBV').value;
 }
 function lerBoasVindasForm() {
   if (SECRETARIA || !$('#parLocBV')) return undefined;     // não mexe no que já existe
   const id = $('#parLocBV').value;
-  return id ? { midiaId: id, nome: midiaPorId(id)?.nome || '', auto: $('#parLocBVAuto').checked } : null;
+  return id ? { midiaId: id, nome: midiaPorId(id)?.nome || '', auto: $('#parLocBVAuto').checked, repetir: $('#parLocBVRepetir').checked } : null;
 }
 
 const boasVindasAuto = localId => { const b = localDe(localId)?.boasVindas; return b?.midiaId && b.auto ? b : null; };
-const itemBoasVindas = b => ({ id: uid(), tipo: 'midia', midiaId: b.midiaId, loop: false, boasVindas: true });
+// (1.9.10) "🔁 Repetir automaticamente" na igreja: o item já nasce com Repetir marcado
+const itemBoasVindas = b => ({ id: uid(), tipo: 'midia', midiaId: b.midiaId, loop: !!b.repetir, boasVindas: true });
 
 // roteiro NOVO de Missa daquela igreja: o vídeo entra como 1º item (se ainda não começa com ele)
 function comBoasVindas(itens, localId) {
@@ -107,7 +108,7 @@ async function incluirEmTodos(it, quando) {
 }
 
 function ligarBoasVindas() {
-  $('#parLocBV')?.addEventListener('change', () => { $('#parLocBVAuto').disabled = !$('#parLocBV').value; if ($('#parLocBV').value && !$('#parLocBVAuto').dataset.mexeu) $('#parLocBVAuto').checked = true; });
+  $('#parLocBV')?.addEventListener('change', () => { $('#parLocBVAuto').disabled = $('#parLocBVRepetir').disabled = !$('#parLocBV').value; if ($('#parLocBV').value && !$('#parLocBVAuto').dataset.mexeu) $('#parLocBVAuto').checked = true; });
   $('#parLocBVAuto')?.addEventListener('change', e => { e.target.dataset.mexeu = '1'; });
   $('#itemCab').addEventListener('click', e => {
     const b = e.target.closest('[data-incluir-todos]');
