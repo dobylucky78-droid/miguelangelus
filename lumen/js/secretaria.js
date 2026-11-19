@@ -11,6 +11,11 @@
 // VERSAO_SECRETARIA fica no <head> do index.html (o splash usa antes deste arquivo carregar)
 
 const NOVIDADES_SECRETARIA = [
+  { versao: '1.5.0', data: '2026-11-19', itens: [
+    '🕯 Intenções no MiguelAngelus (telão): nova chave em Ajustes → 🕯 Intenções no MiguelAngelus. Vem DESLIGADA. Ligada, o operador do MiguelAngelus pode trazer as intenções de cada Missa para o roteiro e mostrar no telão: vão só o tipo e a intenção; o "a pedido de", o responsável, o telefone e a oferta ficam na Secretaria. Deixe desligada se muitas intenções chegam na hora, na entrada da igreja, e são lidas só do papel. A tela de Intenções de Missa mostra se a chave está ligada ou desligada e onde mudar.',
+    '🔒 Dados de uma pessoa (LGPD), em Ajustes: procure pelo nome ou pelo telefone e aparecem todas as marcações e intenções onde a pessoa está. "🖨 Relatório para a pessoa" imprime ou salva em PDF tudo o que a secretaria guarda dela; "🗑 Apagar os marcados" apaga de vez, também nos outros computadores da secretaria (a intenção de 7º dia lançada pela marcação vai junto).',
+    '📈 Histórico do andamento das campanhas: cada vez que o arrecadado muda, ou a campanha é pausada, encerrada ou reaberta, fica registrado com a data e a hora. O histórico aparece na própria campanha, com quanto entrou entre uma atualização e outra, e dá para imprimir. As campanhas que já existiam começam pelo andamento que tinham.',
+  ] },
   { versao: '1.4.1', data: '2026-11-18', itens: [
     '💠 Para quem vai o Pix de cada campanha: embaixo do QR code aparece o recebedor que está dentro do próprio QR (nome, cidade e chave). Ao escolher o QR, o programa pergunta se é para ele mesmo e já preenche a chave, se o campo estiver vazio. Se a chave escrita for diferente da chave do QR, aparece um alerta. Tudo é lido no próprio computador, sem internet.',
   ] },

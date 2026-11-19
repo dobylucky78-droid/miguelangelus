@@ -733,6 +733,24 @@ function comHomilia(itens) {
 
 const TEXTO_OUTRAS_INTENCOES = 'Outras intenções da comunidade…';
 
+// (1.9.12) 🕯 Intenções lançadas na Secretaria (só se a paróquia ligou a chave lá: Ajustes → Intenções no MiguelAngelus).
+// Chegam pela nuvem (pasta "intencoes/", registro secn-<chave da celebração>) só com o tipo e o texto de cada intenção.
+// Cada tipo vira um bloco: o título ("Pelos falecidos") e uma intenção por linha; linha em branco entre os tipos = outro slide.
+async function trazerIntencoesSecretaria(it) {
+  const chave = S.roteiro?.celebracao;
+  if (!chave) return toast('Este roteiro não está ligado a uma celebração da Agenda: não dá para saber de qual Missa trazer.');
+  const reg = await DB.obter('config', 'secn-' + String(chave).replace(/[^\w-]+/g, '_'));
+  const grupos = reg?.item?.grupos || [];
+  if (!grupos.length) return toast('🕯 A Secretaria ainda não lançou intenções para esta Missa (ou elas ainda não chegaram pela nuvem).');
+  const texto = grupos.map(g => [g.titulo, ...g.nomes].join('\n')).join('\n\n');
+  if ((it.texto || '').trim() && it.texto.trim() !== texto && !confirm('Trocar o texto deste item pelas intenções da Secretaria?')) return;
+  it.texto = texto;
+  const n = grupos.reduce((s, g) => s + g.nomes.length, 0);
+  if (S.atual?.rIdx >= 0) { salvarRoteiro(); renderRoteiroLista(); }
+  renderCabecalho(); atualizarSlides();
+  toast(`🕯 ${n} intenç${n > 1 ? 'ões' : 'ão'} da Secretaria.`);
+}
+
 function gerarSlidesBase(item) {
   switch (item.tipo) {
     case 'canto': {
@@ -1550,7 +1568,8 @@ function renderCabecalho() {
     case 'texto':
       h = `<div class="cab-linha"><span class="tag t-texto">Texto</span>
              <input data-campo="titulo" value="${esc(it.titulo)}" placeholder="Título (aparece no rodapé)">
-             ${it.formas ? `<label class="chave-forma" title="Esta leitura tem forma breve. Desligado: a completa (padrão). Ligado: a breve — título e texto trocam juntos."><input type="checkbox" data-campo="breve" ${it.breve ? 'checked' : ''}><span class="trilho"></span> Forma breve</label>` : ''}</div>
+             ${it.formas ? `<label class="chave-forma" title="Esta leitura tem forma breve. Desligado: a completa (padrão). Ligado: a breve — título e texto trocam juntos."><input type="checkbox" data-campo="breve" ${it.breve ? 'checked' : ''}><span class="trilho"></span> Forma breve</label>` : ''}
+             ${it.intencoes && Agenda.dados.paroquia?.intencoesTelao && !SECRETARIA ? `<button data-cmd="intencoesSec" title="Traz as intenções que a Secretaria lançou para a Missa deste roteiro (só o tipo e a intenção)">🕯 Trazer da Secretaria</button>` : ''}</div>
            <textarea data-campo="texto" rows="5" placeholder="${it.antifona ? 'Cole aqui a antífona do Missal (ou do folheto), com a referência no fim, ex.: (Sl 104,3s).'
              : it.intencoes ? 'Uma intenção por linha, ex.:&#10;Pelas almas de João da Silva e Maria de Souza&#10;Em ação de graças pelos 50 anos de casamento de José e Ana&#10;(linha em branco: começa outro slide)'
              : 'Digite o texto. Deixe uma linha em branco para separar os slides.'}">${esc(it.texto)}</textarea>`;
@@ -3008,6 +3027,7 @@ function ligarEventos() {
     if (cmd === 'fundoEscolher') return $('#arqFundoItem').click();
     if (cmd === 'fundoTirar') { delete it.fundoImg; it.usarFundo = false; return aposMudarFundoItem(); }
     if (cmd === 'partituraTirar') return tirarPartituraDoItem(it);
+    if (cmd === 'intencoesSec') return trazerIntencoesSecretaria(it);
     if (cmd === 'editarRezado') {
       const d = $('#itemCab details.rezado-ed');
       if (!d) return;

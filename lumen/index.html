@@ -8,7 +8,7 @@
 <script>try { if (localStorage.getItem('lumen.temaApp') === 'claro') document.documentElement.dataset.temaApp = 'claro'; } catch (_) {}
   // (Secretaria MiguelAngelus 1.0) o mesmo programa aberto no modo Secretaria: só Agenda e Avisos (index.html?app=secretaria)
   const SECRETARIA = new URLSearchParams(location.search).get('app') === 'secretaria';
-  const VERSAO_SECRETARIA = '1.4.1';   // versão da Secretaria (a do .iss e do .csproj precisam bater)
+  const VERSAO_SECRETARIA = '1.5.0';   // versão da Secretaria (a do .iss e do .csproj precisam bater)
   if (SECRETARIA) { document.documentElement.classList.add('app-secretaria'); document.title = 'Secretaria MiguelAngelus'; }</script>
 <link rel="icon" type="image/svg+xml" href="img/icone.svg">
 </head>

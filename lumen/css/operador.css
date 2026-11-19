@@ -1248,6 +1248,18 @@ html.app-secretaria .splash-gratis { color: #9a6a00; }
 .sec-int { font-size: 12px; white-space: nowrap; background: var(--painel2); border-radius: 10px; padding: 1px 7px; }
 dialog.dlg-sec-largo { width: min(1100px, 96vw); }
 .dlg-sec .sec-privado { margin: -4px 0 6px; }
+/* (Secretaria 1.5.0) situação da chave "Intenções no MiguelAngelus" */
+.in-telao-aviso { margin: 0 0 6px; padding: 6px 10px; border-radius: 8px; border-left: 4px solid var(--borda, #888); background: var(--painel2); }
+.in-telao-aviso.ligado { border-left-color: #3fa66b; }
+/* (Secretaria 1.5.0) histórico da campanha e dados de uma pessoa (LGPD) */
+.cp-hist { margin: 4px 0 8px; }
+.cp-hist summary { cursor: pointer; font-size: .9em; }
+.cp-hist #cpfHistLista { max-height: 180px; overflow: auto; margin-top: 4px; }
+.lg-lista { max-height: 46vh; overflow: auto; background: var(--painel2); border-radius: 8px; padding: 6px 10px; margin: 6px 0; min-height: 60px; }
+.lg-grupo-tit { font-weight: 700; margin: 6px 0 2px; }
+.lg-item { display: flex; gap: 8px; align-items: flex-start; padding: 4px 0; border-bottom: 1px solid var(--borda, #333); }
+.lg-item small { display: block; }
+.lg-item mark { background: #e8c35a55; color: inherit; border-radius: 3px; }
 .sec-filtros { flex-wrap: wrap; gap: 6px; }
 .sec-visoes, .sec-nav { display: inline-flex; }
 .sec-visoes button, .sec-nav button { border-radius: 0; padding: 5px 11px; }

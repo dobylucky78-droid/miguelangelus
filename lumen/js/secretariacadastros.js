@@ -4,7 +4,7 @@
  * e Intenções de Missa. Só roda no modo Secretaria (iniciarCadastrosSecretaria é chamada por iniciarSecretaria).
  *
  * Regra geral (BACKLOG da Secretaria): o que sai da Secretaria para o MiguelAngelus e para os celulares são só os avisos
- * e os eventos (e, talvez no futuro, os nomes das intenções). As marcações, intenções e eventos são COMPARTILHADOS entre
+ * e os eventos (e, desde a 1.5.0, os nomes das intenções, só se a paróquia ligar a chave). As marcações, intenções e eventos são COMPARTILHADOS entre
  * os computadores da secretaria pela nuvem da paróquia, numa pasta só da Secretaria ("secretaria/", ver sincronia.js),
  * que o MiguelAngelus não lê. Um registro por item no store "config":
  *  - { id: 'secm-<id>', item: {…} } marcação · { id: 'seci-<id>', item } intenção · { id: 'sece-<id>', item } evento
@@ -24,6 +24,8 @@ const MENU_SECRETARIA = `
       <button data-menu="sec-pasta">🖼 Pasta das imagens do Holyrics…</button>
       <hr>
       <button data-menu="sec-paroquia">🏛 Paróquia e comunidades…</button>
+      <button data-menu="sec-intTelao">🕯 Intenções no MiguelAngelus (telão)…</button>
+      <button data-menu="sec-lgpd">🔒 Dados de uma pessoa (LGPD)…</button>
       <hr>
       <button data-menu="sec-tema">🌓 Tema claro / escuro</button>
       <button data-menu="sec-aparencia">🖥️ Aparência do aplicativo…</button>
@@ -57,6 +59,8 @@ function acaoMenuSecretaria(acao) {
       if (!NO_APP) return toast('A pasta das imagens se escolhe só no aplicativo para Windows.');
       return escolherPastaImagens().then(ok => ok && toast('🖼 Pasta das imagens: ' + S.config.avisosPastaImagens));
     case 'paroquia': return abrirAgenda('paroquia');
+    case 'intTelao': return abrirIntTelao();
+    case 'lgpd': return abrirLgpd();
     case 'tema':
       S.config.temaApp = S.config.temaApp === 'claro' ? 'escuro' : 'claro';
       aplicarTemaApp(); salvarConfig();
@@ -91,6 +95,8 @@ const HTML_COMO_USAR_SEC = `
         na Missa e o relatório das ofertas.</p>
       <p class="sutil">Nomes, telefones e ofertas são dados pessoais: vão pela nuvem da paróquia só para os outros computadores da secretaria, não vão para o MiguelAngelus,
         nem para o telão, nem para o site.</p>
+      <p class="sutil">Se uma pessoa pedir para ver ou apagar os dados dela (LGPD): <b>Ajustes → 🔒 Dados de uma pessoa</b> procura pelo nome ou telefone,
+        imprime o relatório e apaga o que for marcado.</p>
       <h3>4. Eventos com QR code</h3>
       <p><b>🎉 Eventos</b>: título, data, local, descrição e o cartaz. Quem aponta a câmera do celular para o QR salva o evento na agenda.
         A Secretaria monta a <b>imagem para o Holyrics</b> (cartaz à esquerda, QR à direita) e o <b>cartaz A4 com QR</b> para o mural.</p>
@@ -142,9 +148,13 @@ async function gravarItemSec(tipo, item, { versaoAberta = 0, rotulo = 'este item
   await DB.salvar('config', reg);
   item.versao = reg.atualizado;
   avisarMudancaSec();
+  if (tipo === 'int') aposMudarIntencoes();
   return true;
 }
-async function apagarItemSec(tipo, id) { await DB.remover('config', PREF_SEC[tipo] + id); avisarMudancaSec(); }
+async function apagarItemSec(tipo, id) { await DB.remover('config', PREF_SEC[tipo] + id); avisarMudancaSec(); if (tipo === 'int') aposMudarIntencoes(); }
+// (1.5.0) intenção nova, mudada ou apagada: refaz o que vai para o MiguelAngelus (só se a chave estiver ligada)
+let timerPubInt = 0;
+function aposMudarIntencoes() { clearTimeout(timerPubInt); timerPubInt = setTimeout(() => SECRETARIA && publicarIntencoesTelao(), 400); }
 
 // manda logo para a nuvem (os outros computadores da secretaria recebem em até 2 minutos)
 let timerSec = 0;
@@ -154,7 +164,8 @@ function avisarMudancaSec() { clearTimeout(timerSec); timerSec = setTimeout(() =
 async function recarregarCadastrosSecretaria() {
   await Promise.all([carregarMarcacoes(), carregarIntencoes(), carregarEventos(), carregarCampanhas()]);
   if ($('#dlgMarcacoes')?.open) renderMarcacoes();
-  if ($('#dlgIntencoes')?.open) { renderCelebracoesInt(); renderResumoInt(); }
+  if ($('#dlgIntencoes')?.open) { renderCelebracoesInt(); renderResumoInt(); avisoIntTelao(); }
+  if (SECRETARIA) publicarIntencoesTelao();      // (1.5.0) a chave pode ter sido mudada em outro computador
   if ($('#dlgEventos')?.open) renderEventos();
   if ($('#dlgCampanhas')?.open) renderCampanhas();
   aposMudarEventos();
@@ -515,12 +526,84 @@ const Int = { lista: [], ocs: [], editando: null };
 
 async function carregarIntencoes() { Int.lista = await lerItensSec('int'); }
 
+// ---- (Secretaria 1.5.0) nomes das intenções no MiguelAngelus: chave da paróquia, NASCE DESLIGADA
+// Fica na Agenda (paroquia.intencoesTelao), que já vai para todos os computadores da Secretaria e do MiguelAngelus.
+// Ligada: para cada Missa de hoje em diante sai um registro secn-<chave> na pasta "intencoes/" da nuvem SÓ com o tipo e o
+// texto da intenção (nunca o "a pedido de", o responsável, o telefone ou a oferta). Desligada: esses registros são apagados.
+// Toda Secretaria calcula o mesmo conteúdo; só grava quando muda, então dois computadores não brigam.
+const intencoesNoTelao = () => !!Agenda.dados.paroquia?.intencoesTelao;
+const idPubInt = chave => 'secn-' + String(chave).replace(/[^\w-]+/g, '_');
+
+async function publicarIntencoesTelao() {
+  const hoje = hojeIso(), quer = new Map();
+  if (intencoesNoTelao()) {
+    const porMissa = new Map();
+    for (const i of Int.lista) if (i.chave && i.data >= hoje) (porMissa.get(i.chave) || porMissa.set(i.chave, []).get(i.chave)).push(i);
+    for (const [chave, its] of porMissa) {
+      const grupos = TIPOS_INT.map(t => ({ titulo: t[1], nomes: its.filter(i => i.tipo === t[0]).sort((a, b) => (a.criado || 0) - (b.criado || 0)).map(i => i.texto) }))
+        .filter(g => g.nomes.length);
+      quer.set(idPubInt(chave), { chave, data: its[0].data, hora: its[0].hora || '', grupos });
+    }
+  }
+  let atuais = [];
+  try { atuais = (await DB.todos('config')).filter(r => /^secn-/.test(r.id)); } catch (_) {}
+  let mudou = false;
+  for (const r of atuais) if (!quer.has(r.id)) { await DB.remover('config', r.id); mudou = true; }
+  for (const [id, item] of quer) {
+    const a = atuais.find(r => r.id === id);
+    if (a && JSON.stringify(a.item) === JSON.stringify(item)) continue;
+    await DB.salvar('config', { id, item }); mudou = true;
+  }
+  if (mudou) avisarMudancaSec();
+}
+
+function avisoIntTelao() {
+  const p = $('#inTelaoAviso');
+  if (!p) return;
+  const lig = intencoesNoTelao();
+  p.classList.toggle('ligado', lig);
+  p.innerHTML = lig
+    ? '📺 <b>Os nomes das intenções vão para o MiguelAngelus</b> (só o tipo e a intenção; sem "a pedido de", responsável ou oferta). Para parar: <b>Ajustes → 🕯 Intenções no MiguelAngelus</b>.'
+    : '📺 Os nomes das intenções <b>não vão</b> para o MiguelAngelus: ficam só na folha impressa. Para mandar ao telão: <b>Ajustes → 🕯 Intenções no MiguelAngelus</b>.';
+}
+
+const HTML_INT_TELAO = `
+<dialog id="dlgIntTelao" class="dlg-sec">
+  <form method="dialog" class="form">
+    <h2>🕯 Intenções no MiguelAngelus (telão)</h2>
+    <label class="chave-forma"><input type="checkbox" id="itTelao"><span class="trilho"></span> Mandar os nomes das intenções para o MiguelAngelus</label>
+    <p class="sutil pequeno">Ligado: o operador do MiguelAngelus pode trazer as intenções de cada Missa para o item <b>Intenções da Missa</b> do roteiro
+      e mostrar no telão. Vão <b>só o tipo e a intenção</b> (ex.: "Pelos falecidos: João da Silva"); o "a pedido de", o responsável,
+      o telefone e a oferta ficam só na Secretaria.</p>
+    <p class="sutil pequeno">Deixe desligado se muitas intenções chegam na hora, na entrada da igreja, e são lidas só do papel:
+      assim o telão não mostra uma parte e esquece a outra. Vale para todos os computadores da paróquia.</p>
+    <div class="linha"><span class="espaco"></span><button value="ok" class="primario">OK</button></div>
+  </form>
+</dialog>`;
+
+function abrirIntTelao() {
+  $('#itTelao').checked = intencoesNoTelao();
+  abrirDialogo('dlgIntTelao');
+}
+
+function ligarIntTelao() {
+  $('#itTelao').addEventListener('change', e => {
+    Agenda.dados.paroquia ||= {};
+    Agenda.dados.paroquia.intencoesTelao = e.target.checked;
+    salvarAgenda();
+    publicarIntencoesTelao();
+    avisoIntTelao();
+    toast(e.target.checked ? '🕯 Os nomes das intenções vão para o MiguelAngelus.' : '🕯 Os nomes das intenções não vão mais para o MiguelAngelus.');
+  });
+}
+
 const HTML_INTENCOES = `
 <dialog id="dlgIntencoes" class="dlg-sec dlg-sec-largo">
   <form method="dialog" class="form">
     <h2>🕯 Intenções de Missa</h2>
     <p class="sutil pequeno sec-privado">🔒 Compartilhadas só entre os computadores da Secretaria. O responsável e o valor da oferta nunca vão para o MiguelAngelus;
       na folha para ler na Missa vão só as intenções e o "a pedido de".</p>
+    <p id="inTelaoAviso" class="pequeno in-telao-aviso"></p>
     <div class="linha">
       <label class="campo">Dia <input type="date" id="inData"></label>
       <label class="campo in-cel-campo">Celebração <select id="inCel"></select></label>
@@ -698,6 +781,7 @@ async function abrirIntencoes(iso, chave) {
   if (!$('#inrFim').value) $('#inrFim').value = isoData(new Date(h.getFullYear(), h.getMonth() + 1, 0));
   $('#inrLocal').innerHTML = opcoesLocais($('#inrLocal').value, 'Todas as igrejas');
   renderResumoInt();
+  avisoIntTelao();
   abrirDialogo('dlgIntencoes');
   $('#infTexto').focus();
 }
@@ -741,6 +825,121 @@ function ligarIntencoes() {
     }
   });
   dlg.addEventListener('close', () => setTimeout(() => typeof renderSecretaria === 'function' && renderSecretaria(), 100));
+}
+
+// ================================================================ (1.5.0) LGPD: DADOS DE UMA PESSOA
+// Procura uma pessoa (nome ou telefone) nas marcações e nas intenções; imprime/salva em PDF tudo o que há dela (para entregar
+// a quem pediu) e apaga o que for marcado. Apagar aqui apaga nos outros computadores da secretaria (pela nuvem).
+// As pessoas com login na 📆 Agenda da secretaria aparecem só como aviso (são removidas lá, pelo responsável).
+const Lgpd = { achados: [] };
+const soDigitos = s => String(s || '').replace(/\D/g, '');
+
+function casaLgpd(q, campos) {
+  const qd = soDigitos(q), soNumero = qd.length >= 4 && !/[a-zà-ÿ]/i.test(q);
+  if (soNumero) return campos.some(c => soDigitos(c).includes(qd));
+  const qa = semAcento(q.trim());
+  return qa.length >= 3 && campos.some(c => semAcento(c).includes(qa));
+}
+// destaca o trecho achado (só para mostrar)
+function marcarLgpd(txt, q) {
+  const t = esc(txt || '');
+  const qa = semAcento(q.trim());
+  if (qa.length < 3 || /^[\d\s()+-]+$/.test(q)) return t;
+  const i = semAcento(txt || '').indexOf(qa);
+  return i < 0 ? t : esc(txt.slice(0, i)) + '<mark>' + esc(txt.slice(i, i + qa.length)) + '</mark>' + esc(txt.slice(i + qa.length));
+}
+
+const HTML_LGPD = `
+<dialog id="dlgLgpd" class="dlg-sec dlg-sec-largo">
+  <form method="dialog" class="form">
+    <h2>🔒 Dados de uma pessoa (LGPD)</h2>
+    <p class="sutil pequeno">Quando alguém pede para ver ou apagar os próprios dados: procure pelo nome ou pelo telefone. Aparecem as marcações e as intenções
+      onde a pessoa está (nomes, contato, observações, "a pedido de", responsável). <b>🖨 Relatório</b> imprime ou salva em PDF para entregar a ela;
+      <b>🗑 Apagar</b> apaga os itens marcados neste e nos outros computadores da secretaria.</p>
+    <div class="linha">
+      <input id="lgBusca" type="search" placeholder="🔎 Nome (3 letras ou mais) ou telefone (4 números ou mais)" autocomplete="off" style="flex:1">
+      <button type="button" id="lgProcurar" class="primario">Procurar</button>
+    </div>
+    <div id="lgLista" class="lg-lista"><p class="sutil">Digite um nome ou telefone.</p></div>
+    <p class="sutil pequeno">Não entram aqui: folhas já impressas, cópias de segurança (backup) e os textos de avisos e eventos — confira e corrija esses à mão.</p>
+    <div class="linha">
+      <button type="button" id="lgTodos">Marcar todos</button>
+      <button type="button" id="lgImprimir" title="Folha com tudo o que foi achado (só os itens marcados)">🖨 Relatório para a pessoa…</button>
+      <button type="button" id="lgApagar" class="perigo">🗑 Apagar os marcados…</button>
+      <span class="espaco"></span><button value="fechar">Fechar</button>
+    </div>
+  </form>
+</dialog>`;
+
+async function procurarLgpd() {
+  const q = $('#lgBusca').value;
+  const qd = soDigitos(q);
+  if (semAcento(q.trim()).length < 3 && qd.length < 4) { $('#lgLista').innerHTML = '<p class="sutil">Digite pelo menos 3 letras do nome ou 4 números do telefone.</p>'; Lgpd.achados = []; return; }
+  await Promise.all([carregarMarcacoes(), carregarIntencoes()]);
+  const marc = Marc.lista.filter(m => casaLgpd(q, [m.nomes, m.contato, m.obs, m.celebrante]))
+    .sort((a, b) => (a.data + a.hora).localeCompare(b.data + b.hora));
+  const ints = Int.lista.filter(i => casaLgpd(q, [i.texto, i.aPedidoDe, i.pedidoPor]))
+    .sort((a, b) => (a.data + (a.hora || '')).localeCompare(b.data + (b.hora || '')));
+  const pessoas = (await lerItensSec('usu')).filter(p => casaLgpd(q, [p.nome]));
+  Lgpd.achados = [...marc.map(m => ({ tipo: 'marc', item: m })), ...ints.map(i => ({ tipo: 'int', item: i }))];
+  const linhaMarc = m => `<label class="lg-item"><input type="checkbox" data-lg="marc:${m.id}" checked><span>
+      <b>${tipoMarc(m.tipo)[2]} ${esc(tipoMarc(m.tipo)[1])} · ${dataBR(m.data)} ${esc(m.hora || '')} · ${esc(nomeIgreja(m.localId))}</b>
+      <small>Nomes: ${marcarLgpd((m.nomes || '').replace(/\n/g, ' · '), q)}${m.contato ? ` · Contato: ${marcarLgpd(m.contato, q)}` : ''}${m.obs ? ` · Obs.: ${marcarLgpd(m.obs, q)}` : ''}${m.celebrante ? ` · Celebrante: ${marcarLgpd(m.celebrante, q)}` : ''}</small></span></label>`;
+  const linhaInt = i => `<label class="lg-item"><input type="checkbox" data-lg="int:${i.id}" checked><span>
+      <b>🕯 ${esc(tipoInt(i.tipo)[1])} · ${dataBR(i.data)} ${esc(i.hora || '')} · ${esc(nomeIgreja(i.localId))}</b>
+      <small>Intenção: ${marcarLgpd(i.texto, q)}${i.aPedidoDe ? ` · ${marcarLgpd(aPedidoTxt(i), q)}` : ''}${i.pedidoPor ? ` · Responsável: ${marcarLgpd(i.pedidoPor, q)}` : ''}${i.oferta ? ` · Oferta: ${reais(i.oferta)}` : ''}${i.marcacaoId ? ' · 📒 lançada por uma marcação' : ''}</small></span></label>`;
+  $('#lgLista').innerHTML = (!Lgpd.achados.length && !pessoas.length) ? '<p class="sutil">Nada encontrado com esse nome ou telefone.</p>'
+    : (marc.length ? `<div class="lg-grupo-tit">📒 Marcações (${marc.length})</div>${marc.map(linhaMarc).join('')}` : '')
+    + (ints.length ? `<div class="lg-grupo-tit">🕯 Intenções de Missa (${ints.length})</div>${ints.map(linhaInt).join('')}` : '')
+    + (pessoas.length ? `<div class="lg-grupo-tit">📆 Login na Agenda da secretaria</div><p class="sutil pequeno">${pessoas.map(p => esc(p.nome)).join(', ')}: o nome e a senha (guardada só como código) servem para entrar na agenda. Quem é responsável remove em 📆 Agenda da secretaria → Pessoas.</p>` : '');
+  $('#lgImprimir').disabled = $('#lgApagar').disabled = $('#lgTodos').disabled = !Lgpd.achados.length;
+}
+
+const marcadosLgpd = () => $$('#lgLista [data-lg]:checked').map(c => { const [tipo, id] = c.dataset.lg.split(':'); return Lgpd.achados.find(a => a.tipo === tipo && a.item.id === id); }).filter(Boolean);
+
+function imprimirLgpd() {
+  const sel = marcadosLgpd();
+  if (!sel.length) return toast('Marque pelo menos um item.');
+  const q = $('#lgBusca').value.trim();
+  const ms = sel.filter(a => a.tipo === 'marc').map(a => a.item), is = sel.filter(a => a.tipo === 'int').map(a => a.item);
+  const corpo = `<p>Dados guardados pela secretaria paroquial encontrados na procura por "<b>${esc(q)}</b>", em ${dataBR(hojeIso())}.</p>`
+    + (ms.length ? `<h2>Marcações</h2><table><thead><tr><th>Dia</th><th>Tipo</th><th>Igreja</th><th>Nomes</th><th>Contato</th><th>Observações</th><th>Situação</th></tr></thead><tbody>${ms.map(m =>
+      `<tr><td>${dataBR(m.data)} ${esc(m.hora || '')}</td><td>${esc(tipoMarc(m.tipo)[1])}</td><td>${esc(nomeIgreja(m.localId))}</td><td>${esc((m.nomes || '').replace(/\n/g, ', '))}</td><td>${esc(m.contato || '')}</td><td>${esc(m.obs || '')}</td><td>${esc(SITUACOES_MARC.find(s => s[0] === (m.situacao || 'pre'))?.[1] || '')}</td></tr>`).join('')}</tbody></table>` : '')
+    + (is.length ? `<h2>Intenções de Missa</h2><table><thead><tr><th>Dia</th><th>Igreja</th><th>Tipo</th><th>Intenção</th><th>A pedido de</th><th>Responsável</th><th class="num">Oferta</th></tr></thead><tbody>${is.map(i =>
+      `<tr><td>${dataBR(i.data)} ${esc(i.hora || '')}</td><td>${esc(nomeIgreja(i.localId))}</td><td>${esc(tipoInt(i.tipo)[3])}</td><td>${esc(i.texto)}</td><td>${esc(i.aPedidoDe || '')}</td><td>${esc(i.pedidoPor || '')}</td><td class="num">${i.oferta ? reais(i.oferta) : '—'}</td></tr>`).join('')}</tbody></table>` : '');
+  imprimirFolhaSec('Dados pessoais guardados pela secretaria', `Procura por "${q}" · ${sel.length} registro${sel.length > 1 ? 's' : ''}`, corpo, `Dados LGPD ${q}`);
+}
+
+async function apagarLgpd() {
+  const sel = marcadosLgpd();
+  if (!sel.length) return toast('Marque pelo menos um item.');
+  const nm = sel.filter(a => a.tipo === 'marc').length, ni = sel.length - nm;
+  // intenções de 7º dia lançadas por uma marcação apagada vão junto
+  const extras = Int.lista.filter(i => i.marcacaoId && sel.some(a => a.tipo === 'marc' && a.item.id === i.marcacaoId) && !sel.some(a => a.tipo === 'int' && a.item.id === i.id));
+  const txt = [nm ? `${nm} marcaç${nm > 1 ? 'ões' : 'ão'}` : '', ni ? `${ni} intenç${ni > 1 ? 'ões' : 'ão'}` : '', extras.length ? `${extras.length} intenção(ões) de 7º dia ligada(s) a essas marcações` : ''].filter(Boolean).join(', ');
+  if (!confirm(`Apagar de vez: ${txt}?\n\nSome também dos outros computadores da secretaria e NÃO dá para desfazer.\nSugestão: antes, imprima ou salve o relatório em PDF.`)) return;
+  for (const a of sel) await apagarItemSec(a.tipo, a.item.id);
+  for (const i of extras) await apagarItemSec('int', i.id);
+  await Promise.all([carregarMarcacoes(), carregarIntencoes()]);
+  toast(`🗑 Apagado: ${txt}.`);
+  procurarLgpd();
+}
+
+function abrirLgpd() {
+  $('#lgBusca').value = '';
+  $('#lgLista').innerHTML = '<p class="sutil">Digite um nome ou telefone.</p>';
+  Lgpd.achados = [];
+  $('#lgImprimir').disabled = $('#lgApagar').disabled = $('#lgTodos').disabled = true;
+  abrirDialogo('dlgLgpd');
+  $('#lgBusca').focus();
+}
+
+function ligarLgpd() {
+  $('#lgProcurar').addEventListener('click', procurarLgpd);
+  $('#lgBusca').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); procurarLgpd(); } });
+  $('#lgImprimir').addEventListener('click', imprimirLgpd);
+  $('#lgApagar').addEventListener('click', apagarLgpd);
+  $('#lgTodos').addEventListener('click', () => { const cs = $$('#lgLista [data-lg]'); const todos = cs.every(c => c.checked); cs.forEach(c => c.checked = !todos); });
 }
 
 // ================================================================ EVENTOS COM QR CODE
@@ -1098,9 +1297,11 @@ function ligarEventosSec() {
 // ================================================================ início
 function iniciarCadastrosSecretaria() {
   $('#menubar').innerHTML = MENU_SECRETARIA;
-  document.body.insertAdjacentHTML('beforeend', HTML_COMO_USAR_SEC + HTML_MARCACOES + HTML_INTENCOES + HTML_EVENTOS + HTML_CAMPANHAS);
+  document.body.insertAdjacentHTML('beforeend', HTML_COMO_USAR_SEC + HTML_MARCACOES + HTML_INTENCOES + HTML_EVENTOS + HTML_CAMPANHAS + HTML_INT_TELAO + HTML_LGPD);
   ligarMarcacoes();
   ligarIntencoes();
+  ligarIntTelao();          // (1.5.0) chave "Intenções no MiguelAngelus" (nasce desligada)
+  ligarLgpd();              // (1.5.0) 🔒 dados de uma pessoa: procurar, relatório, apagar
   ligarEventosSec();
   ligarCampanhasSec();      // (1.9.6) 💝 campanhas de arrecadação (campanhas.js)
   if (typeof iniciarAgendaG === 'function') iniciarAgendaG();   // (protótipo) 📆 agenda da secretaria numa conta própria
@@ -1110,7 +1311,7 @@ function iniciarCadastrosSecretaria() {
     e.preventDefault(); e.stopImmediatePropagation();
     if (!$('#dlgComoUsarSec').open) abrirDialogo('dlgComoUsarSec');
   }, true);
-  Promise.all([carregarMarcacoes(), carregarIntencoes(), carregarEventos(), carregarCampanhas()]).then(() => typeof renderSecretaria === 'function' && renderSecretaria());
+  Promise.all([carregarMarcacoes(), carregarIntencoes(), carregarEventos(), carregarCampanhas()]).then(() => { if (typeof renderSecretaria === 'function') renderSecretaria(); publicarIntencoesTelao(); });
   // as mudanças dos outros computadores da secretaria chegam sozinhas (a cada 2 minutos, se a nuvem estiver ligada)
   setInterval(() => { if (ligadaSync() && !Sync.ocupado) sincronizarAgora({ silencioso: true }).then(() => renderSecretaria()); }, 120000);
 }

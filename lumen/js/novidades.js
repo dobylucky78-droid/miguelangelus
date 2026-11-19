@@ -5,6 +5,10 @@
  * A versão mais nova fica em cima. Ao gerar uma versão nova, acrescente a entrada dela aqui.
  */
 const NOVIDADES = [
+  { versao: '1.9.12', data: '2026-11-19', itens: [
+    '🕯 Intenções da Secretaria no roteiro: se a paróquia ligar, na Secretaria, a chave "Intenções no MiguelAngelus" (vem desligada), o item "Intenções da Missa" ganha o botão "🕯 Trazer da Secretaria", que preenche as intenções lançadas para aquela Missa, um slide por tipo (falecidos, ação de graças, saúde…). Vêm só o tipo e a intenção: quem pediu, telefone e oferta ficam na Secretaria.',
+    '☁ Sincronização: um item apagado, que voltou a existir e foi apagado de novo, agora também some dos outros computadores.',
+  ] },
   { versao: '1.9.11', data: '2026-11-19', itens: [
     '🧩 "Aplicar modelo" não apaga mais o roteiro: a ordem das partes passa a ser a do modelo, mas as leituras, o salmo, o Evangelho, os cantos escolhidos, a Coleta, as orações do dia, as antífonas e o vídeo de boas-vindas que já estavam nele continuam, cada um no seu lugar. Ex.: roteiro montado com a "Liturgia do dia" num dia de semana + modelo "Missa dominical/solenidade" → entram o Glória, a 2ª leitura e o Creio sem perder nada.',
     '⛪ Solenidade em dia de semana (ex.: Imaculada Conceição, 8/12): a "Liturgia do dia" percebe pela 2ª leitura e pelo Creio e já monta o roteiro com o modelo de Missa dominical/solenidade, como num domingo — sem precisar aplicar o modelo depois. O botão agora se chama "📖 Liturgia do dia (Missas sem folheto)": serve para dias de semana, solenidades e qualquer Missa sem folheto.',

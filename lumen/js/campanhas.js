@@ -247,6 +247,8 @@ const HTML_CAMPANHAS = `
           <label class="campo" title="Sem os valores em reais, informe só o percentual">ou só o percentual <span><input id="cpfPct" type="number" min="0" max="999" step="1" style="width:80px"> %</span></label>
         </div>
         <div class="cp-barra" title="Como vai aparecer a barra no telão"><div id="cpfBarra"></div><span id="cpfPctTxt"></span></div>
+        <details id="cpfHist" class="cp-hist" hidden><summary></summary><div id="cpfHistLista"></div>
+          <div class="linha"><span class="espaco"></span><button type="button" id="cpfHistImprimir">🖨 Imprimir o histórico…</button></div></details>
         <div class="linha">
           <label class="campo" title="Como a meta aparece no telão (use 👁 Ver o slide para conferir)">Mostrador da meta <select id="cpfMostrador"></select></label>
           <label class="check pequeno"><input type="checkbox" id="cpfMostrarValores"> Mostrar no telão os <b>valores</b> (meta e arrecadado). Desmarcado: só o percentual.</label>
@@ -345,6 +347,7 @@ function atualizarFormCp() {
     ? (Camp.qr || d.chave ? '🔓 Ao salvar, você cria a senha de 4 números desta campanha: ela protege o QR e a chave Pix (ninguém troca sem a senha).' : '')
     : trav ? '🔒 O QR e a chave Pix desta campanha estão protegidos por senha. <button type="button" data-cp-senha="entrar">🔓 Desbloquear</button>'
       : '🔓 QR e chave liberados para troca. <button type="button" data-cp-senha="bloquear">🔒 Bloquear</button> <button type="button" data-cp-senha="trocar">Trocar a senha</button>';
+  renderHistCp();
 }
 
 function abrirFormCp(c) {
@@ -386,6 +389,51 @@ async function novaSenhaCp(titulo, texto) {
   return { sal, hash: await hashSenha(pin, sal) };
 }
 
+// ---- (Secretaria 1.5.0) 📈 histórico do andamento: cada mudança do arrecadado (ou da meta/percentual) e do status
+// fica guardada na própria campanha: { em, meta, obtido, pct } ou { em, status }. Só números e datas (nada pessoal).
+// Campanha de antes da 1.5.0: o primeiro registro é o andamento que ela já tinha (com a data da última atualização).
+const MAX_HIST_CP = 300;
+function comHistoricoCp(antigo, c, agora, andamento, status) {
+  const h = [...(antigo?.historico || [])];
+  if (antigo && !h.length) h.push({ em: antigo.andamentoEm || antigo.criado || agora, meta: antigo.meta || 0, obtido: antigo.obtido || 0, pct: antigo.pct || 0, inicio: true });
+  if (andamento) h.push({ em: agora, meta: c.meta || 0, obtido: c.obtido || 0, pct: c.pct || 0 });
+  if (status) h.push({ em: agora, status });
+  return h.slice(-MAX_HIST_CP);
+}
+
+const ROT_STATUS_HIST = { ativa: '▶ reaberta', pausada: '⏸ pausada', encerrada: '■ encerrada' };
+function linhasHistCp(c) {
+  let ant = null;
+  return (c.historico || []).map(e => {
+    if (e.status) return { quando: e.em, txt: ROT_STATUS_HIST[e.status] || e.status, dif: '' };
+    const pct = Math.floor(pctCampanha(e));
+    const txt = e.meta > 0 || e.obtido > 0 ? `${dinheiro(e.obtido)}${e.meta > 0 ? ` de ${dinheiro(e.meta)} · ${pct}%` : ''}` : `${pct}%`;
+    const dif = ant && (e.obtido || ant.obtido) && e.obtido !== ant.obtido ? `${e.obtido > ant.obtido ? '+' : '−'} ${dinheiro(Math.abs(e.obtido - ant.obtido))}`
+      : ant && !(e.obtido || ant.obtido) && pct !== Math.floor(pctCampanha(ant)) ? `${pct > Math.floor(pctCampanha(ant)) ? '+' : '−'} ${Math.abs(pct - Math.floor(pctCampanha(ant)))} pontos` : '';
+    ant = e;
+    return { quando: e.em, txt: (e.inicio ? 'início do histórico: ' : '') + txt, dif };
+  });
+}
+const dataHoraCp = t => new Date(t).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+
+function renderHistCp() {
+  const c = campanhaAberta(), d = $('#cpfHist');
+  const linhas = c ? linhasHistCp(c) : [];
+  d.hidden = !linhas.length;
+  if (!linhas.length) return;
+  d.querySelector('summary').textContent = `📈 Histórico do andamento (${linhas.length} registro${linhas.length > 1 ? 's' : ''})`;
+  $('#cpfHistLista').innerHTML = `<table class="in-tab"><tbody>${[...linhas].reverse().map(l =>
+    `<tr><td>${esc(dataHoraCp(l.quando))}</td><td>${esc(l.txt)}</td><td class="num">${esc(l.dif)}</td></tr>`).join('')}</tbody></table>`;
+}
+
+function imprimirHistCp() {
+  const c = campanhaAberta();
+  if (!c?.historico?.length) return toast('Esta campanha ainda não tem histórico.');
+  const corpo = `<table><thead><tr><th>Quando</th><th>Andamento</th><th class="num">Diferença</th></tr></thead><tbody>${linhasHistCp(c).map(l =>
+    `<tr><td>${esc(dataHoraCp(l.quando))}</td><td>${esc(l.txt)}</td><td class="num">${esc(l.dif)}</td></tr>`).join('')}</tbody></table>`;
+  imprimirFolhaSec(`Campanha: ${c.titulo}`, `Histórico do andamento · situação atual: ${STATUS_CAMP[statusCamp(c)]} · ${andamentoTexto(c, true)}`, corpo, `Histórico campanha ${c.titulo}`);
+}
+
 // status: '' = só salvar o formulário; 'ativa' | 'pausada' | 'encerrada' = muda também o status
 async function salvarFormCp(status = '') {
   const d = lerFormCp();
@@ -401,8 +449,10 @@ async function salvarFormCp(status = '') {
   const mudouAndamento = !antigo || antigo.meta !== d.meta || antigo.obtido !== d.obtido || (antigo.pct || 0) !== d.pct;
   const c = antigo ? { ...antigo, ...d, alterado: agora } : { id: uid(), criado: agora, status: 'ativa', ...d };
   c.senha = Camp.senha;
+  const mudouStatus = !!status && statusCamp(antigo || { status: 'ativa' }) !== status;
   if (status) c.status = status;
   if (mudouAndamento) c.andamentoEm = agora;
+  if (mudouAndamento || mudouStatus) c.historico = comHistoricoCp(antigo, c, agora, mudouAndamento, mudouStatus ? status : '');
   if (!await gravarItemSec('camp', c, { versaoAberta: antigo ? Camp.versaoAberta : 0, rotulo: 'esta campanha' })) {
     await carregarCampanhas(); $('#cpForm').hidden = true; Camp.editando = null; return renderCampanhas();
   }
@@ -461,6 +511,7 @@ function ligarCampanhasSec() {
   $('#cpNova').addEventListener('click', () => abrirFormCp(null));
   $('#cpEncerradas').addEventListener('change', renderCampanhas);
   $('#cpfSalvar').addEventListener('click', () => salvarFormCp());
+  $('#cpfHistImprimir').addEventListener('click', imprimirHistCp);
   $('#cpfPausar').addEventListener('click', () => salvarFormCp('pausada'));
   $('#cpfEncerrar').addEventListener('click', () => {
     const c = campanhaAberta();
