@@ -1676,11 +1676,12 @@ function renderCabecalho() {
     case 'prefacio':
     case 'eucaristica': {
       const pref = it.tipo === 'prefacio', id = pref ? it.prefId : it.oeId;
+      const mi = missalDe(id), pagTag = mi.pag || mi.uso ? `<span class="tag euc-pag" title="${esc([mi.pag ? 'Página no ' + edicaoMissal() : '', mi.uso ? 'Quando usar: ' + mi.uso : ''].filter(Boolean).join('\n'))}">📖 ${mi.pag ? 'p. ' + esc(mi.pag) : 'uso'}</span>` : '';
       h = noRoteiro
         ? `<div class="cab-linha"><span class="tag t-oracao">${pref ? 'Prefácio' : 'Or. Eucarística'}</span>
-             <select data-campo="${pref ? 'prefId' : 'oeId'}">${opcoesEuc(pref ? 'pref' : 'oe', id)}</select>
+             <select data-campo="${pref ? 'prefId' : 'oeId'}">${opcoesEuc(pref ? 'pref' : 'oe', id)}</select>${pagTag}
              <button data-cmd="editarEuc">✎ Texto</button><button data-cmd="catalogoEuc" title="Escolher a combinação no catálogo">Catálogo…</button></div>`
-        : `<div class="cab-linha"><span class="tag t-oracao">${pref ? 'Prefácio' : 'Or. Eucarística'}</span><h2>${esc(nomeEuc(id))}</h2>
+        : `<div class="cab-linha"><span class="tag t-oracao">${pref ? 'Prefácio' : 'Or. Eucarística'}</span><h2>${esc(nomeEuc(id))}</h2>${pagTag}
              <span class="espaco"></span><button data-cmd="editarEuc">✎ Texto</button><button data-cmd="catalogoEuc">Voltar ao catálogo</button></div>`;
       break;
     }

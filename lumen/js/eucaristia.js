@@ -108,6 +108,51 @@ function trocarNomesN(texto) {
   return texto;
 }
 
+// ---------- (1.9.14, pedido do Luciano) Página no Missal e "quando usar" ----------
+// A página só vale para uma edição do Missal (o ano A/B/C e o ano par/ímpar não mudam o Missal; muda a edição/formato).
+// MISSAL_PADRAO vem com o programa (preenchido com o JSON que a equipe mandar); o que a paróquia digita fica em
+// Euc.dados.missal = { edicao, itens: { id: { pag, uso } }, outras: { 'nome da edição': itens } } e vai pela nuvem/backup
+// junto com os textos. "itens" é a edição em uso; trocar de edição guarda as páginas da anterior em "outras" (nada se perde:
+// uma paróquia pode ter o modelo padrão na matriz e o solene na capela, por exemplo).
+// "uso" é uma nota curta com as nossas palavras (não copiar a rubrica do Missal).
+// A 3ª edição brasileira (Edições CNBB, 2023) saiu em dois modelos, ambos com 1.264 páginas: padrão (19 × 27,5 cm) e
+// solene (26,5 × 34,5 cm, de luxo). Se a numeração for a mesma nos dois, basta copiar as páginas de um para o outro.
+const MISSAL_PADRAO = { edicao: 'Missal Romano, 3ª edição (2023), modelo padrão', itens: {} };
+const EDICOES_MISSAL = ['Missal Romano, 3ª edição (2023), modelo padrão', 'Missal Romano, 3ª edição (2023), modelo solene', 'Missal Romano, 2ª edição (1992)'];
+const edicaoMissal = () => (Euc.dados.missal?.edicao || MISSAL_PADRAO.edicao).trim();
+const itensDaEdicao = ed => (ed === edicaoMissal() ? Euc.dados.missal?.itens : Euc.dados.missal?.outras?.[ed]) || {};
+const edicoesConhecidas = () => [...new Set([...EDICOES_MISSAL, MISSAL_PADRAO.edicao, edicaoMissal(), ...Object.keys(Euc.dados.missal?.outras || {})])];
+function missalDe(id, ed = edicaoMissal()) {
+  const meu = itensDaEdicao(ed)[id] || {};
+  const pad = MISSAL_PADRAO.itens[id] || {}, mesmaEd = ed === MISSAL_PADRAO.edicao;
+  return { pag: String(meu.pag || (mesmaEd && pad.pag) || '').trim(), uso: String(meu.uso || pad.uso || '').trim() };
+}
+// Passa a usar outra edição: as páginas da atual ficam guardadas; numa edição ainda vazia, as notas "quando usar" vêm junto.
+function trocarEdicaoMissal(ed) {
+  ed = String(ed || '').trim() || MISSAL_PADRAO.edicao;
+  const atual = edicaoMissal(), m = Euc.dados.missal || {};
+  if (ed === atual) return false;
+  const outras = { ...(m.outras || {}) };
+  if (Object.keys(m.itens || {}).length) outras[atual] = m.itens; else delete outras[atual];
+  let itens = outras[ed];
+  delete outras[ed];
+  if (!itens) itens = Object.fromEntries(Object.entries(m.itens || {}).filter(([, v]) => v.uso).map(([k, v]) => [k, { uso: v.uso }]));
+  Euc.dados.missal = { edicao: ed, itens, outras };
+  return true;
+}
+// todos os ids com página ou nota (do programa + da paróquia), para exportar
+const missalItens = () => Object.fromEntries([...new Set([...Object.keys(MISSAL_PADRAO.itens), ...Object.keys(Euc.dados.missal?.itens || {})])]
+  .map(id => [id, missalDe(id)]).filter(([, v]) => v.pag || v.uso)
+  .map(([id, v]) => [id, { nome: nomeEuc(id), ...(v.pag ? { pag: v.pag } : {}), ...(v.uso ? { uso: v.uso } : {}) }]));
+const pagMissal = id => { const p = missalDe(id).pag; return p ? 'p. ' + p : ''; };
+function salvarMissalItem(id, pag, uso) {
+  const m = Euc.dados.missal = { edicao: edicaoMissal(), itens: {}, outras: {}, ...(Euc.dados.missal || {}) };
+  m.itens = { ...(m.itens || {}) };
+  pag = String(pag || '').trim(); uso = String(uso || '').trim();
+  if (pag || uso) m.itens[id] = { ...(pag ? { pag } : {}), ...(uso ? { uso } : {}) };
+  else delete m.itens[id];
+}
+
 const listaOEs = () => [...OES, ...Euc.dados.extras.filter(x => x.tipo === 'oe').map(x => ({ ...x, pref: 'livre', extra: true }))];
 function listaPrefacios() {
   const base = GRUPOS_PREF.flatMap(g => g.itens.map(([id, nome]) => ({ id, nome, grupo: g.grupo })));
@@ -380,9 +425,11 @@ function linhaEuc(item, tipo, sel, chk = null) {
   const tem = temTexto(item.id);
   const regra = tipo === 'oe' ? ({ livre: 'prefácio à escolha', fixo: 'prefácio próprio', 'fixo-flex': 'próprio ou penitencial' }[item.pref]) : '';
   const hoje = chk && chk.nivel !== 'ok' ? chk : null;
-  return `<div class="euc-it ${sel ? 'sel' : ''} ${hoje ? 'euc-' + hoje.nivel : ''}" data-${tipo}="${item.id}" title="${esc(hoje?.msg || item.obs || '')}">
+  const mi = missalDe(item.id), dica = [hoje?.msg, mi.uso ? 'Quando usar: ' + mi.uso : '', item.obs].filter(Boolean).join('\n');
+  return `<div class="euc-it ${sel ? 'sel' : ''} ${hoje ? 'euc-' + hoje.nivel : ''}" data-${tipo}="${item.id}" title="${esc(dica)}">
     <span class="euc-status ${tem ? 'ok' : ''}" title="${tem ? 'Texto cadastrado' : 'Texto ainda não cadastrado'}">${tem ? '✓' : '—'}</span>
     <span class="tit">${esc(item.nome)}</span>
+    ${mi.pag ? `<span class="tag euc-pag" title="Página no ${esc(edicaoMissal())}">p. ${esc(mi.pag)}</span>` : ''}
     ${hoje ? `<span class="tag euc-tag-${hoje.nivel}">${hoje.nivel === 'bloq' ? '⛔ não hoje' : '⚠ confira'}</span>` : ''}
     ${regra ? `<span class="tag">${regra}</span>` : ''}
     <button data-euc-editar="${item.id}" title="${tem ? 'Ver / editar o texto' : 'Colar o texto'}">✎</button>
@@ -417,7 +464,10 @@ function renderEucaristia() {
       <h2>Orações Eucarísticas e Prefácios</h2>
       <span class="sutil">${comTexto} de ${total} textos cadastrados · lista baseada no Missal Romano (confira com o Missal da paróquia)</span>
       <span class="espaco"></span>
+      <label class="euc-edicao" title="As páginas (p. 000) são desta edição do Missal. Trocar a edição mostra as páginas da outra; as desta ficam guardadas.">📖
+        <input id="eucEdicao" list="eucEdicoes" value="${esc(edicaoMissal())}" size="30"><datalist id="eucEdicoes">${edicoesConhecidas().map(e => `<option value="${esc(e)}">`).join('')}</datalist></label>
       <button data-euc-folhetos title="Lê um ou vários folhetos em PDF e guarda só a oração eucarística e o prefácio (não cria roteiros)">📄 Ler orações de folhetos…</button>
+      <button data-euc-missal title="Tabela para preencher a página de cada oração e prefácio no Missal da paróquia">📖 Páginas do Missal…</button>
       <button data-euc-exportar title="Salva num arquivo .json os textos cadastrados (✓), para levar a outro computador ou paróquia">⬇ Exportar textos</button>
       <button data-euc-importar title="Traz os textos de um arquivo .json exportado por outro MiguelAngelus">⬆ Importar textos…</button>
     </div>
@@ -441,7 +491,7 @@ function renderEucaristia() {
       </section>
     </div>
     <div class="euc-barra">
-      <span>Selecionado: <b>${esc(oe.nome)}</b>${Euc.sel.pref ? ` + <b>${esc(nomeEuc(Euc.sel.pref))}</b>` : ' <span class="sutil">(escolha o prefácio)</span>'}</span>
+      <span>Selecionado: <b>${esc(oe.nome)}</b>${pagMissal(oe.id) ? ` <span class="sutil">(${pagMissal(oe.id)})</span>` : ''}${Euc.sel.pref ? ` + <b>${esc(nomeEuc(Euc.sel.pref))}</b>${pagMissal(Euc.sel.pref) ? ` <span class="sutil">(${pagMissal(Euc.sel.pref)})</span>` : ''}` : ' <span class="sutil">(escolha o prefácio)</span>'}</span>
       <span class="espaco"></span>
       <button data-euc-ver="pref" ${Euc.sel.pref ? '' : 'disabled'}>Ver prefácio</button>
       <button data-euc-ver="oe">Ver oração</button>
@@ -491,6 +541,10 @@ function abrirEditorEuc(id) {
   const reg = Euc.dados.textos[id];
   $('#eucTitulo').textContent = nomeEuc(id);
   $('#formTextoEuc').texto.value = reg?.texto || '';
+  const mi = missalDe(id);
+  $('#formTextoEuc').pag.value = mi.pag;
+  $('#formTextoEuc').uso.value = mi.uso;
+  $('#eucEdicaoInfo').textContent = `A página vale para: ${edicaoMissal()} (troque a edição no alto da tela da Eucaristia).`;
   $('#eucOrigem').textContent = reg ? `Texto ${reg.origem === 'folheto' ? 'vindo de um folheto' : 'colado à mão'} em ${reg.data?.split('-').reverse().join('/') || '—'}.` : 'Ainda sem texto: cole aqui o texto do Missal (ou importe um folheto que traga esta oração).';
   $('#btnEucApagar').hidden = !reg;
   const dlg = $('#dlgTextoEuc');
@@ -503,35 +557,55 @@ function abrirEditorEuc(id) {
 // Só os textos cadastrados e os itens "extras" (vindos de folhetos); os nomes do Papa e do Bispo ficam (são de cada paróquia).
 // Cada texto leva o nome junto: assim um extra de outro computador (id diferente) se acha pelo nome.
 function exportarTextosEuc() {
-  const ids = Object.keys(Euc.dados.textos).filter(temTexto);
-  if (!ids.length) return toast('Nenhum texto cadastrado para exportar.');
-  const extras = Euc.dados.extras.filter(x => ids.includes(x.id));
+  const ids = Object.keys(Euc.dados.textos).filter(temTexto), mItens = missalItens();
+  const nPag = Object.values(mItens).filter(v => v.pag).length, nUso = Object.values(mItens).filter(v => v.uso).length;
+  if (!ids.length && !nPag && !nUso) return toast('Nenhum texto nem página do Missal para exportar.');
+  const extras = Euc.dados.extras.filter(x => ids.includes(x.id) || mItens[x.id]);
   const textos = Object.fromEntries(ids.map(id => [id, { nome: nomeEuc(id), ...Euc.dados.textos[id] }]));
-  const dados = { app: 'MiguelAngelus', tipo: 'eucaristia', versao: 1, exportado: new Date().toISOString(), textos, extras };
+  // (1.9.14) páginas no Missal e "quando usar" (com a edição) vão juntas
+  const dados = { app: 'MiguelAngelus', tipo: 'eucaristia', versao: 2, exportado: new Date().toISOString(), textos, extras,
+    missal: { edicao: edicaoMissal(), itens: mItens } };
   baixar(`Orações eucarísticas e prefácios MiguelAngelus ${isoData(new Date())}.json`, JSON.stringify(dados, null, 1));
-  toast(`${ids.length} texto(s) exportado(s).`);
+  toast(`${ids.length} texto(s), ${nPag} página(s) e ${nUso} nota(s) "quando usar" exportados.`);
 }
 
 async function importarTextosEuc(d) {
   // aceita o arquivo exportado aqui ou um backup completo (pega só a parte da Eucaristia)
   const fonte = d?.tipo === 'eucaristia' ? d : d?.app === 'lumen' && d.eucaristia ? d.eucaristia : null;
-  if (!fonte?.textos) throw new Error('Este arquivo não tem orações eucarísticas nem prefácios do MiguelAngelus.');
+  if (!fonte?.textos && !fonte?.missal?.itens) throw new Error('Este arquivo não tem orações eucarísticas nem prefácios do MiguelAngelus.');
   const extrasArq = new Map((fonte.extras || []).map(x => [x.id, x]));
-  const novos = [], iguais = [], diferentes = [];
-  for (const [idArq, t] of Object.entries(fonte.textos)) {
-    if (!t?.texto) continue;
-    let id = idArq;
+  const idLocal = (idArq, nomeArq) => {
     const ex = extrasArq.get(idArq);
-    if (ex || !(oeDe(idArq) || prefDe(idArq))) {
-      // item extra: acha pelo tipo + nome; se não existir, cria
-      const nome = ex?.nome || t.nome || idArq, tipo = ex?.tipo || 'pref';
-      const achado = (tipo === 'oe' ? listaOEs() : listaPrefacios()).find(x => normEuc(x.nome) === normEuc(nome));
-      if (achado) id = achado.id;
-      else {
-        id = idArq.startsWith('x-') && !Euc.dados.extras.some(x => x.id === idArq) ? idArq : 'x-' + uid();
-        Euc.dados.extras.push({ id, tipo, nome, grupo: ex?.grupo || 'Outros (importados)' });
-      }
+    if (!ex && (oeDe(idArq) || prefDe(idArq))) return idArq;
+    // item extra: acha pelo tipo + nome; se não existir, cria
+    const nome = ex?.nome || nomeArq || idArq, tipo = ex?.tipo || 'pref';
+    const achado = (tipo === 'oe' ? listaOEs() : listaPrefacios()).find(x => normEuc(x.nome) === normEuc(nome));
+    if (achado) return achado.id;
+    const id = idArq.startsWith('x-') && !Euc.dados.extras.some(x => x.id === idArq) ? idArq : 'x-' + uid();
+    Euc.dados.extras.push({ id, tipo, nome, grupo: ex?.grupo || 'Outros (importados)' });
+    return id;
+  };
+  // (1.9.14) páginas no Missal e "quando usar"
+  let msgMissal = '';
+  const mArq = fonte.missal?.itens ? Object.entries(fonte.missal.itens).filter(([, v]) => v && (v.pag || v.uso)) : [];
+  if (mArq.length) {
+    const edArq = String(fonte.missal.edicao || '').trim() || MISSAL_PADRAO.edicao;
+    let comPag = edArq === edicaoMissal();
+    if (!comPag && mArq.some(([, v]) => v.pag)) comPag = confirm(`As páginas deste arquivo são do "${edArq}", mas aqui está marcado "${edicaoMissal()}".\n\n`
+      + `OK = passar a usar a edição do arquivo, com as páginas dele (as daqui ficam guardadas) · Cancelar = trazer só as notas "quando usar"`);
+    if (comPag) trocarEdicaoMissal(edArq);
+    let n = 0;
+    for (const [idArq, v] of mArq) {
+      const id = idLocal(idArq, v.nome), mi = missalDe(id);
+      const pag = comPag && v.pag ? String(v.pag) : mi.pag, uso = v.uso ? String(v.uso) : mi.uso;
+      if (pag !== mi.pag || uso !== mi.uso) { salvarMissalItem(id, pag, uso); n++; }
     }
+    msgMissal = `\nMissal (${edicaoMissal()}): ${n} página(s)/nota(s) atualizada(s).`;
+  }
+  const novos = [], iguais = [], diferentes = [];
+  for (const [idArq, t] of Object.entries(fonte.textos || {})) {
+    if (!t?.texto) continue;
+    const id = idLocal(idArq, t.nome);
     const atual = Euc.dados.textos[id]?.texto;
     const reg = { texto: t.texto, origem: 'importado', data: isoData(new Date()) };
     if (!atual) novos.push([id, reg]);
@@ -546,7 +620,109 @@ async function importarTextosEuc(d) {
   salvarEucaristia();
   aposMudarEuc();
   alert(`Importação concluída: ${novos.length} novo(s), ${trocar ? diferentes.length : 0} substituído(s), `
-    + `${trocar ? 0 : diferentes.length} mantido(s) como estavam, ${iguais.length} já iguais.`);
+    + `${trocar ? 0 : diferentes.length} mantido(s) como estavam, ${iguais.length} já iguais.` + msgMissal);
+}
+
+// ---------- (1.9.14) Tabela "Páginas do Missal" ----------
+// Um rascunho por edição (Ms.rascs[edição]); só grava no Salvar. Trocar a edição no alto da tabela mostra as páginas
+// daquela edição (as digitadas na outra continuam no rascunho). "Exportar para enviar" usa a edição que está na tela.
+const Ms = { rascs: {}, edicao: '', todos: [] };
+const rascMissal = () => Ms.rascs[Ms.edicao];
+function carregarRascMissal(ed) {
+  if (!Ms.rascs[ed]) {
+    const salvo = ed === edicaoMissal() || Euc.dados.missal?.outras?.[ed] || ed === MISSAL_PADRAO.edicao;
+    // edição nova: as notas "quando usar" vêm da edição que estava na tela
+    const base = !salvo && Ms.edicao && Ms.rascs[Ms.edicao];
+    Ms.rascs[ed] = Object.fromEntries(Ms.todos.map(x => [x.id, salvo ? missalDe(x.id, ed) : { pag: '', uso: base?.[x.id]?.uso || missalDe(x.id, ed).uso }]));
+  }
+  Ms.edicao = ed;
+}
+function abrirTabelaMissal() {
+  Ms.todos = [...listaOEs().map(o => ({ id: o.id, nome: o.nome, grupo: 'Orações Eucarísticas' })), ...listaPrefacios()];
+  Ms.rascs = {}; Ms.edicao = '';
+  carregarRascMissal(edicaoMissal());
+  $('#msEdicao').value = Ms.edicao;
+  $('#eucEdicoes2').innerHTML = edicoesConhecidas().map(e => `<option value="${esc(e)}">`).join('');
+  $('#msBusca').value = ''; $('#msFaltando').checked = false;
+  renderTabelaMissal();
+  const dlg = $('#dlgMissal'); dlg.returnValue = ''; dlg.showModal();
+}
+function renderTabelaMissal() {
+  const termo = semAcento($('#msBusca').value), falt = $('#msFaltando').checked, r = rascMissal();
+  const vis = Ms.todos.filter(x => (!termo || semAcento(`${x.nome} ${x.grupo}`).includes(termo)) && (!falt || !r[x.id].pag));
+  const grupos = [...new Set(vis.map(x => x.grupo))];
+  $('#msCorpo').innerHTML = grupos.map(g => `<tr class="ms-grupo"><td colspan="3">${esc(g)}</td></tr>` + vis.filter(x => x.grupo === g).map(x =>
+    `<tr data-ms="${x.id}"><td>${esc(x.nome)}</td>
+      <td><input data-k="pag" value="${esc(r[x.id].pag)}" size="5" maxlength="12" inputmode="numeric"></td>
+      <td><input data-k="uso" value="${esc(r[x.id].uso)}" maxlength="240"></td></tr>`).join('')).join('')
+    || '<tr><td colspan="3" class="sutil">Nada encontrado.</td></tr>';
+  contarMissal();
+}
+function contarMissal() {
+  const v = Object.values(rascMissal());
+  $('#msConta').textContent = `${v.filter(x => x.pag).length} de ${v.length} com página`;
+}
+const itensDoRasc = r => Object.fromEntries(Object.entries(r).filter(([, v]) => v.pag || v.uso)
+  .map(([id, v]) => [id, { nome: nomeEuc(id), ...(v.pag ? { pag: v.pag } : {}), ...(v.uso ? { uso: v.uso } : {}) }]));
+function ligarTabelaMissal() {
+  $('#msCorpo').addEventListener('input', e => {
+    const tr = e.target.closest('[data-ms]'), k = e.target.dataset.k;
+    if (!tr || !k) return;
+    rascMissal()[tr.dataset.ms][k] = e.target.value.trim();
+    if (k === 'pag') contarMissal();
+  });
+  // Enter pula para a linha de baixo (preencher em sequência, com o Missal aberto)
+  $('#msCorpo').addEventListener('keydown', e => {
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    const ins = [...$$('#msCorpo input[data-k="' + e.target.dataset.k + '"]')], i = ins.indexOf(e.target);
+    ins[i + 1]?.focus(); ins[i + 1]?.select();
+  });
+  $('#msEdicao').addEventListener('change', e => {
+    const ed = e.target.value.trim() || MISSAL_PADRAO.edicao, de = Ms.edicao;
+    if (ed === de) return;
+    const novo = !Ms.rascs[ed];
+    carregarRascMissal(ed);
+    // edição ainda sem páginas: oferece copiar da anterior (ex.: modelo padrão → solene, se a numeração for a mesma)
+    const nDe = Object.values(Ms.rascs[de]).filter(v => v.pag).length;
+    if (novo && nDe && !Object.values(rascMissal()).some(v => v.pag)
+      && confirm(`"${ed}" ainda não tem páginas.\nCopiar as ${nDe} página(s) do "${de}" para começar?\n\n(Só faça isso se a numeração dos dois livros for a mesma.)`))
+      for (const [id, v] of Object.entries(Ms.rascs[de])) if (v.pag) rascMissal()[id].pag = v.pag;
+    e.target.value = ed;
+    renderTabelaMissal();
+  });
+  $('#msBusca').addEventListener('input', renderTabelaMissal);
+  $('#msFaltando').addEventListener('change', renderTabelaMissal);
+  $('#msExportar').addEventListener('click', () => {
+    const itens = itensDoRasc(rascMissal()), n = Object.values(itens).filter(v => v.pag).length;
+    if (!Object.keys(itens).length) return toast('Preencha alguma página antes de exportar.');
+    const dados = { app: 'MiguelAngelus', tipo: 'eucaristia', versao: 2, exportado: new Date().toISOString(), textos: {},
+      extras: Euc.dados.extras.filter(x => itens[x.id]), missal: { edicao: Ms.edicao, itens } };
+    baixar(`Páginas do Missal MiguelAngelus ${isoData(new Date())}.json`, JSON.stringify(dados, null, 1));
+    toast(`${n} página(s) do "${Ms.edicao}" exportada(s). Mande o arquivo por e-mail ou WhatsApp.`);
+  });
+  $('#msImportar').addEventListener('click', () => $('#arqEucJson').click());
+  $('#dlgMissal form').addEventListener('submit', e => {
+    if (e.submitter?.value !== 'salvar') return;
+    // a edição que está na tela passa a ser a usada; as outras mexidas são guardadas também
+    trocarEdicaoMissal(Ms.edicao);
+    const m = Euc.dados.missal = { edicao: edicaoMissal(), itens: {}, outras: {}, ...(Euc.dados.missal || {}) };
+    m.outras = { ...(m.outras || {}) };
+    for (const [ed, r] of Object.entries(Ms.rascs)) {
+      // grava só o que difere do que vem com o programa (o resto continua vindo do padrão)
+      const pad = ed === MISSAL_PADRAO.edicao ? MISSAL_PADRAO.itens : {}, itens = {};
+      for (const [id, v] of Object.entries(r)) {
+        const p = pad[id] || {}, x = {};
+        if (v.pag && v.pag !== String(p.pag || '')) x.pag = v.pag;
+        if (v.uso && v.uso !== String(p.uso || '')) x.uso = v.uso;
+        if (x.pag || x.uso) itens[id] = x;
+      }
+      if (ed === m.edicao) m.itens = itens;
+      else if (Object.keys(itens).length) m.outras[ed] = itens;
+      else delete m.outras[ed];
+    }
+    salvarEucaristia(); aposMudarEuc(); toast(`Páginas do Missal salvas (${m.edicao}).`);
+  });
 }
 
 function aposMudarEuc() {
@@ -557,6 +733,7 @@ function aposMudarEuc() {
 
 function ligarEucaristia() {
   ligarNomesLiturgia();
+  ligarTabelaMissal();
   $('#btnAbrirEuc').addEventListener('click', () => mostrarEucaristia(true));
   const painel = $('#painelEucaristia');
   painel.addEventListener('click', e => {
@@ -575,6 +752,7 @@ function ligarEucaristia() {
     if (ver) return abrirItem(ver.dataset.eucVer === 'pref' ? { tipo: 'prefacio', prefId: Euc.sel.pref } : { tipo: 'eucaristica', oeId: Euc.sel.oe });
     if (e.target.closest('[data-euc-add]')) adicionarEucaristiaAoRoteiro();
     if (e.target.closest('[data-euc-folhetos]')) $('#arqFolhetosEuc').click();
+    if (e.target.closest('[data-euc-missal]')) abrirTabelaMissal();
     if (e.target.closest('[data-euc-exportar]')) exportarTextosEuc();
     if (e.target.closest('[data-euc-importar]')) $('#arqEucJson').click();
   });
@@ -590,6 +768,11 @@ function ligarEucaristia() {
     e.target.value = '';
     if (arquivos.length) await lerOracoesDeFolhetos(arquivos);
   });
+  painel.addEventListener('change', e => {
+    if (e.target.id !== 'eucEdicao') return;
+    if (!trocarEdicaoMissal(e.target.value)) return;
+    salvarEucaristia(); aposMudarEuc(); toast('Edição do Missal: ' + edicaoMissal() + ' (as páginas da anterior ficaram guardadas).');
+  });
   painel.addEventListener('input', e => {
     if (e.target.id !== 'eucFiltro') return;
     Euc.filtro = e.target.value;
@@ -598,10 +781,15 @@ function ligarEucaristia() {
   });
   $('#formTextoEuc').addEventListener('submit', e => {
     if (e.submitter?.value !== 'salvar') return;
-    const texto = $('#formTextoEuc').texto.value.replace(/\r/g, '').trim();
-    if (texto) Euc.dados.textos[Euc.editando] = { texto, origem: 'manual', data: isoData(new Date()) };
-    else delete Euc.dados.textos[Euc.editando];
-    salvarEucaristia(); aposMudarEuc(); toast('Texto salvo.');
+    const f = $('#formTextoEuc'), texto = f.texto.value.replace(/\r/g, '').trim();
+    const antes = Euc.dados.textos[Euc.editando]?.texto || '';
+    if (texto !== antes.trim()) {
+      if (texto) Euc.dados.textos[Euc.editando] = { texto, origem: 'manual', data: isoData(new Date()) };
+      else delete Euc.dados.textos[Euc.editando];
+    }
+    const mi = missalDe(Euc.editando), pag = f.pag.value.trim(), uso = f.uso.value.trim();
+    if (pag !== mi.pag || uso !== mi.uso) salvarMissalItem(Euc.editando, pag, uso);
+    salvarEucaristia(); aposMudarEuc(); toast('Salvo.');
   });
   $('#btnEucApagar').addEventListener('click', () => {
     if (!confirm('Apagar o texto desta oração/prefácio?')) return;

@@ -5,6 +5,11 @@
  * A versão mais nova fica em cima. Ao gerar uma versão nova, acrescente a entrada dela aqui.
  */
 const NOVIDADES = [
+  { versao: '1.9.14', data: '2026-11-20', itens: [
+    '📖 Página no Missal (ideia do Luciano, da Paróquia Santa Marina): no catálogo ✝, o botão "📖 Páginas do Missal…" abre uma tabela com todas as orações e prefácios para preencher a página e uma nota de "quando usar" (Enter pula para a linha de baixo). Também dá para preencher pelo ✎ de cada um. A página aparece no catálogo, no item do roteiro e na impressão do roteiro (Resumo e Completo), para quem preside achar rápido no livro.',
+    '📖 A página vale para uma edição do Missal, escolhida no alto do catálogo ou da tabela. Vem "3ª edição (2023), modelo padrão"; há também o modelo solene, a 2ª edição, ou dá para digitar outra. Cada edição guarda as suas páginas: trocar não apaga nada (ex.: o modelo padrão na matriz e o solene na capela). Ao começar uma edição vazia, o programa oferece copiar as páginas da anterior. O ano A, B ou C e o ano par ou ímpar não mudam o Missal.',
+    '⬇ "Exportar textos" agora leva também as páginas e as notas, com a edição. Assim uma paróquia preenche e passa para as outras pelo "Importar textos…".',
+  ] },
   { versao: '1.9.13', data: '2026-11-19', itens: [
     '✝ Prefácio e Oração Eucarística pelas regras do Missal (ideia do Luciano, da Paróquia Santa Marina): o catálogo (✝) mostra, para a data do roteiro, qual é o prefácio do dia. Ex.: Advento I até 16/12 e Advento II de 17 a 24/12, os domingos da Quaresma, a oitava da Páscoa, as solenidades, os santos. Ele já vem escolhido.',
     '⛔ Combinações que não podem são barradas, no catálogo e na troca pelo roteiro. Ex.: Oração Eucarística IV (e as outras de prefácio fixo) num dia com prefácio próprio, ou outro prefácio num domingo do Advento. Nos dias de semana dos tempos fortes e nas festas, o programa só pergunta, porque pode ser uma Missa votiva ou de exéquias. Trocar para a Oração IV leva o prefácio dela junto.',

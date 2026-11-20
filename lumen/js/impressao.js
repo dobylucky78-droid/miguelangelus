@@ -43,7 +43,9 @@ function htmlImpressao(r, modelo) {
   const quando = inf.data ? inf.data.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) + (inf.hora ? ' · ' + inf.hora : '') : '';
   const itens = (r.itens || []).map((it, i) => {
     const res = resumoItem(it), c = it.tipo === 'canto' ? S.cantos.find(x => x.id === it.cantoId) : null;
-    const ficha = c ? [fichaCanto(c), c.tom ? 'Tom: ' + c.tom : ''].filter(Boolean).join(' · ') : '';
+    // (1.9.14) prefácio e oração eucarística: a página no Missal (pedido do Luciano)
+    const pagEuc = ['prefacio', 'eucaristica'].includes(it.tipo) && typeof pagMissal === 'function' ? pagMissal(it.tipo === 'prefacio' ? it.prefId : it.oeId) : '';
+    const ficha = c ? [fichaCanto(c), c.tom ? 'Tom: ' + c.tom : ''].filter(Boolean).join(' · ') : pagEuc ? 'Missal ' + pagEuc : '';
     const cab = `<div class="cab"><span class="n">${i + 1}</span><span class="rot">${esc(res.rot)}</span>
       <span class="tit">${esc(tirarMarcas(res.tit || ''))}</span>${ficha ? `<span class="ficha">${esc(ficha)}</span>` : ''}</div>`;
     let corpo = '';

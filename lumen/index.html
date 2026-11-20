@@ -1446,12 +1446,41 @@
   </form>
 </dialog>
 
+<!-- ============ (1.9.14) Páginas do Missal: tabela para preencher ============ -->
+<dialog id="dlgMissal">
+  <form method="dialog" class="form">
+    <h2>📖 Páginas do Missal</h2>
+    <p class="sutil pequeno">Preencha a página de cada oração e de cada prefácio no Missal da sua paróquia. Em "Quando usar", escreva uma nota curta
+      com as suas palavras (não copie a rubrica). Pode deixar em branco o que não souber. As páginas aparecem no catálogo, no roteiro e na impressão.</p>
+    <div class="linha missal-topo">
+      <label>Edição do Missal <input id="msEdicao" list="eucEdicoes2" size="40"></label>
+      <datalist id="eucEdicoes2"></datalist>
+      <input type="search" id="msBusca" placeholder="Buscar…">
+      <label class="chk"><input type="checkbox" id="msFaltando"> só os sem página</label>
+      <span class="espaco"></span><span id="msConta" class="sutil pequeno"></span>
+    </div>
+    <div class="missal-tab-caixa"><table class="missal-tab"><thead><tr><th>Oração / Prefácio</th><th>Página</th><th>Quando usar</th></tr></thead><tbody id="msCorpo"></tbody></table></div>
+    <div class="linha">
+      <button type="button" id="msExportar" title="Salva um arquivo .json com as páginas e notas, para mandar a outra paróquia ou à equipe do MiguelAngelus">⬇ Exportar para enviar</button>
+      <button type="button" id="msImportar" title="Traz páginas de um arquivo .json exportado por outro MiguelAngelus">⬆ Importar…</button>
+      <span class="espaco"></span>
+      <button value="cancelar" formnovalidate>Cancelar</button>
+      <button value="salvar" class="primario">Salvar</button>
+    </div>
+  </form>
+</dialog>
+
 <!-- ============ Texto de oração eucarística / prefácio ============ -->
 <dialog id="dlgTextoEuc">
   <form id="formTextoEuc" method="dialog" class="form">
     <h2 id="eucTitulo">Texto</h2>
     <p id="eucOrigem" class="sutil pequeno"></p>
-    <textarea name="texto" rows="20" placeholder="Cole aqui o texto do Missal.&#10;&#10;Linha em branco separa os slides.&#10;— Linha começando com travessão é resposta do povo (fica em negrito)."></textarea>
+    <div class="linha euc-missal">
+      <label>Página no Missal <input name="pag" size="6" maxlength="12" placeholder="ex.: 412"></label>
+      <label class="cresce">Quando usar <input name="uso" maxlength="240" placeholder="ex.: domingos do Advento até 16 de dezembro (com as nossas palavras)"></label>
+    </div>
+    <p id="eucEdicaoInfo" class="sutil pequeno"></p>
+    <textarea name="texto" rows="18" placeholder="Cole aqui o texto do Missal.&#10;&#10;Linha em branco separa os slides.&#10;— Linha começando com travessão é resposta do povo (fica em negrito)."></textarea>
     <p class="sutil pequeno">Use o texto oficial do Missal Romano (CNBB). No prefácio, cole a partir de "Na verdade, é digno e justo…" até antes do Santo;
       na oração, a partir de depois do Santo até o "Amém" final.</p>
     <div class="linha">
