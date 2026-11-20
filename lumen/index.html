@@ -133,6 +133,8 @@
     </div>
     <div class="menu"><button class="menu-titulo">Ajuda</button>
       <div class="menu-itens">
+        <button data-menu="pergunte" data-assist-rot="pergunte">❓ Pergunte ao Miguel…</button>
+        <button data-menu="dica" data-assist-rot="dica" title="A cola do coroinha: prefácio e Oração Eucarística do roteiro, com a página do Missal">💡 Dica do Miguel…</button>
         <button data-menu="manual">📘 Manual do MiguelAngelus <span class="atalho">F1</span></button>
         <button data-menu="manualAparencia">🎨 Manual da aparência dos slides</button>
         <button data-menu="atalhos">Atalhos do teclado…</button>
@@ -820,6 +822,14 @@
             <label class="campo">Site / e-mail / Instagram <input data-par="contato"></label>
           </div>
           <label class="campo">Pároco <input data-par="paroco" placeholder="Ex.: Pe. …"></label>
+          <div class="assist-escolha">
+            <img id="parAssistIcone" src="img/assistente-miguel.svg" alt="">
+            <label class="campo">Assistente do programa (💡 dicas e ❓ perguntas)
+              <select data-par="assistente">
+                <option value="">Miguel, o anjinho do MiguelAngelus</option>
+                <option value="mariana">Mariana, a Expert em Liturgia</option>
+              </select></label>
+          </div>
           <p class="sutil pequeno">Salvo automaticamente enquanto você digita.</p>
           <div class="separador">Apresentação no telão</div>
           <p class="sutil pequeno">Imagens nos cantos da tela (brasão, logo da PASCOM, padroeiro…). A padrão vale para todas as
@@ -1178,6 +1188,28 @@
   </form>
 </dialog>
 
+<!-- ============ Assistente (1.9.15): 💡 Dica (cola do coroinha) e ❓ Pergunte (busca no Manual) ============ -->
+<dialog id="dlgDica" class="dlg-assist">
+  <form method="dialog" class="form">
+    <div class="assist-cab"><img class="assist-icone" alt=""><div><h2 data-assist-rot="dica">Dica do Miguel</h2>
+      <div class="sutil" id="dicaRoteiro"></div></div></div>
+    <div id="dicaCorpo"></div>
+    <div class="linha"><button type="button" id="btnDicaImprimir">🖨 Imprimir a cola</button><button type="button" id="btnDicaCatalogo">✝ Abrir o catálogo</button>
+      <span class="espaco"></span><button value="ok" class="primario">Fechar</button></div>
+  </form>
+</dialog>
+
+<dialog id="dlgPergunte" class="dlg-assist">
+  <form method="dialog" class="form">
+    <div class="assist-cab"><img class="assist-icone" alt=""><div><h2 data-assist-rot="pergunte">Pergunte ao Miguel</h2>
+      <div class="sutil">Escreva a sua dúvida com as suas palavras. A resposta vem do Manual do MiguelAngelus.</div></div></div>
+    <input type="search" id="pergTermo" placeholder="Ex.: como importar o folheto? o vídeo ficou sem som…" autocomplete="off">
+    <div id="pergCorpo" class="perg-corpo"></div>
+    <div class="linha"><button type="button" id="btnPergFaq">📋 Perguntas frequentes</button><button type="button" id="btnPergManual">📘 Abrir o Manual inteiro</button>
+      <span class="espaco"></span><button value="ok" class="primario">Fechar</button></div>
+  </form>
+</dialog>
+
 <!-- ============ Sobre ============ -->
 <dialog id="dlgSobre">
   <form method="dialog" class="form sobre">
@@ -1192,6 +1224,9 @@
       <div class="credito"><img class="foto" src="img/foto-marcio.webp" alt="Marcio">
         <div><span class="sutil pequeno">Desenvolvido por</span><b>Marcio Aurelio Rios Martins</b></div></div>
     </div>
+    <p class="sutil">Os assistentes do programa são uma homenagem ao <b>Miguel</b>, coroinha da <b>Paróquia São José Operário</b>,
+      e à <b>Mariana</b>, acólita da <b>Paróquia Coração Eucarístico de Jesus e Santa Marina</b>. Os dois contribuíram para o MiguelAngelus trazer as
+      referências das Orações Eucarísticas e dos prefácios, para ajudar quem serve no presbitério. 🙏</p>
     <div class="sobre-brasoes">
       <figure><img src="img/brasao-paroquia.webp" alt="Brasão da Paróquia São José Operário"><figcaption>Paróquia São José Operário (RJ)</figcaption></figure>
     </div>
@@ -1578,7 +1613,9 @@
 <script src="js/apresentacao.js"></script>
 <script src="js/temas.js"></script>
 <script src="js/roteiros.js"></script>
+<script src="js/missal-paginas.js"></script>
 <script src="js/eucaristia.js"></script>
+<script src="js/assistente.js"></script>
 <script src="js/liturgiadia.js"></script>
 <script src="js/avisos.js"></script>
 <script src="js/avisosparoquiais.js"></script>

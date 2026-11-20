@@ -31,7 +31,8 @@ const GRUPOS_PREF = [
     ['p-rec1', 'Prefácio da Reconciliação I'], ['p-rec2', 'Prefácio da Reconciliação II'],
     ['p-dc1', 'Prefácio das Diversas Circunstâncias I'], ['p-dc2', 'Prefácio das Diversas Circunstâncias II'],
     ['p-dc3', 'Prefácio das Diversas Circunstâncias III'], ['p-dc4', 'Prefácio das Diversas Circunstâncias IV']] },
-  { grupo: 'Advento', itens: romanos(2).map((r, i) => [`adv${i + 1}`, `Advento ${r}`]) },
+  // (1.9.15) a 3ª edição brasileira traz também o I-A e o II-A (mesmos dias que o I e o II)
+  { grupo: 'Advento', itens: [['adv1', 'Advento I'], ['adv1a', 'Advento I-A'], ['adv2', 'Advento II'], ['adv2a', 'Advento II-A']] },
   { grupo: 'Natal', itens: [...romanos(3).map((r, i) => [`nat${i + 1}`, `Natal ${r}`]), ['epif', 'Epifania do Senhor']] },
   { grupo: 'Quaresma', itens: romanos(4).map((r, i) => [`qua${i + 1}`, `Quaresma ${r}`]) },
   { grupo: 'Domingos da Quaresma', itens: [['qd1', '1º Domingo da Quaresma — A tentação do Senhor'], ['qd2', '2º Domingo da Quaresma — A Transfiguração'],
@@ -39,14 +40,15 @@ const GRUPOS_PREF = [
   { grupo: 'Paixão do Senhor', itens: [['pai1', 'Paixão do Senhor I'], ['pai2', 'Paixão do Senhor II'], ['ramos', 'Domingo de Ramos e da Paixão']] },
   { grupo: 'Páscoa', itens: [...romanos(5).map((r, i) => [`pas${i + 1}`, `Páscoa ${r}`]), ['asc1', 'Ascensão do Senhor I'], ['asc2', 'Ascensão do Senhor II'], ['pent', 'Pentecostes']] },
   { grupo: 'Domingos do Tempo Comum', itens: romanos(10).map((r, i) => [`tc${i + 1}`, `Domingos do Tempo Comum ${r}`]) },
-  { grupo: 'Comuns', itens: romanos(6).map((r, i) => [`com${i + 1}`, `Comum ${r}`]) },
+  { grupo: 'Comuns', itens: romanos(9).map((r, i) => [`com${i + 1}`, `Comum ${r}`]) },     // (1.9.15) a 3ª edição vai até o IX
   { grupo: 'Solenidades e festas do Senhor', itens: [['trin', 'Santíssima Trindade'], ['batismo', 'Batismo do Senhor'], ['apres', 'Apresentação do Senhor'],
     ['anunc', 'Anunciação do Senhor'], ['transf', 'Transfiguração do Senhor'], ['cruz', 'Exaltação da Santa Cruz'], ['corac', 'Sagrado Coração de Jesus'],
-    ['cristorei', 'Cristo Rei do Universo'], ['euc1', 'Santíssima Eucaristia I'], ['euc2', 'Santíssima Eucaristia II']] },
+    ['cristorei', 'Cristo Rei do Universo'], ['euc1', 'Santíssima Eucaristia I'], ['euc2', 'Santíssima Eucaristia II'], ['euc3', 'Santíssima Eucaristia III']] },
   { grupo: 'Espírito Santo', itens: [['es1', 'Espírito Santo I'], ['es2', 'Espírito Santo II']] },
-  { grupo: 'Nossa Senhora', itens: [['nsra1', 'Virgem Maria I'], ['nsra2', 'Virgem Maria II'], ['imac', 'Imaculada Conceição'], ['assun', 'Assunção de Nossa Senhora']] },
+  { grupo: 'Nossa Senhora', itens: [['nsra1', 'Virgem Maria I'], ['nsra2', 'Virgem Maria II'], ['imac', 'Imaculada Conceição'], ['assun', 'Assunção de Nossa Senhora'],
+    ['aparecida', 'Nossa Senhora Aparecida']] },     // (1.9.15) próprio do Brasil (12/10)
   { grupo: 'Santos', itens: [['jose', 'São José'], ['joaob', 'São João Batista'], ['pedropaulo', 'São Pedro e São Paulo'], ['apost1', 'Apóstolos I'], ['apost2', 'Apóstolos II'],
-    ['santos1', 'Santos I'], ['santos2', 'Santos II'], ['todossantos', 'Todos os Santos'], ['martires', 'Santos Mártires'], ['pastores', 'Santos Pastores'], ['virgens', 'Santas Virgens e Santos Religiosos'], ['anjos', 'Anjos']] },
+    ['santos1', 'Santos I'], ['santos2', 'Santos II'], ['todossantos', 'Todos os Santos'], ['martires', 'Santos Mártires I'], ['martires2', 'Santos Mártires II'], ['pastores', 'Santos Pastores I'], ['pastores2', 'Santos Pastores II'], ['virgens', 'Santas Virgens e Santos Religiosos'], ['anjos', 'Anjos']] },
   { grupo: 'Outras ocasiões', itens: [['unidade', 'Unidade dos Cristãos'], ['ded1', 'Dedicação de uma igreja I'], ['ded2', 'Dedicação de uma igreja II']] },
   { grupo: 'Defuntos', itens: romanos(5).map((r, i) => [`def${i + 1}`, `Defuntos ${r}`]) },
 ];
@@ -58,7 +60,38 @@ const Euc = { dados: { textos: {}, extras: [] }, sel: { oe: 'oe3', pref: null },
 async function carregarEucaristia() {
   const reg = await DB.obter('config', 'eucaristia');
   if (reg?.valor) Object.assign(Euc.dados, reg.valor);
+  if (arrumarEucaristia15()) salvarEucaristia();
   renderNomesLiturgia();
+}
+
+// (1.9.15) Arrumação ao carregar (idempotente; true = mudou algo):
+//  - páginas/notas digitadas ou importadas iguais às que vêm com o programa saem (passam a valer as do programa, que
+//    podem ser corrigidas nas próximas versões); notas "(página a conferir)" da coleta de SP também saem;
+//  - prefácio "vindo dos folhetos" que é um do catálogo ("A glória de Jerusalém" = Todos os Santos…): o texto passa
+//    para o do catálogo (se ele não tiver) e o avulso deixa de aparecer nas listas (continua existindo para roteiros antigos).
+function arrumarEucaristia15() {
+  let mudou = false;
+  const m = Euc.dados.missal;
+  if (m?.itens && edicaoMissal() === MISSAL_PADRAO.edicao) {
+    for (const [id, v] of Object.entries(m.itens)) {
+      const p = MISSAL_PADRAO.itens[id] || {}, x = { ...v };
+      if (x.pag && String(x.pag) === String(p.pag || '')) delete x.pag;
+      if (x.uso && (x.uso === p.uso || /^\(p[aá]gina (deduzida|a conferir)/.test(x.uso))) delete x.uso;
+      if (x.pag === v.pag && x.uso === v.uso) continue;
+      mudou = true;
+      if (x.pag || x.uso) m.itens[id] = x; else delete m.itens[id];
+    }
+  }
+  for (const x of Euc.dados.extras) {
+    if (x.tipo !== 'pref' || x.duplica) continue;
+    const alvo = TEMAS_PREF.filter(([re]) => re.test(x.nome || '')).map(([, id]) => id);
+    if (!alvo.length) continue;
+    // "Do mistério de Maria e da Igreja" é o mesmo texto na Imaculada e em Aparecida
+    if (alvo.includes('imac')) alvo.push('aparecida');
+    for (const id of alvo) if (!temTexto(id) && temTexto(x.id)) Euc.dados.textos[id] = { ...Euc.dados.textos[x.id] };
+    x.duplica = alvo[0]; mudou = true;
+  }
+  return mudou;
 }
 
 // Ajustes → 🙏 Papa e Bispo
@@ -117,7 +150,8 @@ function trocarNomesN(texto) {
 // "uso" é uma nota curta com as nossas palavras (não copiar a rubrica do Missal).
 // A 3ª edição brasileira (Edições CNBB, 2023) saiu em dois modelos, ambos com 1.264 páginas: padrão (19 × 27,5 cm) e
 // solene (26,5 × 34,5 cm, de luxo). Se a numeração for a mesma nos dois, basta copiar as páginas de um para o outro.
-const MISSAL_PADRAO = { edicao: 'Missal Romano, 3ª edição (2023), modelo padrão', itens: {} };
+const MISSAL_PADRAO = { edicao: 'Missal Romano, 3ª edição (2023), modelo padrão',
+  itens: typeof MISSAL_PAGINAS === 'object' ? MISSAL_PAGINAS : {} };     // (1.9.15) js/missal-paginas.js
 const EDICOES_MISSAL = ['Missal Romano, 3ª edição (2023), modelo padrão', 'Missal Romano, 3ª edição (2023), modelo solene', 'Missal Romano, 2ª edição (1992)'];
 const edicaoMissal = () => (Euc.dados.missal?.edicao || MISSAL_PADRAO.edicao).trim();
 const itensDaEdicao = ed => (ed === edicaoMissal() ? Euc.dados.missal?.itens : Euc.dados.missal?.outras?.[ed]) || {};
@@ -154,13 +188,90 @@ function salvarMissalItem(id, pag, uso) {
 }
 
 const listaOEs = () => [...OES, ...Euc.dados.extras.filter(x => x.tipo === 'oe').map(x => ({ ...x, pref: 'livre', extra: true }))];
-function listaPrefacios() {
+// todos = true: inclui os avulsos que duplicam um do catálogo (para achar o nome em roteiros antigos)
+function listaPrefacios(todos = false) {
   const base = GRUPOS_PREF.flatMap(g => g.itens.map(([id, nome]) => ({ id, nome, grupo: g.grupo })));
-  return [...base, ...Euc.dados.extras.filter(x => x.tipo === 'pref').map(x => ({ ...x, extra: true }))];
+  return [...base, ...Euc.dados.extras.filter(x => x.tipo === 'pref' && (todos || !x.duplica)).map(x => ({ ...x, extra: true }))];
 }
 const oeDe = id => listaOEs().find(o => o.id === id) || null;
-const prefDe = id => listaPrefacios().find(p => p.id === id) || null;
-const nomeEuc = id => (oeDe(id) || prefDe(id))?.nome || '?';
+const prefDe = id => listaPrefacios(true).find(p => p.id === id) || null;
+// (1.9.15) Partes fixas do Missal, para os fitilhos (a página fica na mesma tabela das orações e prefácios)
+const PARTES_MISSAL = [
+  { id: 'mr-inicio', nome: 'Rito da Missa (ritos iniciais)' },
+  { id: 'mr-comunhao', nome: 'Rito da Comunhão (Pai-Nosso)' },
+  { id: 'mr-bencao', nome: 'Bênção final simples' },
+  { id: 'mr-solenes', nome: 'Bênçãos solenes (começo)' },
+  { id: 'mr-povo', nome: 'Orações sobre o povo (começo)' },
+].map(p => ({ ...p, grupo: 'Partes fixas do Missal (fitilhos)' }));
+// (1.9.15) Missa do dia (fitilho 1): uma linha por celebração, na mesma tabela 📖. A página não muda de um ano para
+// o outro (ano A, B ou C), então a tabela vale para sempre. Dias de semana do Tempo Comum usam a Missa do domingo
+// da semana; santos vão pela data do calendário (Próprio dos Santos).
+const FESTAS_DATA = [['01-20', 'São Sebastião, mártir'], ['02-02', 'Apresentação do Senhor'], ['03-19', 'São José, Esposo da Virgem Maria'],
+  ['03-25', 'Anunciação do Senhor'], ['06-24', 'Natividade de São João Batista'], ['06-29', 'São Pedro e São Paulo, Apóstolos'],
+  ['08-06', 'Transfiguração do Senhor'], ['08-15', 'Assunção de Nossa Senhora'], ['09-14', 'Exaltação da Santa Cruz'],
+  ['10-12', 'Nossa Senhora da Conceição Aparecida'], ['11-01', 'Todos os Santos'], ['11-02', 'Comemoração de Todos os Fiéis Defuntos'],
+  ['11-09', 'Dedicação da Basílica do Latrão'], ['12-08', 'Imaculada Conceição de Nossa Senhora']];
+function listaMissaDoDia() {
+  if (listaMissaDoDia.c) return listaMissaDoDia.c;
+  const T = 'Missa do dia: tempos e solenidades', SG = 'Missa do dia: santos (pela data)', L = [];
+  const t = (id, nome) => L.push({ id: 'dia-' + id, nome, grupo: T });
+  for (let n = 1; n <= 4; n++) t('adv-' + n, `${n}º Domingo do Advento`);
+  t('natal', 'Natal do Senhor'); t('sagrada-familia', 'Sagrada Família'); t('maria-mae-deus', 'Santa Maria, Mãe de Deus (1º de janeiro)');
+  t('epifania', 'Epifania do Senhor'); t('batismo', 'Batismo do Senhor'); t('cinzas', 'Quarta-feira de Cinzas');
+  for (let n = 1; n <= 5; n++) t('qua-' + n, `${n}º Domingo da Quaresma`);
+  t('ramos', 'Domingo de Ramos e da Paixão'); t('ceia', 'Quinta-feira Santa: Ceia do Senhor'); t('paixao', 'Sexta-feira da Paixão');
+  t('vigilia', 'Vigília Pascal'); t('pascoa', 'Domingo da Páscoa');
+  for (let n = 2; n <= 7; n++) t('pas-' + n, `${n}º Domingo da Páscoa`);
+  t('ascensao', 'Ascensão do Senhor'); t('pentecostes', 'Pentecostes');
+  t('tc-1', '1ª Semana do Tempo Comum (dias de semana)');
+  for (let n = 2; n <= 33; n++) t('tc-' + n, `${n}º Domingo do Tempo Comum (e a semana)`);
+  t('tc-34', '34ª Semana do Tempo Comum (dias de semana)');
+  t('trindade', 'Santíssima Trindade'); t('corpus', 'Corpo e Sangue de Cristo'); t('sagrado-coracao', 'Sagrado Coração de Jesus');
+  t('cristorei', 'Cristo Rei do Universo');
+  const sant = { ...Object.fromEntries(Object.entries(Liturgia.SANTORAL || {}).map(([k, s]) => [k, s.nome])), ...Object.fromEntries(FESTAS_DATA) };
+  for (const k of Object.keys(sant).sort()) L.push({ id: 'dia-d-' + k, nome: `${k.slice(3)}/${k.slice(0, 2)} · ${sant[k]}`, grupo: SG });
+  L.push({ id: 'dia-mae-igreja', nome: 'Maria, Mãe da Igreja (2ª-feira depois de Pentecostes)', grupo: SG },
+    { id: 'dia-sumo-sacerdote', nome: 'Jesus Cristo, Sumo e Eterno Sacerdote (5ª-feira depois de Pentecostes)', grupo: SG },
+    { id: 'dia-imac-coracao', nome: 'Imaculado Coração de Maria (sábado depois do Sagrado Coração)', grupo: SG });
+  return (listaMissaDoDia.c = L);
+}
+// Chave da Missa do dia para um dia do calendário (Liturgia.info); null = dia de semana com Missa própria ainda sem tabela
+function chaveMissaDoDia(lit) {
+  if (!lit?.data) return null;
+  const d = lit.data, mmdd = `${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const t = lit.titulo || '', tt = lit.tituloTempo || t;
+  const fixas = { 'Sagrado Coração de Jesus': 'dia-sagrado-coracao', 'Assunção de Nossa Senhora': 'dia-d-08-15', 'Todos os Santos': 'dia-d-11-01',
+    'São Pedro e São Paulo, Apóstolos': 'dia-d-06-29', 'Imaculada Conceição de Nossa Senhora': 'dia-d-12-08' };
+  if (lit.padroeiro) return 'dia-d-' + mmdd;
+  if (fixas[t]) return fixas[t];
+  if (lit.santo) {
+    if (/Mãe da Igreja/.test(t)) return 'dia-mae-igreja';
+    if (/Sumo e Eterno Sacerdote/.test(t)) return 'dia-sumo-sacerdote';
+    if (/Imaculado Coração/.test(t)) return 'dia-imac-coracao';
+    return 'dia-d-' + mmdd;
+  }
+  if (lit.festa) return 'dia-d-' + mmdd;
+  const nomes = { 'Natal do Senhor': 'natal', 'Sagrada Família': 'sagrada-familia', 'Santa Maria, Mãe de Deus': 'maria-mae-deus', 'Epifania do Senhor': 'epifania',
+    'Batismo do Senhor': 'batismo', 'Quarta-feira de Cinzas': 'cinzas', 'Domingo de Ramos e da Paixão': 'ramos', 'Quinta-feira Santa — Ceia do Senhor': 'ceia',
+    'Sexta-feira da Paixão': 'paixao', 'Sábado Santo — Vigília Pascal': 'vigilia', 'Domingo da Páscoa': 'pascoa', 'Ascensão do Senhor': 'ascensao',
+    'Pentecostes': 'pentecostes', 'Santíssima Trindade': 'trindade', 'Corpo e Sangue de Cristo': 'corpus', 'Cristo Rei do Universo': 'cristorei' };
+  if (nomes[tt]) return 'dia-' + nomes[tt];
+  let m;
+  if ((m = tt.match(/^(\d+)[ºª] (Domingo|Semana) do Tempo Comum/))) return 'dia-tc-' + m[1];
+  if ((m = tt.match(/^(\d+)º Domingo do Advento/))) return 'dia-adv-' + m[1];
+  if ((m = tt.match(/^(\d+)º Domingo da Quaresma/))) return 'dia-qua-' + m[1];
+  if ((m = tt.match(/^(\d+)º Domingo da Páscoa/))) return 'dia-pas-' + m[1];
+  return null;
+}
+// (1.9.15) Bênçãos solenes do Missal, cada uma com a sua página (fitilho 6)
+const BENCAOS_SOLENES = [['advento', 'Advento'], ['natal', 'Natal do Senhor'], ['inicio-ano', 'Início do ano'], ['epifania', 'Epifania do Senhor'],
+  ['paixao', 'Paixão do Senhor'], ['pascoa', 'Tempo Pascal'], ['ascensao', 'Ascensão do Senhor'], ['espirito', 'Espírito Santo'],
+  ...['I', 'II', 'III', 'IV', 'V', 'VI'].map((r, i) => ['tc-' + (i + 1), 'Tempo Comum ' + r]),
+  ['bvm', 'Bem-aventurada Virgem Maria'], ['pedro-paulo', 'São Pedro e São Paulo'], ['apostolos', 'Santos Apóstolos'],
+  ['todos-santos', 'Todos os Santos'], ['dedicacao', 'Dedicação de igreja'], ['defuntos', 'Celebração pelos fiéis defuntos']]
+  .map(([id, nome]) => ({ id: 'ben-' + id, nome: 'Bênção solene: ' + nome, grupo: 'Bênçãos solenes' }));
+const parteMissal = id => PARTES_MISSAL.find(p => p.id === id) || BENCAOS_SOLENES.find(p => p.id === id) || (id?.startsWith('dia-') ? listaMissaDoDia().find(p => p.id === id) : null) || null;
+const nomeEuc = id => (oeDe(id) || prefDe(id) || parteMissal(id))?.nome || '?';
 const temTexto = id => !!Euc.dados.textos[id]?.texto;
 
 // Prefácios que podem ser usados com uma oração eucarística
@@ -183,12 +294,12 @@ const PREF_PROPRIOS = [
   [/Domingo de Ramos/, ['ramos']], [/Natal do Senhor/, idsEuc('nat', 3)], [/Sagrada Família/, idsEuc('nat', 3)],
   [/Santa Maria, Mãe de Deus/, ['nsra1']], [/Epifania do Senhor/, ['epif']], [/Batismo do Senhor/, ['batismo']],
   [/Ascensão do Senhor/, ['asc1', 'asc2']], [/Pentecostes/, ['pent']], [/Santíssima Trindade/, ['trin']],
-  [/Corpo e Sangue/, ['euc1', 'euc2']], [/Sagrado Coração/, ['corac']], [/Cristo Rei/, ['cristorei']],
+  [/Corpo e Sangue/, ['euc1', 'euc2', 'euc3']], [/Sagrado Coração/, ['corac']], [/Cristo Rei/, ['cristorei']],
   [/Apresentação do Senhor/, ['apres']], [/São José, Esposo/, ['jose']], [/Anunciação do Senhor/, ['anunc']],
   [/Natividade de São João Batista/, ['joaob']], [/São Pedro e São Paulo/, ['pedropaulo']], [/Transfiguração do Senhor/, ['transf']],
-  [/Assunção de Nossa Senhora/, ['assun']], [/Exaltação da Santa Cruz/, ['cruz']], [/Aparecida/, ['nsra1', 'nsra2']],
+  [/Assunção de Nossa Senhora/, ['assun']], [/Exaltação da Santa Cruz/, ['cruz']], [/Aparecida/, ['aparecida']],
   [/Fiéis Defuntos/, idsEuc('def', 5)], [/Todos os Santos/, ['todossantos']], [/Basílica do Latrão/, ['ded2', 'ded1']],
-  [/Imaculada Conceição/, ['imac']], [/São Sebastião/, ['martires']],
+  [/Imaculada Conceição/, ['imac']], [/São Sebastião/, ['martires', 'martires2']],
 ];
 const SOLENIDADES_EUC = /Natal do Senhor|Santa Maria, Mãe de Deus|Epifania do Senhor|Ascensão do Senhor|Pentecostes|Santíssima Trindade|Corpo e Sangue|Sagrado Coração|Cristo Rei|São José, Esposo|Anunciação do Senhor|Natividade de São João Batista|São Pedro e São Paulo|Assunção de Nossa Senhora|Aparecida|Todos os Santos|Imaculada Conceição|Fiéis Defuntos|Domingo de Ramos/;
 
@@ -202,9 +313,9 @@ function prefsDoSanto(nome) {
   if (/dedicacao/.test(n)) return ['ded2', 'ded1'];
   if (/jesus cristo|do senhor\b|nome de jesus/.test(n)) return null;
   if (/apostol|evangelista/.test(n)) return ['apost1', 'apost2'];
-  if (/martir/.test(n)) return ['martires', 'santos1', 'santos2'];
+  if (/martir/.test(n)) return ['martires', 'martires2', 'santos1', 'santos2'];
   if (/virge|religios|abade|abadessa|monge|eremita/.test(n)) return ['virgens', 'santos1', 'santos2'];
-  if (/\b(papa|bispo|presbitero|diacono|doutor)/.test(n)) return ['pastores', 'santos1', 'santos2'];
+  if (/\b(papa|bispo|presbitero|diacono|doutor)/.test(n)) return ['pastores', 'pastores2', 'santos1', 'santos2'];
   return ['santos1', 'santos2'];
 }
 
@@ -237,8 +348,8 @@ function regraEuc(data = new Date(), padroeiro = null) {
   let doTempo = [], modoTempo = dom ? 'rigido' : 'aviso', nota = '';
   const n = parseInt(tt, 10) || 0;
   if (tempo === 'Advento') {
-    doTempo = m === 12 && dia >= 17 ? ['adv2'] : ['adv1'];
-    nota = m === 12 && dia >= 17 ? 'De 17 a 24 de dezembro: Advento II.' : 'Até 16 de dezembro: Advento I.';
+    doTempo = m === 12 && dia >= 17 ? ['adv2', 'adv2a'] : ['adv1', 'adv1a'];
+    nota = m === 12 && dia >= 17 ? 'De 17 a 24 de dezembro: Advento II ou II-A.' : 'Até 16 de dezembro: Advento I ou I-A.';
   } else if (tempo === 'Natal') {
     const epi = new Date(d.getFullYear(), 0, 2); epi.setDate(2 + (7 - epi.getDay()) % 7);
     doTempo = m === 1 && d > epi ? ['epif', ...nat] : nat;
@@ -257,7 +368,7 @@ function regraEuc(data = new Date(), padroeiro = null) {
     doTempo = dias > 42 ? ['asc1', 'asc2', ...pas] : pas;
   } else {                                          // Tempo Comum
     r.fixasOk = !lit.padroeiro && lit.santo !== 'Festa';
-    doTempo = dom ? idsEuc('tc', 10) : idsEuc('com', 6);
+    doTempo = dom ? idsEuc('tc', 10) : idsEuc('com', 9);
     modoTempo = dom ? 'aviso' : 'livre';
   }
   // santo do dia (festa, memória) ou padroeiro da comunidade (solenidade)
@@ -299,7 +410,7 @@ function checarEuc(oeId, prefId, regra = regraDoRoteiro()) {
     return { nivel: forte, msg: `A ${oe.nome} tem prefácio próprio e por isso não se usa neste dia (${regra.titulo}), que tem prefácio do dia (${nomesPrefsRegra(regra)}). Use a Oração Eucarística I, II ou III.` };
   if (prefId && regra.modo !== 'livre' && !regra.prefs.includes(prefId) && !(oe && oe.pref !== 'livre' && prefId === oe.proprio)) {
     if (prefId.startsWith('x-')) return { nivel: 'aviso', msg: `Confira: neste dia (${regra.titulo}) o prefácio indicado é ${nomesPrefsRegra(regra)}.` };
-    return { nivel: forte, msg: `Neste dia (${regra.titulo}) o prefácio é:${nomesPrefsRegra(regra)}.` };
+    return { nivel: forte, msg: `Neste dia (${regra.titulo}) o prefácio é: ${nomesPrefsRegra(regra)}.` };
   }
   return { nivel: 'ok', msg: '' };
 }
@@ -343,6 +454,7 @@ const TEMAS_PREF = [[/assun[cç][aã]o/i, 'assun'], [/imaculada/i, 'imac'], [/tr
   [/cristo,? rei|rei do universo/i, 'cristorei'], [/ramos/i, 'ramos'], [/epifania/i, 'epif'], [/batismo do senhor/i, 'batismo'],
   [/apresenta[cç][aã]o do senhor/i, 'apres'], [/transfigura/i, 'transf'], [/santa cruz/i, 'cruz'], [/sagrado cora/i, 'corac'],
   [/tenta[cç][aã]o do senhor/i, 'qd1'], [/samaritana/i, 'qd3'], [/cego de nascen/i, 'qd4'], [/l[aá]zaro/i, 'qd5'], [/mist[eé]rio de maria e da igreja/i, 'imac'],
+  [/gl[oó]ria de jerusal[eé]m/i, 'todossantos'], [/aparecida/i, 'aparecida'],     // (1.9.15) folhetos de SP
   [/s[aã]o jos[eé]/i, 'jose'], [/jo[aã]o batista/i, 'joaob'], [/pedro e (s[aã]o )?paulo/i, 'pedropaulo'], [/anuncia[cç][aã]o/i, 'anunc']];
 const prefPorTema = nome => { const t = TEMAS_PREF.find(([re]) => re.test(nome || '')); return t ? prefDe(t[1]) : null; };
 // "Páscoa, I O mistério pascal", "Santíssima Eucaristia I Sacrifício e Sacramento de Cristo": o nome do catálogo seguido do tema
@@ -467,6 +579,7 @@ function renderEucaristia() {
       <label class="euc-edicao" title="As páginas (p. 000) são desta edição do Missal. Trocar a edição mostra as páginas da outra; as desta ficam guardadas.">📖
         <input id="eucEdicao" list="eucEdicoes" value="${esc(edicaoMissal())}" size="30"><datalist id="eucEdicoes">${edicoesConhecidas().map(e => `<option value="${esc(e)}">`).join('')}</datalist></label>
       <button data-euc-folhetos title="Lê um ou vários folhetos em PDF e guarda só a oração eucarística e o prefácio (não cria roteiros)">📄 Ler orações de folhetos…</button>
+      <button data-cmd-dica title="A cola do coroinha: prefácio e oração do roteiro aberto, com a página do Missal" data-assist-rot="dica">💡 ${esc(rotuloDica())}…</button>
       <button data-euc-missal title="Tabela para preencher a página de cada oração e prefácio no Missal da paróquia">📖 Páginas do Missal…</button>
       <button data-euc-exportar title="Salva num arquivo .json os textos cadastrados (✓), para levar a outro computador ou paróquia">⬇ Exportar textos</button>
       <button data-euc-importar title="Traz os textos de um arquivo .json exportado por outro MiguelAngelus">⬆ Importar textos…</button>
@@ -564,7 +677,7 @@ function exportarTextosEuc() {
   const textos = Object.fromEntries(ids.map(id => [id, { nome: nomeEuc(id), ...Euc.dados.textos[id] }]));
   // (1.9.14) páginas no Missal e "quando usar" (com a edição) vão juntas
   const dados = { app: 'MiguelAngelus', tipo: 'eucaristia', versao: 2, exportado: new Date().toISOString(), textos, extras,
-    missal: { edicao: edicaoMissal(), itens: mItens } };
+    missal: { edicao: edicaoMissal(), itens: mItens, ...(Euc.dados.nFitilhos ? { fitilhos: Euc.dados.nFitilhos } : {}) } };
   baixar(`Orações eucarísticas e prefácios MiguelAngelus ${isoData(new Date())}.json`, JSON.stringify(dados, null, 1));
   toast(`${ids.length} texto(s), ${nPag} página(s) e ${nUso} nota(s) "quando usar" exportados.`);
 }
@@ -576,7 +689,9 @@ async function importarTextosEuc(d) {
   const extrasArq = new Map((fonte.extras || []).map(x => [x.id, x]));
   const idLocal = (idArq, nomeArq) => {
     const ex = extrasArq.get(idArq);
-    if (!ex && (oeDe(idArq) || prefDe(idArq))) return idArq;
+    // (1.9.15) partes fixas, bênçãos solenes e Missa do dia (mr-*, ben-*, dia-*) entram com o mesmo id
+    if (!ex && (oeDe(idArq) || prefDe(idArq) || parteMissal(idArq))) return idArq;
+    if (!ex && /^(mr|ben|dia)-/.test(idArq)) return idArq;
     // item extra: acha pelo tipo + nome; se não existir, cria
     const nome = ex?.nome || nomeArq || idArq, tipo = ex?.tipo || 'pref';
     const achado = (tipo === 'oe' ? listaOEs() : listaPrefacios()).find(x => normEuc(x.nome) === normEuc(nome));
@@ -601,6 +716,11 @@ async function importarTextosEuc(d) {
       if (pag !== mi.pag || uso !== mi.uso) { salvarMissalItem(id, pag, uso); n++; }
     }
     msgMissal = `\nMissal (${edicaoMissal()}): ${n} página(s)/nota(s) atualizada(s).`;
+  }
+  // (1.9.15) quantos fitilhos tem o Missal
+  if (+fonte.missal?.fitilhos >= 1 && +fonte.missal.fitilhos <= 12 && +fonte.missal.fitilhos !== +Euc.dados.nFitilhos) {
+    Euc.dados.nFitilhos = +fonte.missal.fitilhos;
+    msgMissal += `\nFitilhos do Missal: ${Euc.dados.nFitilhos}.`;
   }
   const novos = [], iguais = [], diferentes = [];
   for (const [idArq, t] of Object.entries(fonte.textos || {})) {
@@ -638,14 +758,14 @@ function carregarRascMissal(ed) {
   Ms.edicao = ed;
 }
 function abrirTabelaMissal() {
-  Ms.todos = [...listaOEs().map(o => ({ id: o.id, nome: o.nome, grupo: 'Orações Eucarísticas' })), ...listaPrefacios()];
+  Ms.todos = [...listaOEs().map(o => ({ id: o.id, nome: o.nome, grupo: 'Orações Eucarísticas' })), ...listaPrefacios(), ...PARTES_MISSAL, ...BENCAOS_SOLENES, ...listaMissaDoDia()];
   Ms.rascs = {}; Ms.edicao = '';
   carregarRascMissal(edicaoMissal());
   $('#msEdicao').value = Ms.edicao;
   $('#eucEdicoes2').innerHTML = edicoesConhecidas().map(e => `<option value="${esc(e)}">`).join('');
   $('#msBusca').value = ''; $('#msFaltando').checked = false;
-  renderTabelaMissal();
   const dlg = $('#dlgMissal'); dlg.returnValue = ''; dlg.showModal();
+  renderTabelaMissal();     // depois de abrir: a altura das notas depende do tamanho na tela
 }
 function renderTabelaMissal() {
   const termo = semAcento($('#msBusca').value), falt = $('#msFaltando').checked, r = rascMissal();
@@ -654,10 +774,13 @@ function renderTabelaMissal() {
   $('#msCorpo').innerHTML = grupos.map(g => `<tr class="ms-grupo"><td colspan="3">${esc(g)}</td></tr>` + vis.filter(x => x.grupo === g).map(x =>
     `<tr data-ms="${x.id}"><td>${esc(x.nome)}</td>
       <td><input data-k="pag" value="${esc(r[x.id].pag)}" size="5" maxlength="12" inputmode="numeric"></td>
-      <td><input data-k="uso" value="${esc(r[x.id].uso)}" maxlength="240"></td></tr>`).join('')).join('')
+      <td><textarea data-k="uso" rows="1" maxlength="240">${esc(r[x.id].uso)}</textarea></td></tr>`).join('')).join('')
     || '<tr><td colspan="3" class="sutil">Nada encontrado.</td></tr>';
+  // (1.9.15) a nota quebra a linha e mostra o texto inteiro (antes cortava)
+  for (const t of $$('#msCorpo textarea')) ajustarAlturaMissal(t);
   contarMissal();
 }
+function ajustarAlturaMissal(t) { t.style.height = 'auto'; t.style.height = t.scrollHeight + 2 + 'px'; }
 function contarMissal() {
   const v = Object.values(rascMissal());
   $('#msConta').textContent = `${v.filter(x => x.pag).length} de ${v.length} com página`;
@@ -668,8 +791,8 @@ function ligarTabelaMissal() {
   $('#msCorpo').addEventListener('input', e => {
     const tr = e.target.closest('[data-ms]'), k = e.target.dataset.k;
     if (!tr || !k) return;
-    rascMissal()[tr.dataset.ms][k] = e.target.value.trim();
-    if (k === 'pag') contarMissal();
+    rascMissal()[tr.dataset.ms][k] = e.target.value.replace(/\s*\n\s*/g, ' ').trim();
+    if (k === 'pag') contarMissal(); else ajustarAlturaMissal(e.target);
   });
   // Enter pula para a linha de baixo (preencher em sequência, com o Missal aberto)
   $('#msCorpo').addEventListener('keydown', e => {
@@ -697,7 +820,7 @@ function ligarTabelaMissal() {
     const itens = itensDoRasc(rascMissal()), n = Object.values(itens).filter(v => v.pag).length;
     if (!Object.keys(itens).length) return toast('Preencha alguma página antes de exportar.');
     const dados = { app: 'MiguelAngelus', tipo: 'eucaristia', versao: 2, exportado: new Date().toISOString(), textos: {},
-      extras: Euc.dados.extras.filter(x => itens[x.id]), missal: { edicao: Ms.edicao, itens } };
+      extras: Euc.dados.extras.filter(x => itens[x.id]), missal: { edicao: Ms.edicao, itens, ...(Euc.dados.nFitilhos ? { fitilhos: Euc.dados.nFitilhos } : {}) } };
     baixar(`Páginas do Missal MiguelAngelus ${isoData(new Date())}.json`, JSON.stringify(dados, null, 1));
     toast(`${n} página(s) do "${Ms.edicao}" exportada(s). Mande o arquivo por e-mail ou WhatsApp.`);
   });
@@ -800,7 +923,7 @@ function ligarEucaristia() {
 
 function opcoesEuc(tipo, sel) {
   if (tipo === 'oe') return listaOEs().map(o => `<option value="${o.id}" ${o.id === sel ? 'selected' : ''}>${temTexto(o.id) ? '✓ ' : '— '}${esc(o.nome)}</option>`).join('');
-  const l = listaPrefacios();
+  const l = listaPrefacios(true).filter(p => !p.duplica || p.id === sel);     // roteiro antigo com o avulso continua mostrando-o
   return [...new Set(l.map(p => p.grupo))].map(g => `<optgroup label="${esc(g)}">${l.filter(p => p.grupo === g)
     .map(p => `<option value="${p.id}" ${p.id === sel ? 'selected' : ''}>${temTexto(p.id) ? '✓ ' : '— '}${esc(p.nome)}</option>`).join('')}</optgroup>`).join('');
 }

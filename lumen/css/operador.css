@@ -656,9 +656,12 @@ big.m-g { font-size: 1.3em; } big.m-gg { font-size: 1.7em; } small.m-pq { font-s
 .missal-tab-caixa { max-height: 60vh; overflow: auto; border: 1px solid var(--borda); border-radius: 6px; margin: 8px 0; }
 .missal-tab { width: 100%; border-collapse: collapse; font-size: 13px; }
 .missal-tab th { position: sticky; top: 0; background: var(--painel2); text-align: left; padding: 6px 8px; z-index: 1; }
-.missal-tab td { padding: 3px 8px; border-top: 1px solid var(--borda); }
-.missal-tab td:nth-child(2) { width: 80px; }
-.missal-tab td:nth-child(3) input { width: 100%; box-sizing: border-box; }
+.missal-tab { table-layout: fixed; }
+.missal-tab td { padding: 3px 8px; border-top: 1px solid var(--borda); vertical-align: top; }
+.missal-tab th:nth-child(1), .missal-tab td:nth-child(1) { width: 34%; padding-top: 8px; }
+.missal-tab th:nth-child(2), .missal-tab td:nth-child(2) { width: 72px; }
+.missal-tab td:nth-child(2) input { width: 100%; box-sizing: border-box; }
+.missal-tab td:nth-child(3) textarea { width: 100%; box-sizing: border-box; resize: none; overflow: hidden; font: inherit; line-height: 1.35; min-height: 30px; }
 .missal-tab tr.ms-grupo td { font-weight: 600; color: var(--acento); padding-top: 10px; border-top: none; }
 #dlgLiturgia { width: min(760px, 94vw); }
 .lit-passos { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; }
@@ -1407,3 +1410,51 @@ html[data-tema-app="claro"] .t-campanhas { background: #fde3ef; color: #9a1d56; 
 #cpPrevia img.cp-previa { width: 480px; height: 270px; }
 .bv-linha { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 6px 12px; width: 100%; }
 .bv-linha select { max-width: 340px; }
+/* (1.9.15) Assistente: 💡 Dica (cola do coroinha) e ❓ Pergunte (busca no Manual) */
+.assist-escolha { display: flex; align-items: center; gap: 10px; }
+.assist-escolha img { width: 48px; height: 48px; border-radius: 12px; flex: none; }
+.assist-escolha .campo { flex: 1; }
+.dlg-assist { width: min(760px, 94vw); }
+.assist-cab { display: flex; align-items: center; gap: 14px; margin-bottom: 8px; }
+.assist-cab h2 { margin: 0; }
+.assist-icone { width: 72px; height: 72px; border-radius: 16px; flex: none; }
+#dicaCorpo { max-height: 62vh; overflow: auto; }
+.dica-card { border: 1px solid var(--borda); border-left: 5px solid var(--acento); border-radius: 10px; padding: 10px 14px; margin: 8px 0; background: var(--painel); }
+.dica-card.dica-falta { border-left-color: #d9a520; }
+.dica-o { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--sutil); }
+.dica-nome { font-size: 24px; font-weight: 700; line-height: 1.2; }
+.dica-pag { font-size: 20px; margin: 4px 0; } .dica-pag b { font-size: 28px; }
+.dica-uso { line-height: 1.4; }
+.dica-sem-pag { font-size: 14px; }
+.marca-versao { font-size: 12px; font-weight: 400; color: var(--sutil); margin-left: 2px; align-self: flex-end; padding-bottom: 2px; }
+.dica-det { margin-top: 14px; }
+.fitas { list-style: none; padding: 0; margin: 6px 0; }
+.fitas li { display: flex; align-items: center; gap: 12px; padding: 6px 4px; border-bottom: 1px solid var(--borda); }
+.fita-n { width: 30px; height: 30px; border-radius: 50%; background: var(--fita); color: #fff; text-shadow: 0 0 2px #000; display: grid; place-items: center; font-weight: 700; flex: none; }
+.fita-parte { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.fita-parte small { color: var(--sutil); }
+.fita-pag { font-size: 22px; font-weight: 700; white-space: nowrap; }
+.fita-pag .sutil { font-size: 13px; font-weight: 400; }
+.fita-pag i { font-style: normal; font-size: 15px; color: #f2b632; }
+.fita-junto { opacity: .65; } .fita-junto .fita-n { background: transparent; color: var(--sutil); text-shadow: none; }
+.fita-sobra { opacity: .7; } .fita-sobra .fita-n { background: transparent; border: 2px dashed var(--sutil); color: var(--sutil); }
+.fita-form { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; padding: 6px 0 2px; }
+.fita-form input, .fita-form select { width: auto; }
+.fita-form input[type=number] { width: 56px; }
+.dica-lista { list-style: none; padding: 0; margin: 6px 0; columns: 2; column-gap: 24px; }
+.dica-lista li { display: flex; justify-content: space-between; gap: 10px; padding: 3px 0; border-bottom: 1px dashed var(--borda); break-inside: avoid; }
+.dica-lista b { font-size: 18px; white-space: nowrap; }
+.dica-aviso { padding: 6px 10px; border-radius: 8px; background: rgba(242, 182, 49, .15); border: 1px solid rgba(242, 182, 49, .7); }
+.dica-nota, .dica-fala { line-height: 1.4; }
+#pergTermo { width: 100%; font-size: 16px; padding: 8px 10px; }
+.perg-corpo { max-height: 56vh; overflow: auto; margin-top: 8px; }
+.perg-res { border: 1px solid var(--borda); border-radius: 10px; padding: 8px 14px; margin: 8px 0; background: var(--painel); }
+.perg-res h3 { margin: 2px 0 6px; font-size: 16px; color: var(--acento-claro); }
+.perg-onde { font-size: 12px; color: var(--sutil); }
+.perg-trecho { line-height: 1.45; } .perg-trecho p { margin: 0 0 6px; }
+.perg-trecho .caixa { border-left: 3px solid var(--acento); padding: 4px 10px; margin: 6px 0; }
+.perg-trecho .caixa > b:first-child { display: block; }
+.perg-res mark { background: rgba(242, 182, 49, .45); color: inherit; border-radius: 3px; padding: 0 1px; }
+.perg-mais { margin-top: 4px; }
+.perg-faq { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 4px; }
+.perg-faq button { width: 100%; text-align: left; }

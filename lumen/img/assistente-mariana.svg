@@ -1,0 +1,106 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <title>MiguelAngelus — Mariana, acólita</title>
+  <defs>
+    <linearGradient id="ceu" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#23508f"/>
+      <stop offset="1" stop-color="#0e1f40"/>
+    </linearGradient>
+    <radialGradient id="brilho" cx="0.5" cy="0.36" r="0.5">
+      <stop offset="0" stop-color="#fff6d6" stop-opacity=".55"/>
+      <stop offset="1" stop-color="#fff6d6" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="alva" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#dfe8f5"/>
+    </linearGradient>
+    <linearGradient id="cabelo" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2a2420"/>
+      <stop offset="1" stop-color="#14100e"/>
+    </linearGradient>
+    <clipPath id="moldura"><rect width="512" height="512" rx="112"/></clipPath>
+  </defs>
+
+  <g clip-path="url(#moldura)">
+    <!-- céu (o mesmo do ícone do MiguelAngelus) -->
+    <rect width="512" height="512" fill="url(#ceu)"/>
+    <circle cx="256" cy="200" r="230" fill="url(#brilho)"/>
+
+    <!-- estrelinhas -->
+    <g fill="#ffd95a">
+      <path d="M78 92 l6 16 16 6 -16 6 -6 16 -6 -16 -16 -6 16 -6z"/>
+      <path d="M432 70 l5 12 12 5 -12 5 -5 12 -5 -12 -12 -5 12 -5z"/>
+      <path d="M446 250 l4 10 10 4 -10 4 -4 10 -4 -10 -10 -4 10 -4z"/>
+      <path d="M58 268 l4 10 10 4 -10 4 -4 10 -4 -10 -10 -4 10 -4z"/>
+    </g>
+
+    <!-- alva (veste branca da acólita) -->
+    <path d="M196 252 Q256 232 316 252 L372 530 L140 530 Z" fill="url(#alva)" stroke="#b9c9e2" stroke-width="4"/>
+    <!-- pregas -->
+    <g stroke="#c9d6ea" stroke-width="4" stroke-linecap="round" fill="none">
+      <path d="M210 440 L196 530"/><path d="M256 440 L256 530"/><path d="M302 440 L316 530"/>
+    </g>
+    <!-- gola preta (a batina aparecendo por baixo da alva) -->
+    <path d="M222 244 Q256 274 290 244 L284 240 Q256 262 228 240 Z" fill="#1d1b1f"/>
+    <path d="M222 246 Q256 276 290 246" fill="none" stroke="#b9c9e2" stroke-width="5" stroke-linecap="round"/>
+    <!-- cíngulo com a borla: dourado por padrão; o programa pode trocar pela cor do tempo litúrgico
+         (substituir #f2b632 nos elementos class="cingulo") -->
+    <path class="cingulo" d="M176 418 Q256 436 336 418" fill="none" stroke="#f2b632" stroke-width="10" stroke-linecap="round"/>
+    <path class="cingulo" d="M300 426 Q306 456 298 486" fill="none" stroke="#f2b632" stroke-width="7" stroke-linecap="round"/>
+    <path class="cingulo" d="M290 480 L306 480 L310 504 L286 504 Z" fill="#f2b632"/>
+
+    <!-- braços (mangas pretas) -->
+    <path d="M202 262 C176 292 170 330 188 356" fill="none" stroke="#1d1b1f" stroke-width="32" stroke-linecap="round"/>
+    <path d="M310 262 C336 292 342 326 326 350" fill="none" stroke="#1d1b1f" stroke-width="32" stroke-linecap="round"/>
+    <path d="M196 274 C182 296 178 322 188 344" fill="none" stroke="#3a3740" stroke-width="5" stroke-linecap="round"/>
+    <path d="M316 274 C330 296 334 318 326 338" fill="none" stroke="#3a3740" stroke-width="5" stroke-linecap="round"/>
+
+    <!-- Missal aberto, com as fitinhas -->
+    <g transform="rotate(-5 256 340)">
+      <path d="M180 300 Q218 290 256 304 Q294 290 332 300 L332 392 Q294 382 256 396 Q218 382 180 392 Z" fill="#8e1f1f"/>
+      <path d="M188 304 Q222 296 252 308 L252 388 Q222 378 188 386 Z" fill="#fbf4e2"/>
+      <path d="M260 308 Q290 296 324 304 L324 386 Q290 378 260 388 Z" fill="#fbf4e2"/>
+      <g stroke="#d9cfb6" stroke-width="3" stroke-linecap="round">
+        <path d="M200 324 L240 328"/><path d="M200 338 L240 342"/><path d="M200 352 L236 356"/>
+        <path d="M272 328 L312 324"/><path d="M272 342 L312 338"/><path d="M276 356 L312 352"/>
+      </g>
+      <!-- cruz vermelha (rubrica) -->
+      <rect x="219" y="362" width="5" height="16" rx="1" fill="#c0392b"/>
+      <rect x="214" y="366" width="15" height="5" rx="1" fill="#c0392b"/>
+      <!-- fitas -->
+      <path d="M244 392 L240 432" stroke="#c0392b" stroke-width="6" stroke-linecap="round"/>
+      <path d="M256 396 L256 440" stroke="#2e7d32" stroke-width="6" stroke-linecap="round"/>
+      <path d="M268 392 L274 428" stroke="#6a2c91" stroke-width="6" stroke-linecap="round"/>
+    </g>
+
+    <!-- mãos -->
+    <circle cx="188" cy="352" r="16" fill="#f6c9a0"/>
+    <circle cx="326" cy="346" r="16" fill="#f6c9a0"/>
+
+    <!-- coque (atrás e em cima da cabeça) -->
+    <circle cx="256" cy="104" r="34" fill="url(#cabelo)"/>
+    <path d="M232 104 Q256 92 280 104" fill="none" stroke="#3a322c" stroke-width="4" stroke-linecap="round"/>
+    <!-- pescoço e cabeça -->
+    <rect x="240" y="226" width="32" height="28" rx="10" fill="#e9b88c"/>
+    <circle cx="256" cy="186" r="60" fill="#f6c9a0"/>
+    <!-- orelhas -->
+    <circle cx="197" cy="196" r="11" fill="#f0bd92"/>
+    <circle cx="315" cy="196" r="11" fill="#f0bd92"/>
+    <!-- cabelo preto puxado para o coque, com franjinha de lado -->
+    <path d="M194 196 C184 146 214 122 256 122 C298 122 328 146 318 196 C312 176 304 164 292 156 C270 168 238 170 214 158 C204 168 198 180 194 196 Z" fill="url(#cabelo)"/>
+    <path d="M214 158 C232 150 250 146 270 150" fill="none" stroke="#3a322c" stroke-width="4" stroke-linecap="round"/>
+    <!-- prendedor do coque -->
+    <rect x="240" y="126" width="32" height="9" rx="4" fill="#ffd95a"/>
+    <!-- olhos com cílios -->
+    <ellipse cx="234" cy="196" rx="8" ry="10" fill="#2b1d16"/>
+    <ellipse cx="278" cy="196" rx="8" ry="10" fill="#2b1d16"/>
+    <circle cx="237" cy="192" r="3" fill="#fff"/>
+    <circle cx="281" cy="192" r="3" fill="#fff"/>
+    <g stroke="#2b1d16" stroke-width="3" stroke-linecap="round">
+      <path d="M225 186 L220 181"/><path d="M287 186 L292 181"/>
+    </g>
+    <!-- bochechas e sorriso -->
+    <circle cx="218" cy="216" r="10" fill="#f28b8b" opacity=".5"/>
+    <circle cx="294" cy="216" r="10" fill="#f28b8b" opacity=".5"/>
+    <path d="M238 222 Q256 240 274 222" fill="none" stroke="#7a3b2e" stroke-width="5" stroke-linecap="round"/>
+  </g>
+</svg>

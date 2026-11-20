@@ -373,5 +373,5 @@ const Liturgia = (() => {
     return def('Comum', rotulo(n, 'do Tempo Comum'), 'verde');
   }
 
-  return { info, pascoa, CORES };
+  return { info, pascoa, CORES, SANTORAL };
 })();

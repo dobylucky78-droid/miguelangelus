@@ -38,7 +38,7 @@ const DIOCESES_FOLHETOS = [
 const semBarra = u => (u || '').trim().replace(/^https?:\/\/(www\.)?/i, '').replace(/\/+$/, '').toLowerCase();
 const dioceseDoSite = site => DIOCESES_FOLHETOS.find(d => semBarra(d.site) === semBarra(site));
 
-const CAMPOS_PAROQUIA = ['nome', 'padroeiro', 'diocese', 'siteFolhetos', 'endereco', 'telefone', 'contato', 'paroco'];
+const CAMPOS_PAROQUIA = ['nome', 'padroeiro', 'diocese', 'siteFolhetos', 'endereco', 'telefone', 'contato', 'paroco', 'assistente'];
 
 const Agenda = {
   dados: { paroquia: {}, locais: [], regras: [], excecoes: {}, avulsos: [], vinculos: {} },
@@ -168,6 +168,7 @@ function renderParoquia() {
   const p = Agenda.dados.paroquia;
   for (const c of CAMPOS_PAROQUIA) { const el = $(`[data-par="${c}"]`); if (el && document.activeElement !== el) el.value = p[c] || ''; }
   renderDioceseFolhetos();
+  if (typeof atualizarAssistente === 'function') atualizarAssistente();   // (1.9.15) Miguel ou Mariana
   if (typeof preencherBoasVindasForm === 'function' && document.activeElement !== $('#parLocBV')) preencherBoasVindasForm();   // (1.9.6) lista de vídeos atualizada
   const locais = [...Agenda.dados.locais].sort((a, b) => TIPOS_LOCAL.indexOf(a.tipo) - TIPOS_LOCAL.indexOf(b.tipo) || a.nome.localeCompare(b.nome, 'pt-BR'));
   $('#parLocais').innerHTML = locais.length ? locais.map(l => {
@@ -545,7 +546,10 @@ function ligarAgenda() {
 
   // Paróquia
   for (const c of CAMPOS_PAROQUIA) {
-    $(`[data-par="${c}"]`).addEventListener('input', e => { Agenda.dados.paroquia[c] = e.target.value.trim(); salvarAgenda(); });
+    $(`[data-par="${c}"]`).addEventListener('input', e => {
+      Agenda.dados.paroquia[c] = e.target.value.trim(); salvarAgenda();
+      if (c === 'assistente' && typeof atualizarAssistente === 'function') atualizarAssistente();
+    });
   }
   $('#parDioceseFolhetos')?.addEventListener('change', e => escolherDioceseFolhetos(e.target.value));
   $('#btnParLocal').addEventListener('click', salvarLocalDoForm);

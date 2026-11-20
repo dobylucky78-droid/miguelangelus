@@ -1680,7 +1680,7 @@ function renderCabecalho() {
       h = noRoteiro
         ? `<div class="cab-linha"><span class="tag t-oracao">${pref ? 'Prefácio' : 'Or. Eucarística'}</span>
              <select data-campo="${pref ? 'prefId' : 'oeId'}">${opcoesEuc(pref ? 'pref' : 'oe', id)}</select>${pagTag}
-             <button data-cmd="editarEuc">✎ Texto</button><button data-cmd="catalogoEuc" title="Escolher a combinação no catálogo">Catálogo…</button></div>`
+             <button data-cmd="editarEuc">✎ Texto</button><button data-cmd="catalogoEuc" title="Escolher a combinação no catálogo">Catálogo…</button><button data-cmd="dicaAssist" title="A cola do coroinha: prefácio e oração com a página do Missal">💡</button></div>`
         : `<div class="cab-linha"><span class="tag t-oracao">${pref ? 'Prefácio' : 'Or. Eucarística'}</span><h2>${esc(nomeEuc(id))}</h2>${pagTag}
              <span class="espaco"></span><button data-cmd="editarEuc">✎ Texto</button><button data-cmd="catalogoEuc">Voltar ao catálogo</button></div>`;
       break;
@@ -3052,6 +3052,8 @@ function ligarEventos() {
       abrirEditorCanto(null, it.momento, c => { it.cantoId = c.id; if (S.atual.rIdx >= 0) salvarRoteiro(); });
     } else if (cmd === 'editarEuc') {
       abrirEditorEuc(it.tipo === 'prefacio' ? it.prefId : it.oeId);
+    } else if (cmd === 'dicaAssist') {
+      abrirDica();
     } else if (cmd === 'catalogoEuc') {
       mostrarAba('missa');
       mostrarEucaristia(true);
@@ -3511,6 +3513,7 @@ async function iniciar() {
   ligarRoteiros();
   renderPreparacao();
   ligarEucaristia();
+  ligarAssistente();
   ligarLiturgiaDoDia();
   ligarCalendarioLit();
   ligarTransmissao();
@@ -3548,6 +3551,11 @@ async function iniciar() {
   const versaoApp = (typeof NOVIDADES !== 'undefined' && NOVIDADES[0]?.versao) || '1.8.7';
   $('#versaoApp').textContent = `Versão ${versaoApp} · ` + (NO_APP ? 'aplicativo para Windows' : 'no navegador');
   document.querySelectorAll('[data-versao]').forEach(e => e.textContent = 'Versão ' + versaoApp);
+  // (1.9.15) versão na barra da janela e ao lado do nome, como no Cast (a Secretaria tem a marca e o título dela)
+  if (!SECRETARIA) {
+    document.title = `MiguelAngelus ${versaoApp} — Projeção para a Missa`;
+    $('.marca')?.insertAdjacentHTML('beforeend', ` <span class="marca-versao">versão ${esc(versaoApp)}</span>`);
+  }
   // pede armazenamento permanente (o navegador não apaga os dados para liberar espaço)
   try { navigator.storage?.persist?.(); } catch (_) {}
   enviarConfigTelao(); renderTemasRapidos();

@@ -112,6 +112,8 @@ function acaoMenu(acao) {
     case 'agenda-celebracoes': return abrirAgenda('celebracoes');
     case 'agenda-paroquia': return abrirAgenda('paroquia');
     case 'manual': return abrirManual();
+    case 'pergunte': return abrirPergunte();
+    case 'dica': return abrirDica();
     case 'manualAparencia': return abrirManual('aparencia');
     case 'atalhos': return abrirDialogo('dlgAtalhos');
     case 'atualizar': return verificarAtualizacao({ silencioso: false });
