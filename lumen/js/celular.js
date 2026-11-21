@@ -93,10 +93,35 @@ function estadoCelular() {
     camera: Camera.ativa, letra: !!Camera.letra,
     tocando, volume: volumeMidia(),
     cfg: { corRotulo: cfg.corRotulo || '#ff5a4f', mostrarRotulos: cfg.mostrarRotulos !== false, espacoResposta: cfg.espacoResposta !== false,
+      // (1.9.17) resposta do povo em outra cor, como no telão (1.9.16)
+      corResposta: !!cfg.corResposta, corRespostaCor: cfg.corRespostaCor || '#ffd166',
       // (1.8.4) 📺 aparelho "Telão": o slide em tela cheia com as cores e o jeito do telão
       corFundo: cfg.corFundo || '#000000', corTexto: cfg.corTexto || '#ffffff', maiusculas: !!cfg.maiusculas, negrito: !!cfg.negrito, sombra: cfg.sombra !== false },
     links: typeof linksCelular === 'function' ? linksCelular() : [],      // links.js: mesa de som e outros
+    dica: dicaCelular(),
   };
+}
+
+// (1.9.17) 💡 Dica do assistente nos celulares (só para ler): fitilhos, prefácio e Oração Eucarística do roteiro aberto,
+// com as páginas do Missal. Só páginas e nomes das orações (nada de dado pessoal). Refeita quando o roteiro muda
+// ou a cada 20 s (tabela 📖 e escolha do assistente mudam pouco; o estado vai várias vezes por segundo).
+function dicaCelular() {
+  if (typeof htmlDica !== 'function' || typeof linhasFitilhos !== 'function') return null;
+  const r = S.roteiro;
+  const chave = [r?.id || '', r?.atualizado || '', isoData(new Date()), Math.floor(Date.now() / 20000)].join('|');
+  if (Cel.cacheDica?.chave === chave) return Cel.cacheDica.dados;
+  let dados = null;
+  try {
+    const d = htmlDica(), a = assistente(), n = nFitilhos();
+    dados = {
+      rotulo: rotuloDica(a), nome: a.nome, icone: a.icone.replace(/^img\//, ''), cor: corDoCingulo(),
+      titulo: d.titulo, edicao: d.edicao, corpo: d.corpo,
+      fitas: linhasFitilhos().map(l => ({ n: l.n || 0, parte: l.parte, det: l.det || '', pag: l.junto ? '' : String(l.pag || ''),
+        conf: !!l.conf, junto: !!l.junto, sobra: !l.junto && l.n > n })),
+    };
+  } catch (err) { console.warn('dica para o celular', err); }
+  Cel.cacheDica = { chave, dados };
+  return dados;
 }
 
 // (1.8.1) Agenda para o MiguelAngelus Cast: as celebrações das próximas 2 semanas (data, hora, tipo, capela e se já

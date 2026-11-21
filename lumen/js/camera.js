@@ -150,6 +150,9 @@ function cameraAntesDoSlide(msg) {
 function enviarEstadoCamera(w) {
   const c = Midia.lista.find(m => m.id === Camera.ativa);
   if (c) enviar({ tipo: 'camera', acao: 'mostrar', rotulo: c.rotulo, dispositivo: c.dispositivo, letra: Camera.letra }, [w]);
+  // (1.9.17) sem câmera no telão: avisa também, senão a prévia que perdeu o "parar" (ex.: estava mostrando um texto em
+  // edição) ficava presa na câmera, com a faixa escura por cima do tema
+  else enviar({ tipo: 'camera', acao: 'parar' }, [w]);
 }
 
 // Quadro "Câmeras" na tela principal (aparece quando há câmeras em Mídia): pôr/tirar do telão sem ir até Mídia

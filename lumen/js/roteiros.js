@@ -36,10 +36,13 @@ function infoRoteiro(r) {
   const horaNome = (r.nome.match(/\b([01]\d|2[0-3]):[0-5]\d\b/) || [''])[0];
   const data = iso ? deIso(iso) : null;
   // (1.9.16) Missa de sábado à tarde/noite feita com o folheto do domingo (vigília): a liturgia é a do domingo
-  //   (roteiros antigos: sábado com o título de um domingo vindo do folheto)
-  const vigilia = r.vigilia || (r.liturgiaDe === iso && /domingo/i.test(r.tituloLiturgico || ''));
+  //   (1.9.17) roteiros antigos (sem r.vigilia): sábado à tarde/noite montado com um folheto (título litúrgico do folheto
+  //   na data do próprio roteiro) — o folheto distribuído no sábado à tarde é o do domingo (ex.: "Cristo Rei — Solenidade")
+  const hora = r.hora || oc?.hora || horaNome;
+  const vigilia = r.vigilia || (r.vigilia !== false && r.liturgiaDe === iso && !!r.tituloLiturgico
+    && (/domingo/i.test(r.tituloLiturgico) || (hora || '') >= (typeof HORA_VIGILIA === 'string' ? HORA_VIGILIA : '14:00')));
   const dataLit = data && vigilia && data.getDay() === 6 ? new Date(data.getFullYear(), data.getMonth(), data.getDate() + 1) : data;
-  return { data, dataLit, iso, hora: r.hora || oc?.hora || horaNome,
+  return { data, dataLit, iso, hora,
     localId: r.localId || oc?.localId || localPorTexto(r.nome), cancelada: !!oc?.cancelada };
 }
 

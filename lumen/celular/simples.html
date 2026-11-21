@@ -214,13 +214,17 @@ function htmlSlide(s) {
   if (s.avisos) return '<b>' + esc(s.avisos.titulo) + '</b>' + s.avisos.itens.map(function (t) { return '<br>• ' + esc(t); }).join('');
   if (s.img && !s.texto) return '<span class="vazia">🖼 Imagem</span>';
   var povo = false;
+  // (1.9.17) resposta do povo em outra cor (Ajustes → Aparência do telão), como no telão do computador
+  var cfg = (typeof est !== 'undefined' && est && est.cfg) || {};
+  var corR = cfg.corResposta ? String(cfg.corRespostaCor || '#ffd166').replace(/[^#0-9a-fA-F]/g, '') : '';
+  var resp = corR ? '<span class="resp" style="color:' + corR + '">' : '<span class="resp">';
   var html = esc(s.texto).split('\n').map(function (l) {
     var m = /^\s*([PTLCD])\.\s+/.exec(l), quem = '';
-    if (m) { povo = m[1] === 'T'; quem = '<span class="quem">' + m[1] + '.</span> '; l = l.slice(m[0].length); }
+    if (m) { povo = m[1] === 'T'; quem = '<span class="quem' + (povo ? ' povo' : '') + '"' + (povo && corR ? ' data-cor="' + corR + '"' : '') + '>' + m[1] + '.</span> '; l = l.slice(m[0].length); }
     else if (/^\s*(—|R\.)/.test(l)) povo = true;
-    return quem + (povo ? '<span class="resp">' + l + '</span>' : l);
+    return quem + (povo ? resp + l + '</span>' : l);
   }).join('<br>').replace(RX_MARCA, trocaMarca);
-  return s.refrao ? '<span class="resp">' + html + '</span>' : html;
+  return s.refrao ? resp + html + '</span>' : html;
 }
 
 // ---------- cifras (as mesmas regras da página completa) ----------
@@ -393,7 +397,7 @@ function renderTelao() {
   var tx = $('telaoTxt');
   tx.innerHTML = html;
   var qs = tx.querySelectorAll('.quem');
-  for (var i = 0; i < qs.length; i++) qs[i].style.color = cfg.corRotulo || '#ff5a4f';
+  for (var i = 0; i < qs.length; i++) qs[i].style.color = qs[i].getAttribute('data-cor') || cfg.corRotulo || '#ff5a4f';
   if (!html) return;
   // o maior tamanho de letra em que o slide inteiro cabe (busca binária)
   var cel = $('telaoCel'), W = cel.clientWidth * 0.9, H = t.clientHeight * 0.86 -(av.hidden ? 0 : av.offsetHeight);

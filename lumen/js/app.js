@@ -2621,8 +2621,10 @@ async function importarFolheto(arquivo, dica = {}) {
       data: dataPdf || dica.data || '',          // "… — 27 de setembro de 2026" → "2026-09-27"
       itens: comHomilia([...itemAbertura(r), ...cantos.itens]), aviso: r.aviso, cantos,
       tituloLiturgico: r.tituloLiturgico,            // ex.: "Assunção da Bem-aventurada Virgem Maria — Solenidade"
-      msgEuc: capturarEucaristia(r.eucaristia),   // guarda a oração eucarística e o prefácio do dia no catálogo
+      msgEuc: capturarEucaristia(r.eucaristia, r.tituloLiturgico),   // guarda a oração eucarística e o prefácio do dia no catálogo
     };
+    // (1.9.17) páginas do Missal que o folheto de SP traz (só onde a paróquia ainda não tem página)
+    try { pacote.msgEuc += guardarPaginasDoFolheto(r.missal, pacote.data, r.tituloLiturgico); } catch (err) { console.warn('páginas do Missal do folheto', err); }
     // (1.9.11) faltando 2 ou mais partes principais, ao terminar (concluirFolheto) oferece mandar para avaliação
     const faltam = partesQueFaltam(r.itens);
     if (faltam.length >= 2) pacote.avaliar = { arquivo, dica, problema: `O roteiro foi montado, mas faltaram partes importantes: ${faltam.join(', ')}. ` +
@@ -2653,7 +2655,7 @@ async function lerFolhetosEmLote(arquivos) {
       novos.push(...c.cantosNovos);
       existentes += c.existentes;
       const antes = new Set(Object.keys(Euc.dados.textos));
-      capturarEucaristia(r.eucaristia);
+      capturarEucaristia(r.eucaristia, r.tituloLiturgico);
       orações.push(...Object.keys(Euc.dados.textos).filter(id => !antes.has(id)).map(nomeEuc));
     } catch (err) {
       falhas.push(`${arquivos[i].name} (${err.message})`);

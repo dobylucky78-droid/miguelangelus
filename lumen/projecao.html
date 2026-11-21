@@ -37,6 +37,9 @@
   /* "Letra por cima": o slide vira uma faixa na parte de baixo, sobre a câmera */
   body.camera.com-letra #area { inset: auto 0 3vh 0; height: 27vh; padding: 1.2vh 5vw; background: rgba(0, 0, 0, .55); box-sizing: border-box; }
   body.camera.com-letra #area:has(#texto:empty) { background: transparent; }
+  /* (1.9.17) a faixa da letra por cima da câmera é sempre escura: nos temas claros (letra preta) o texto sumia */
+  body.camera.com-letra #texto { color: #fff !important; text-shadow: 0 .2vh .5vh rgba(0, 0, 0, .9); }
+  body.camera.com-letra #texto .resp, body.camera.com-letra #texto .quem.povo { color: var(--cor-resp-faixa, inherit); }
   body.camera.com-letra #rodape { display: none; }
   #imgSlide { position: fixed; display: none; object-fit: contain; transition: opacity var(--trans, .14s) ease; }
   #veu { position: fixed; inset: 0; display: none; background: #000; pointer-events: none; }
@@ -221,6 +224,18 @@ function pix(m) {
   $('pixCaixa').innerHTML = on ? (ok(m.faixa) ? `<img class="pix-faixa" src="${m.faixa}" alt="Chave Pix">` : '') +
     `<img class="pix-qr" src="${m.qr}" alt="QR code do Pix">` : '';
   desenharImagem(); ajustar();
+}
+
+// (1.9.17) luminância (0 = preto, 1 = branco) de uma cor #rrggbb, e a cor escurecida (f = quanto fica da cor)
+function luz(hex) {
+  const m = /^#?([0-9a-f]{6})$/i.exec(String(hex || '').trim());
+  if (!m) return 0;
+  const n = parseInt(m[1], 16), c = [n >> 16, (n >> 8) & 255, n & 255].map(v => { v /= 255; return v <= .03928 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4; });
+  return .2126 * c[0] + .7152 * c[1] + .0722 * c[2];
+}
+function escurecer(hex, f) {
+  const n = parseInt(String(hex).replace('#', ''), 16);
+  return '#' + [n >> 16, (n >> 8) & 255, n & 255].map(v => Math.round(v * f).toString(16).padStart(2, '0')).join('');
 }
 
 function htmlSlide(s) {
@@ -687,7 +702,13 @@ function aplicarConfig(c) {
   t.style.fontWeight = cfg.negrito ? 700 : 400;     // temas claros: letra preta em negrito
   t.style.setProperty('--cor-quem', cfg.corRotulo || '#ff5a4f');
   // (1.9.16) resposta do povo em outra cor (opcional)
-  if (cfg.corResposta) t.style.setProperty('--cor-resp', cfg.corRespostaCor || '#ffd166'); else t.style.removeProperty('--cor-resp');
+  // (1.9.17) fundo claro (temas creme, azul, branco litúrgico) com cor clara (o dourado de fábrica): escurece a cor,
+  // senão some no fundo; na faixa escura da letra por cima da câmera vale a cor escolhida (--cor-resp-faixa)
+  if (cfg.corResposta) {
+    const cor = cfg.corRespostaCor || '#ffd166';
+    t.style.setProperty('--cor-resp', luz(cfg.corFundo || '#000000') > .6 && luz(cor) > .5 ? escurecer(cor, .5) : cor);
+    t.style.setProperty('--cor-resp-faixa', cor);
+  } else { t.style.removeProperty('--cor-resp'); t.style.removeProperty('--cor-resp-faixa'); }
   t.style.setProperty('--cor-secao', cfg.corSecao || '#5aa9ff');
   t.style.setProperty('--cor-cruz', cfg.corCruz || '#c8102e');
   estiloCruz = cfg.estiloCruz === 'missal' ? 'missal' : 'latina';
@@ -758,10 +779,13 @@ function midia(m) {
 }
 
 // ---------- Câmera ao vivo ----------
-let camStream = null;
+let camStream = null, camVez = 0;
 async function camera(m) {
   const b = document.body;
   if (m.acao === 'letra') { b.classList.toggle('com-letra', !!m.on); b.classList.toggle('sem-letra', !m.on); ajustar(); return; }
+  // (1.9.17) cada pedido ganha um número: um "mostrar" que ainda estava abrindo a câmera (leva alguns segundos) quando
+  // chegou o "parar" — ou outro "mostrar" — é descartado ao terminar (antes, a câmera voltava sozinha e a prévia ficava presa)
+  const vez = ++camVez;
   if (m.acao !== 'mostrar') return camStream ? sumirDevagar($('cam'), pararCam) : pararCam();     // tirar a câmera: some devagar
   cancelarSaida($('cam'));
   pararCam();
@@ -773,12 +797,16 @@ async function camera(m) {
     }
     const d = lista.find(x => x.label === m.rotulo) || lista.find(x => x.deviceId === m.dispositivo);
     if (!d) throw new Error(`"${m.rotulo}" não encontrada (o NDI Webcam está aberto?)`);
-    camStream = await navigator.mediaDevices.getUserMedia({ video: { deviceId: { exact: d.deviceId }, width: { ideal: 1920 }, height: { ideal: 1080 } }, audio: false });
+    if (vez !== camVez) return;                                   // já pediram outra coisa
+    const s = await navigator.mediaDevices.getUserMedia({ video: { deviceId: { exact: d.deviceId }, width: { ideal: 1920 }, height: { ideal: 1080 } }, audio: false });
+    if (vez !== camVez) { s.getTracks().forEach(t => t.stop()); return; }
+    camStream = s;
     $('cam').srcObject = camStream;
     b.classList.add('camera');
     b.classList.toggle('com-letra', !!m.letra); b.classList.toggle('sem-letra', !m.letra);
     desenharImagem(); ajustar();
   } catch (e) {
+    if (vez !== camVez) return;
     if (alvo && alvo !== window) try { alvo.postMessage({ app: 'lumen', tipo: 'cameraStatus', preview: PREVIEW, erro: e.message }, '*'); } catch (_) {}
   }
 }

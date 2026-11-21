@@ -812,6 +812,41 @@ const Folheto = (() => {
     };
   }
 
+  // (1.9.17) Páginas do Missal que o folheto de São Paulo ("O Povo de Deus em São Paulo") traz entre parênteses, em letra
+  // miúda (por isso lidas das linhas cruas, antes de descartar as rubricas):
+  //   "(Prefácio da Quaresma IV | MR, p. 462)" embaixo da Oração Eucarística · "COLETA" + "(MR, p. 313)" na linha de baixo.
+  // Devolve [{ tipo: 'pref' | 'oe' | 'coleta', nome, pag }]; quem guarda decide o id pelo catálogo. As bênçãos ficam de fora:
+  // os folhetos dão páginas diferentes para a mesma bênção (583/584), e "Oração sobre o povo" vem por número.
+  const RX_MR = /\(([^()]*?)\bMR[,.]?\s*p\.?\s*(\d{2,4})\b([^()]*)\)/i;
+  function paginasMissal(runs) {
+    const linhas = [];
+    let pAt = 0, porY = null;
+    for (const r of runs) {
+      if (r.p !== pAt) { pAt = r.p; porY = new Map(); }
+      const y = Math.round(r.y);
+      if (!porY.has(y)) { const l = { t: '' }; porY.set(y, l); linhas.push(l); }
+      porY.get(y).t += r.s;
+    }
+    const achados = [];
+    linhas.forEach((l, i) => {
+      const m = RX_MR.exec(l.t);
+      if (!m) return;
+      const antes = m[1].replace(/\s*[|,]\s*$/, '').trim(), pag = m[2];
+      if (/2[ªa]\s*op[cç][aã]o/i.test(m[3])) return;
+      if (/^pref/i.test(antes)) {
+        const nome = antes.replace(/^pref(?:[aá]cio)?\.?\s*:?\s*/i, '').trim();
+        if (nome) achados.push({ tipo: 'pref', nome, pag });
+      } else if (/ora[cç][aã]o eucar[ií]stica/i.test(antes)) achados.push({ tipo: 'oe', nome: antes, pag });
+      else if (!antes) {
+        // a página logo abaixo do título "COLETA" / "ORAÇÃO DO DIA" é a da Missa do dia (o formulário)
+        const ctx = (l.t.slice(0, m.index) + ' ' + (linhas[i - 1]?.t || '')).trim();
+        if (/^(\d+\.\s*)?(coleta|ora[cç][aã]o do dia)\b/i.test(ctx) || /\b(coleta|ora[cç][aã]o do dia)\s*\d*\s*$/i.test(ctx)) achados.push({ tipo: 'coleta', nome: 'Coleta', pag });
+      }
+    });
+    // a mesma coisa repetida (coleta e "sobre as oferendas" na mesma página) conta uma vez
+    return achados.filter((a, k) => achados.findIndex(b => b.tipo === a.tipo && b.nome === a.nome) === k);
+  }
+
   // Nome da celebração. Em solenidades/festas o folheto traz o nome numa linha e "Solenidade – …" na seguinte:
   // "Assunção da Bem-aventurada Virgem Maria" + "Solenidade – 20ª Semana…" → "Assunção … — Solenidade"
   function tituloLiturgico(linhas) {
@@ -1113,6 +1148,7 @@ const Folheto = (() => {
       tituloLiturgico: tituloLiturgico(linhas),
       itens,
       eucaristia: extrairEucaristia(partes),
+      missal: paginasMissal(bruto.runs),           // (1.9.17) páginas do Missal (folheto de SP)
       creditos: creditos(bruto.tudo),
       capa: await imagemDaCapa(pdf),
       capaTextos: textosDaCapa(bruto.capa, tituloLiturgico(linhas)),

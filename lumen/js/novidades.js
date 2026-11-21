@@ -5,6 +5,16 @@
  * A versão mais nova fica em cima. Ao gerar uma versão nova, acrescente a entrada dela aqui.
  */
 const NOVIDADES = [
+  { versao: '1.9.17', data: '2026-11-21', itens: [
+    '😇 O assistente ganhou lugar fixo: no pé da faixa da esquerda fica o Miguel (ou a Mariana, conforme Agenda → Paróquia). Um clique abre a 💡 Dica, sobre a liturgia do dia (prefácio, Oração Eucarística e fitilhos), e o ❓ Pergunte, para tirar dúvidas sobre o MiguelAngelus.',
+    '💡 A Dica do Miguel (ou da Mariana) também nos celulares e tablets conectados: no Controle pelo celular há a aba "💡 Dica", e no aparelho dos músicos, o botão 💡 ao lado do "Seguir o telão". Mostra onde pôr os fitilhos do Missal, o prefácio e a Oração Eucarística do roteiro aberto, com as páginas. É só para ler: as escolhas continuam no computador. Útil para o coroinha ou o acólito com o Missal, sem papel.',
+    '🎨 A resposta do povo em outra cor (da 1.9.16) agora aparece também no celular: no Controle, no aparelho "📺 Telão" e na versão para celulares antigos.',
+    '🎀 Missa do dia nos dias de semana do Advento, do Natal, da Quaresma e da Páscoa: a tabela 📖 Páginas do Missal ganhou uma linha para cada dia (de 17 a 24 de dezembro pela data; na Quaresma e na Páscoa, pela semana e o dia). As páginas vêm em branco, para a paróquia preencher; os fitilhos da Dica já usam a linha do dia.',
+    '📖 Ao importar o folheto de São Paulo ("O Povo de Deus em São Paulo"), o programa lê as páginas do Missal que o folheto traz (o prefácio e a coleta da Missa do dia) e anota na tabela 📖, só onde a paróquia ainda não tem página, e só com a 3ª edição do Missal. O aviso diz o que foi anotado e o que ficou como estava.',
+    '📷 Correção: ligar e logo desligar a câmera no telão podia deixar a prévia (e às vezes o telão) presa na câmera, com fundo preto e o tema sem mudar. Agora o desligar sempre vale.',
+    '🎨 Resposta do povo em outra cor nos temas claros (creme, azul, branco litúrgico): a cor escurece sozinha para não sumir no fundo claro. E a letra por cima da câmera fica sempre clara, legível na faixa escura.',
+    '🌙 Correção: os roteiros de sábado à tarde montados com o folheto do domingo antes da 1.9.16 também passam a seguir o domingo (ex.: a Missa de sábado à noite com o folheto de Cristo Rei mostrava, na Dica, a memória do sábado).',
+  ] },
   { versao: '1.9.16', data: '2026-11-20', itens: [
     '🎨 Resposta do povo em outra cor (ideia do Luciano, da Paróquia Coração Eucarístico de Jesus e Santa Marina): em Ajustes → 🎨 Aparência do telão, "Resposta do povo em outra cor" pinta a linha do T., do — ou do R. e o refrão do salmo, além do negrito. A cor se escolhe ao lado (vem dourada). Ajuda quando se projeta na parede ou o telão é fraco. Vem desligada.',
     '🌙 Missa de sábado à tarde (pedido do Luciano): ao criar os roteiros a partir do folheto do domingo, entram todas as Missas de sábado. As de 14h em diante (como a das 15h na Santa Marina) vêm marcadas, como vigília, porque valem pelo domingo e usam a liturgia dele; as mais cedo aparecem desmarcadas. Antes só entravam as de 16h em diante.',

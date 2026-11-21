@@ -9,7 +9,7 @@ const MODULO_MIDIA = { videos: 'video', audios: 'audio', apresentacoes: 'apresen
 function mostrarAba(nome, interativo = true) {
   if (nome === 'midia') nome = 'videos';            // módulo antigo "Mídia"
   if (!MODULOS.includes(nome)) return;
-  $$('.abas button').forEach(x => x.classList.toggle('ativa', x.dataset.aba === nome));
+  $$('.abas button[data-aba]').forEach(x => x.classList.toggle('ativa', x.dataset.aba === nome));
   const secao = MODULO_MIDIA[nome] ? 'midia' : nome;
   $$('.aba').forEach(a => a.classList.toggle('ativa', a.id === 'aba-' + secao));
   if (MODULO_MIDIA[nome]) mostrarTipoMidia(MODULO_MIDIA[nome]);
@@ -200,7 +200,7 @@ function ligarMenus() {
   $('.marca').addEventListener('keydown', e => { if (e.key === 'Enter') abrirDialogo('dlgSobre'); });
 
   // Trilho de módulos
-  for (const b of $$('.abas button')) b.addEventListener('click', () => mostrarAba(b.dataset.aba));
+  for (const b of $$('.abas button[data-aba]')) b.addEventListener('click', () => mostrarAba(b.dataset.aba));
 
   // Mensagem rápida: projeta e fecha
   $('#btnMsg').addEventListener('click', () => { if ($('#msgRapida').value.trim()) $('#dlgMensagem').close(); });

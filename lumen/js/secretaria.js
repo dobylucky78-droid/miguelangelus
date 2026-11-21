@@ -11,6 +11,9 @@
 // VERSAO_SECRETARIA fica no <head> do index.html (o splash usa antes deste arquivo carregar)
 
 const NOVIDADES_SECRETARIA = [
+  { versao: '1.5.1', data: '2026-11-21', itens: [
+    '🏷 A versão do programa aparece na barra de cima da janela ("Secretaria MiguelAngelus 1.5.1") e, pequena, ao lado do nome, como no MiguelAngelus e no Cast.',
+  ] },
   { versao: '1.5.0', data: '2026-11-19', itens: [
     '🕯 Intenções no MiguelAngelus (telão): nova chave em Ajustes → 🕯 Intenções no MiguelAngelus. Vem DESLIGADA. Ligada, o operador do MiguelAngelus pode trazer as intenções de cada Missa para o roteiro e mostrar no telão: vão só o tipo e a intenção; o "a pedido de", o responsável, o telefone e a oferta ficam na Secretaria. Deixe desligada se muitas intenções chegam na hora, na entrada da igreja, e são lidas só do papel. A tela de Intenções de Missa mostra se a chave está ligada ou desligada e onde mudar.',
     '🔒 Dados de uma pessoa (LGPD), em Ajustes: procure pelo nome ou pelo telefone e aparecem todas as marcações e intenções onde a pessoa está. "🖨 Relatório para a pessoa" imprime ou salva em PDF tudo o que a secretaria guarda dela; "🗑 Apagar os marcados" apaga de vez, também nos outros computadores da secretaria (a intenção de 7º dia lançada pela marcação vai junto).',
@@ -113,6 +116,9 @@ function iniciarSecretaria() {
   // marca, abertura e Sobre com o nome e o ícone da Secretaria
   $('.marca').innerHTML = '<img src="img/secretaria.svg" alt="" class="logo-mini"> <span class="dourado">Miguel</span>Angelus <span class="marca-sec">Secretaria</span>';
   $('.marca').title = 'Sobre a Secretaria MiguelAngelus';
+  // (1.5.1) versão na barra da janela e ao lado do nome, como no MiguelAngelus e no Cast
+  document.title = `Secretaria MiguelAngelus ${VERSAO_SECRETARIA}`;
+  $('.marca').insertAdjacentHTML('beforeend', ` <span class="marca-versao">versão ${esc(VERSAO_SECRETARIA)}</span>`);
   // Sobre: o cartão da Secretaria no lugar do logotipo do MiguelAngelus; créditos, brasão e redes continuam os mesmos
   const logo = $('#dlgSobre .logo-boas-vindas');
   if (logo) logo.outerHTML = `<div class="sobre-sec"><img src="img/secretaria.svg" alt="">

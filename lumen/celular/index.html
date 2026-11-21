@@ -40,6 +40,25 @@
   .tela .vazia { color: #777; font-size: 14px; }
   .tela .quem { color: var(--cor-quem); font-weight: 700; }
   .tela .resp { font-weight: 700; }
+  /* (1.9.17) resposta do povo em outra cor (Ajustes → Aparência do telão), como no telão do computador */
+  .resp { color: var(--cor-resp, inherit); }
+  .quem.povo { color: var(--cor-resp, var(--cor-quem)) !important; }
+  /* (1.9.17) 💡 Dica do assistente: só para ler (fitilhos, prefácio e Oração Eucarística com as páginas do Missal) */
+  .dica-cab { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+  .dica-cab img { width: 56px; height: 56px; border-radius: 14px; flex: none; background: var(--painel2); }
+  .dica-cab h2 { margin: 0; font-size: 19px; } .dica-cab .sutil { margin-top: 2px; }
+  .dica-o { font-size: 12px; color: var(--sutil); text-transform: uppercase; letter-spacing: .06em; margin: 14px 2px 6px; }
+  .fitas { list-style: none; padding: 0; margin: 0; }
+  .fitas li { display: flex; align-items: center; gap: 10px; padding: 9px 4px; border-bottom: 1px solid var(--borda); }
+  .fita-n { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; font-weight: 700; flex: none; border: 3px solid var(--fita, var(--acento)); }
+  .fita-parte { flex: 1; min-width: 0; display: flex; flex-direction: column; } .fita-parte small { color: var(--sutil); font-size: 12px; }
+  .fita-pag { font-size: 20px; font-weight: 700; white-space: nowrap; color: var(--acento); } .fita-pag i { font-style: normal; font-size: 14px; }
+  .fita-junto { opacity: .7; } .fita-sobra .fita-n { border-style: dashed; }
+  .dica-card { background: var(--painel); border: 1px solid var(--borda); border-radius: 12px; padding: 10px 12px; margin: 8px 0; }
+  .dica-card .dica-o { margin: 0 0 2px; } .dica-nome { font-size: 18px; font-weight: 700; } .dica-pag { font-size: 17px; margin: 4px 0; }
+  .dica-pag b { font-size: 22px; color: var(--acento); } .dica-uso { font-size: 14px; color: #c9d1de; } .dica-sem-pag { font-size: 13px; }
+  .dica-lista { list-style: none; padding: 0; margin: 6px 0; } .dica-lista li { display: flex; justify-content: space-between; gap: 8px; border-bottom: 1px dashed var(--borda); padding: 4px 0; font-size: 14px; }
+  .dica-aviso { color: #ffcf6e; font-size: 14px; } .dica-nota, .dica-fala { font-size: 14px; color: #c9d1de; } .dica-falta { color: var(--sutil); }
   .tela .entre { display: block; height: .4em; }
   .tela sup { font-size: .6em; opacity: .7; }
   .tela .aviso-img { color: var(--sutil); font-size: 13px; }
@@ -56,7 +75,7 @@
   .setas { display: grid; grid-template-columns: 1fr 1.5fr; gap: 10px; }
   .setas button { padding: 22px 8px; font-size: 19px; font-weight: 600; border-radius: 16px; }
   .setas .prox-bt { background: var(--acento); border-color: var(--acento); color: #1b1503; }
-  .abas { display: grid; grid-template-columns: repeat(4, 1fr); background: var(--painel); border-top: 1px solid var(--borda); padding-bottom: var(--seg-baixo); }
+  .abas { display: grid; grid-template-columns: repeat(5, 1fr); background: var(--painel); border-top: 1px solid var(--borda); padding-bottom: var(--seg-baixo); }
   .abas button { background: none; border: 0; border-radius: 0; padding: 10px 0 9px; font-size: 13px; color: var(--sutil); }
   .abas button.sel { color: var(--acento); }
   .abas i { display: block; font-style: normal; font-size: 20px; line-height: 1.1; }
@@ -197,7 +216,7 @@
     .tela { font-size: 22px; min-height: 170px; }
     .tela.prox { font-size: 17px; min-height: 90px; }
     .tira .sl { width: 190px; height: 112px; font-size: 13px; }
-    .abas { justify-content: center; grid-template-columns: repeat(4, minmax(0, 180px)); }
+    .abas { justify-content: center; grid-template-columns: repeat(5, minmax(0, 150px)); }
   }
 
   /* Safari antigo (iOS < 14.5) não tem "gap" em flexbox: margens no lugar (o script liga html.sem-gap) */
@@ -294,9 +313,16 @@
         <option value="eb">🎷 Mi♭ (sax alto, sax barítono)</option>
         <option value="f">📯 Fá (trompa)</option>
       </select>
+      <button id="mDica" data-ir="dica" type="button" title="Dica: onde pôr os fitilhos do Missal">💡</button>
       <label class="check m-seguir"><input type="checkbox" id="mSeguir" checked> Seguir o telão</label>
     </div>
     <div id="mCantos"></div>
+  </section>
+
+  <!-- 💡 DICA do assistente (1.9.17): só para ler; útil ao coroinha/acólito com o Missal -->
+  <section data-aba="dica" hidden>
+    <button id="dicaVoltar" data-ir="musico" type="button" hidden style="margin-bottom:10px">◀ Voltar às cifras</button>
+    <div id="dicaCel"><p class="sutil">Esperando o computador…</p></div>
   </section>
 
   <!-- MÍDIA -->
@@ -323,6 +349,7 @@
   <button data-ir="roteiro"><i>☰</i>Roteiro</button>
   <button data-ir="midia"><i>🎬</i>Mídia</button>
   <button data-ir="musico"><i>🎸</i>Cifras</button>
+  <button data-ir="dica"><i>💡</i>Dica</button>
 </nav>
 
 <!-- Aviso -->
@@ -404,7 +431,7 @@ function htmlSlide(s, curto) {
     if (num) return (cfg.mostrarRotulos === false ? '' : `<span class="quem">${num[1]}.</span> `) + l.slice(num[0].length);
     const m = /^\s*([PTLCD])\.\s+/.exec(l), antes = povo;
     let quem = '';
-    if (m) { povo = m[1] === 'T'; if (cfg.mostrarRotulos !== false) quem = `<span class="quem">${m[1]}.</span> `; l = l.slice(m[0].length); }
+    if (m) { povo = m[1] === 'T'; if (cfg.mostrarRotulos !== false) quem = `<span class="quem${povo ? ' povo' : ''}">${m[1]}.</span> `; l = l.slice(m[0].length); }
     else if (/^\s*(—|R\.)/.test(l)) povo = true;
     if (i > 0 && povo !== antes) trocas[i] = true;
     return quem + (povo ? `<span class="resp">${l}</span>` : l);
@@ -435,6 +462,9 @@ function renderLinksCel() {
 function render() {
   if (!est) return;
   document.documentElement.style.setProperty('--cor-quem', (est.cfg && est.cfg.corRotulo) || '#ff5a4f');
+  // (1.9.17) resposta do povo em outra cor (opcional, vem desligada)
+  if (est.cfg && est.cfg.corResposta) document.documentElement.style.setProperty('--cor-resp', est.cfg.corRespostaCor || '#ffd166');
+  else document.documentElement.style.removeProperty('--cor-resp');
   $('#nomeRoteiro').textContent = est.roteiro || 'MiguelAngelus';
   const selo = $('#selo');
   selo.textContent = est.preto ? 'Tela preta' : est.mudo ? 'Mudo' : est.altar ? 'Altar' : est.camera ? 'Câmera' : est.noAr.slide ? 'Ao vivo' : est.tocando.some(t => t.tipo === 'video' && !t.pausado) ? 'Vídeo' : 'Livre';
@@ -442,7 +472,8 @@ function render() {
   if (!est.projecao) selo.textContent += ' · telão fechado';
   if (papel === 'telao') return renderTelao();        // 📺 telão: só o slide, em tela cheia
   renderLinksCel();
-  if (papel === 'musico') return renderMusico();      // músico: só as cifras
+  if (aba === 'dica') renderDica();
+  if (papel === 'musico') return renderMusico();      // músico: só as cifras (e a 💡 Dica)
 
   // aviso
   const av = $('#avisoAtivo');
@@ -796,9 +827,45 @@ function renderRoteiros() {
   $('#listaRoteiros').innerHTML = h || '<p class="sutil">Nenhum roteiro.</p>';
 }
 
+// ---------- 💡 Dica do assistente (1.9.17): a mesma do computador, só para ler ----------
+let dicaChave = '';
+const iconesDica = {};
+function iconeDica(arq, cor) {
+  // o cíngulo (cinto) do anjinho na cor do tempo litúrgico, como no computador
+  const k = arq + cor;
+  if (iconesDica[k]) return iconesDica[k];
+  iconesDica[k] = '/' + arq;
+  fetch('/' + arq).then(r => r.ok ? r.text() : Promise.reject()).then(svg => {
+    svg = svg.replace(/<[^>]*class="cingulo"[^>]*>/g, tag => tag.split('#f2b632').join(cor));
+    iconesDica[k] = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+    const img = $('#dicaIcone'); if (img && img.dataset.k === k) img.src = iconesDica[k];
+  }).catch(() => {});
+  return iconesDica[k];
+}
+function renderDica() {
+  const d = est && est.dica;
+  $('#dicaVoltar').hidden = papel !== 'musico';
+  const k = JSON.stringify(d || null);
+  if (k === dicaChave) return;
+  dicaChave = k;
+  if (!d) { $('#dicaCel').innerHTML = '<p class="sutil">A dica não veio do computador (atualize o MiguelAngelus).</p>'; return; }
+  const cor = /^#[0-9a-f]{3,8}$/i.test(d.cor || '') ? d.cor : '#f2b632', arq = /^[\w.-]+\.svg$/.test(d.icone || '') ? d.icone : 'assistente-miguel.svg';
+  $('#dicaCel').innerHTML = `<div class="dica-cab"><img id="dicaIcone" data-k="${esc(arq + cor)}" src="${esc(iconeDica(arq, cor))}" alt="">
+      <div><h2>💡 ${esc(d.rotulo)}</h2><div class="sutil">${esc(d.titulo || '')}${d.edicao ? '<br>Páginas do ' + esc(d.edicao) : ''}</div></div></div>
+    <div class="dica-o">🎀 Onde pôr os fitilhos, na ordem da Missa</div>
+    <ol class="fitas">${(d.fitas || []).map(l => `<li class="${l.junto ? 'fita-junto' : ''} ${l.sobra ? 'fita-sobra' : ''}">
+      <span class="fita-n" style="--fita:${cor}">${l.junto ? '↳' : l.n}</span>
+      <span class="fita-parte"><b>${esc(l.parte)}</b><small>${esc(l.det)}${l.sobra ? ' · sem fitilho sobrando: use um marcador de papel' : ''}</small></span>
+      <span class="fita-pag">${l.junto ? '' : l.pag ? `p. ${esc(l.pag)}${l.conf ? ' <i title="Página ainda a conferir no Missal">⚠</i>' : ''}` : '<span class="sutil">—</span>'}</span></li>`).join('')}</ol>
+    ${(d.fitas || []).some(l => l.conf) ? '<p class="sutil">⚠ página ainda a conferir no Missal</p>' : ''}
+    <div class="dica-o">Prefácio e Oração Eucarística</div>${d.corpo || ''}
+    <p class="sutil">Só para ler: as escolhas e as páginas se mudam no computador.</p>`;
+}
+
 function irAba(nome) {
   if (nome !== 'roteiro') trocando = false;
   aba = nome;
+  if (nome === 'dica') { dicaChave = ''; if (est) renderDica(); }
   $$('[data-aba]').forEach(s => s.hidden = s.dataset.aba !== nome);
   $$('[data-ir]').forEach(b => b.classList.toggle('sel', b.dataset.ir === nome));
   $('#nav').hidden = nome === 'midia' || (nome === 'roteiro' && trocando);

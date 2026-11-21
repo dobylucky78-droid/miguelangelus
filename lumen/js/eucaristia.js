@@ -207,6 +207,7 @@ const PARTES_MISSAL = [
 // (1.9.15) Missa do dia (fitilho 1): uma linha por celebração, na mesma tabela 📖. A página não muda de um ano para
 // o outro (ano A, B ou C), então a tabela vale para sempre. Dias de semana do Tempo Comum usam a Missa do domingo
 // da semana; santos vão pela data do calendário (Próprio dos Santos).
+const DIAS_SEM_MISSA = [['seg', 'Segunda-feira'], ['ter', 'Terça-feira'], ['qua', 'Quarta-feira'], ['qui', 'Quinta-feira'], ['sex', 'Sexta-feira'], ['sab', 'Sábado']];
 const FESTAS_DATA = [['01-20', 'São Sebastião, mártir'], ['02-02', 'Apresentação do Senhor'], ['03-19', 'São José, Esposo da Virgem Maria'],
   ['03-25', 'Anunciação do Senhor'], ['06-24', 'Natividade de São João Batista'], ['06-29', 'São Pedro e São Paulo, Apóstolos'],
   ['08-06', 'Transfiguração do Senhor'], ['08-15', 'Assunção de Nossa Senhora'], ['09-14', 'Exaltação da Santa Cruz'],
@@ -229,6 +230,19 @@ function listaMissaDoDia() {
   t('tc-34', '34ª Semana do Tempo Comum (dias de semana)');
   t('trindade', 'Santíssima Trindade'); t('corpus', 'Corpo e Sangue de Cristo'); t('sagrado-coracao', 'Sagrado Coração de Jesus');
   t('cristorei', 'Cristo Rei do Universo');
+  // (1.9.17) dias de semana com Missa própria (Advento, Natal, Quaresma, Páscoa): uma linha por dia, página em branco
+  // até a paróquia (ou o Luciano) preencher. Ids "dia-sem-…" (os ids antigos continuam valendo para os domingos).
+  const W = 'Missa do dia: dias de semana (Advento, Natal, Quaresma, Páscoa)';
+  const w = (id, nome) => L.push({ id: 'dia-sem-' + id, nome, grupo: W });
+  for (let n = 1; n <= 3; n++) DIAS_SEM_MISSA.forEach(([k, nd]) => w(`adv-${n}-${k}`, `${nd} da ${n}ª Semana do Advento`));
+  for (let d = 17; d <= 24; d++) w('adv-12-' + d, `${d} de dezembro (Advento, dias antes do Natal)`);
+  for (const d of [29, 30, 31]) w('nat-12-' + d, `${d} de dezembro (Oitava do Natal)`);
+  for (let d = 2; d <= 7; d++) w('nat-01-0' + d, `${d} de janeiro (Tempo do Natal, antes da Epifania)`);
+  DIAS_SEM_MISSA.forEach(([k, nd]) => w('nat-epi-' + k, `${nd} depois da Epifania`));
+  [['qui', 'Quinta-feira'], ['sex', 'Sexta-feira'], ['sab', 'Sábado']].forEach(([k, nd]) => w('qua-0-' + k, `${nd} depois das Cinzas`));
+  for (let n = 1; n <= 5; n++) DIAS_SEM_MISSA.forEach(([k, nd]) => w(`qua-${n}-${k}`, `${nd} da ${n}ª Semana da Quaresma`));
+  [['seg', 'Segunda-feira'], ['ter', 'Terça-feira'], ['qua', 'Quarta-feira']].forEach(([k, nd]) => w('santa-' + k, `${nd} Santa`));
+  for (let n = 1; n <= 7; n++) DIAS_SEM_MISSA.forEach(([k, nd]) => w(`pas-${n}-${k}`, `${nd} da ${n === 1 ? 'Oitava' : n + 'ª Semana'} da Páscoa`));
   const sant = { ...Object.fromEntries(Object.entries(Liturgia.SANTORAL || {}).map(([k, s]) => [k, s.nome])), ...Object.fromEntries(FESTAS_DATA) };
   for (const k of Object.keys(sant).sort()) L.push({ id: 'dia-d-' + k, nome: `${k.slice(3)}/${k.slice(0, 2)} · ${sant[k]}`, grupo: SG });
   L.push({ id: 'dia-mae-igreja', nome: 'Maria, Mãe da Igreja (2ª-feira depois de Pentecostes)', grupo: SG },
@@ -262,8 +276,31 @@ function chaveMissaDoDia(lit) {
   if ((m = tt.match(/^(\d+)º Domingo do Advento/))) return 'dia-adv-' + m[1];
   if ((m = tt.match(/^(\d+)º Domingo da Quaresma/))) return 'dia-qua-' + m[1];
   if ((m = tt.match(/^(\d+)º Domingo da Páscoa/))) return 'dia-pas-' + m[1];
+  // (1.9.17) dias de semana com Missa própria: Advento (17 a 24/12 pela data), Natal, Quaresma e Páscoa (semana + dia)
+  const ds = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sab'][d.getDay()];
+  if (ds === 'dom') return null;
+  if (/Semana do Advento$/.test(tt)) {
+    if (d.getMonth() === 11 && d.getDate() >= 17) return 'dia-sem-adv-12-' + d.getDate();
+    if ((m = tt.match(/^([123])ª Semana do Advento/))) return `dia-sem-adv-${m[1]}-${ds}`;
+    return null;
+  }
+  if (tt === 'Tempo do Natal') {
+    if (d.getMonth() === 11 && d.getDate() >= 29) return 'dia-sem-nat-' + mmdd;
+    if (d.getMonth() === 0 && d.getDate() >= 2 && d.getDate() <= 7) {
+      // de 2 a 7/1, os dias depois da Epifania (no Brasil, num domingo) já são "depois da Epifania"
+      const epi = new Date(d.getFullYear(), 0, 2 + (7 - new Date(d.getFullYear(), 0, 2).getDay()) % 7);
+      return d > epi ? 'dia-sem-nat-epi-' + ds : 'dia-sem-nat-' + mmdd;
+    }
+    if (d.getMonth() === 0) return 'dia-sem-nat-epi-' + ds;
+    return null;
+  }
+  if (tt === 'Depois das Cinzas') return 'dia-sem-qua-0-' + ds;
+  if ((m = tt.match(/^([1-5])ª Semana da Quaresma/))) return `dia-sem-qua-${m[1]}-${ds}`;
+  if (tt === 'Semana Santa' && ['seg', 'ter', 'qua'].includes(ds)) return 'dia-sem-santa-' + ds;
+  if ((m = tt.match(/^([1-7])ª Semana da Páscoa/))) return `dia-sem-pas-${m[1]}-${ds}`;
   return null;
 }
+const ehMissaDiaDeSemana = id => /^dia-sem-/.test(id || '');
 // (1.9.15) Bênçãos solenes do Missal, cada uma com a sua página (fitilho 6)
 const BENCAOS_SOLENES = [['advento', 'Advento'], ['natal', 'Natal do Senhor'], ['inicio-ano', 'Início do ano'], ['epifania', 'Epifania do Senhor'],
   ['paixao', 'Paixão do Senhor'], ['pascoa', 'Tempo Pascal'], ['ascensao', 'Ascensão do Senhor'], ['espirito', 'Espírito Santo'],
@@ -460,6 +497,14 @@ const TEMAS_PREF = [[/assun[cç][aã]o/i, 'assun'], [/imaculada/i, 'imac'], [/tr
   [/gl[oó]ria de jerusal[eé]m/i, 'todossantos'], [/aparecida/i, 'aparecida'],     // (1.9.15) folhetos de SP
   [/s[aã]o jos[eé]/i, 'jose'], [/jo[aã]o batista/i, 'joaob'], [/pedro e (s[aã]o )?paulo/i, 'pedropaulo'], [/anuncia[cç][aã]o/i, 'anunc']];
 const prefPorTema = nome => { const t = TEMAS_PREF.find(([re]) => re.test(nome || '')); return t ? prefDe(t[1]) : null; };
+// (1.9.17) Nomes que servem para dois prefácios: o título da celebração decide
+// ("Do mistério de Maria e da Igreja" em Aparecida, p. 828, não na Imaculada; a Transfiguração no 2º Domingo da Quaresma)
+function prefPeloTitulo(p, titulo) {
+  if (!p || !titulo) return p;
+  if (p.id === 'imac' && /aparecida/i.test(titulo)) return prefDe('aparecida') || p;
+  if (p.id === 'transf' && /quaresma/i.test(titulo)) return prefDe('qd2') || p;
+  return p;
+}
 // "Páscoa, I O mistério pascal", "Santíssima Eucaristia I Sacrifício e Sacramento de Cristo": o nome do catálogo seguido do tema
 // (o nome mais comprido que serve: "Páscoa II" não vira "Páscoa I")
 const prefPorInicio = nome => {
@@ -474,7 +519,7 @@ function criarExtra(tipo, nome) {
 }
 
 // cap = { oe: { nome, texto }, pref: { nome, texto } } (vem do folheto). Só guarda o que ainda não tem texto.
-function capturarEucaristia(cap) {
+function capturarEucaristia(cap, titulo = '') {
   if (!cap) return '';
   const salvos = [];
   const guardar = (item, texto) => {
@@ -498,6 +543,7 @@ function capturarEucaristia(cap) {
       p = listaPrefacios().find(x => normEuc(x.nome) === normEuc(nomeFolheto))
         || prefPorInicio(nomeFolheto) || prefPorTema(cap.pref.nome)
         || criarExtra('pref', nome.charAt(0).toUpperCase() + nome.slice(1));
+      if (!p.extra) p = prefPeloTitulo(p, titulo);
     }
     guardar(p, cap.pref.texto);
   }
@@ -505,15 +551,72 @@ function capturarEucaristia(cap) {
   return salvos.length ? ` Guardado em Orações Eucarísticas: ${salvos.join(' e ')}.` : '';
 }
 
+// (1.9.17) Páginas do Missal lidas do folheto de SP (Folheto → r.missal). Só para a edição que o folheto usa (3ª edição,
+// a do MISSAL_PADRAO) e só onde a paróquia ainda não tem página: a página do programa marcada "a conferir" e igual à do
+// folheto fica confirmada; diferente, não mexe. Página que já é de outro prefácio/oração na tabela é descartada (o folheto
+// também erra: "Comum VIII, p. 467", que é a Páscoa II). dataIso = data da celebração (para achar a Missa do dia).
+// Devolve o texto para o aviso (toast) e salva a tabela se mudou.
+// "2º DOMINGO DA PÁSCOA", "FESTA DO BATISMO DO SENHOR", "SOLENIDADE DE SÃO PEDRO E SÃO PAULO APÓSTOLOS" → linha da Missa do dia
+// (o nome da linha igual ao título, ou o título começando por ele; o mais comprido vence). Dias de semana ficam de fora.
+function missaDoDiaPorTitulo(titulo) {
+  const tira = s => normEuc(s).replace(/^(solenidade|festa|memoria|comemoracao)\s+/, '');
+  const t = tira(String(titulo).split(/\s+[—–]\s+/)[0]) + ' ';
+  const nm = x => tira(x.nome.replace(/^\d\d\/\d\d · /, '').replace(/\s*\((e a semana|dias de semana|1º de janeiro)\)$/, ''));
+  return listaMissaDoDia().filter(x => !ehMissaDiaDeSemana(x.id)).map(x => [x.id, nm(x)])
+    .filter(([, n]) => n && t.startsWith(n + ' '))
+    .sort((a, b) => b[1].length - a[1].length)[0]?.[0] || null;
+}
+function guardarPaginasDoFolheto(lista, dataIso, titulo = '') {
+  if (!lista?.length) return '';
+  if (edicaoMissal() !== MISSAL_PADRAO.edicao)
+    return ` O folheto traz páginas do Missal (3ª edição), mas a tabela 📖 está em "${edicaoMissal()}": não guardei.`;
+  const guardadas = [], ficaram = [];
+  const deOutro = (id, pag, ids) => ids.find(o => o !== id && missalDe(o).pag === pag);
+  const idsEuc = () => [...listaOEs().map(o => o.id), ...listaPrefacios().map(p => p.id)];
+  for (const a of lista) {
+    let id = null, ids = idsEuc();
+    if (a.tipo === 'pref') {
+      const p = prefPeloTitulo(listaPrefacios().find(x => !x.extra && normEuc(x.nome) === normEuc(a.nome)) || prefPorInicio(a.nome) || prefPorTema(a.nome), titulo);
+      id = p && !p.extra ? p.id : null;
+    } else if (a.tipo === 'oe') {
+      id = OES.find(o => [o.nome, o.nome.split(' — ')[0]].some(n => normEuc(n) === normEuc(a.nome)))?.id || null;
+    } else if (a.tipo === 'coleta') {
+      if (dataIso) try { id = chaveMissaDoDia(Liturgia.info(new Date(dataIso + 'T12:00:00'))); } catch { id = null; }
+      if (!id && titulo) id = missaDoDiaPorTitulo(titulo);       // os PDFs de SP não trazem a data: vai pelo nome da celebração
+      ids = listaMissaDoDia().map(x => x.id);
+    }
+    if (!id) continue;
+    const meu = itensDaEdicao(edicaoMissal())[id] || {}, pad = MISSAL_PADRAO.itens[id] || {};
+    const nome = a.tipo === 'coleta' ? 'Missa do dia: ' + nomeEuc(id) : nomeEuc(id);
+    if (meu.pag) { if (String(meu.pag).trim() !== a.pag) ficaram.push(`${nome} (sua p. ${meu.pag}; folheto p. ${a.pag})`); continue; }
+    const padConf = /^⚠\s*a conferir/i.test(pad.uso || '');
+    if (pad.pag && !(padConf && String(pad.pag).trim() === a.pag)) {
+      if (String(pad.pag).trim() !== a.pag) ficaram.push(`${nome} (p. ${pad.pag} na tabela; folheto p. ${a.pag})`);
+      continue;
+    }
+    const outro = deOutro(id, a.pag, ids);
+    if (outro) { ficaram.push(`${nome} (folheto p. ${a.pag}, que na tabela é de ${nomeEuc(outro)})`); continue; }
+    // a nota "quando usar" continua a do programa; a confirmada perde o "⚠ A conferir."
+    const uso = meu.uso || (padConf ? String(pad.uso).replace(/^⚠\s*a conferir\.?\s*/i, '') : '');
+    salvarMissalItem(id, a.pag, uso);
+    guardadas.push(`${nome} (p. ${a.pag})`);
+  }
+  if (guardadas.length) salvarEucaristia();
+  return (guardadas.length ? ` 📖 Páginas do Missal lidas do folheto: ${guardadas.join(', ')}.` : '') +
+    (ficaram.length ? ` 📖 Não mexi (já havia outra página): ${ficaram.join('; ')}.` : '');
+}
+
 // Lê folhetos (um ou vários) só para guardar a oração eucarística e o prefácio de cada um
 async function lerOracoesDeFolhetos(arquivos) {
-  const achados = [], semOracao = [];
+  const achados = [], semOracao = [], paginas = [];
   for (let i = 0; i < arquivos.length; i++) {
     toast(`Lendo folheto ${i + 1} de ${arquivos.length}…`);
     try {
       const r = await Folheto.importar(arquivos[i]);
       const antes = new Set(Object.keys(Euc.dados.textos));
-      capturarEucaristia(r.eucaristia);
+      capturarEucaristia(r.eucaristia, r.tituloLiturgico);
+      // (1.9.17) e as páginas do Missal do folheto de SP
+      try { const mp = guardarPaginasDoFolheto(r.missal, typeof dataDoTexto === 'function' ? dataDoTexto(r.nome) : '', r.tituloLiturgico); if (mp) paginas.push(`${arquivos[i].name}:${mp}`); } catch (err) { console.warn(err); }
       const novos = Object.keys(Euc.dados.textos).filter(id => !antes.has(id)).map(nomeEuc);
       if (!r.eucaristia) semOracao.push(arquivos[i].name);
       achados.push(...novos);
@@ -524,7 +627,8 @@ async function lerOracoesDeFolhetos(arquivos) {
   renderEucaristia();
   renderRoteiroLista();
   const msg = achados.length ? `Guardados ${achados.length} texto(s):\n• ${achados.join('\n• ')}` : 'Nenhum texto novo: as orações desses folhetos já estavam no catálogo.';
-  alert(msg + (semOracao.length ? `\n\nSem oração eucarística encontrada em:\n• ${semOracao.join('\n• ')}` : ''));
+  alert(msg + (semOracao.length ? `\n\nSem oração eucarística encontrada em:\n• ${semOracao.join('\n• ')}` : '') +
+    (paginas.length ? `\n\n${paginas.map(p => '• ' + p).join('\n')}` : ''));
 }
 
 // ---------- Painel (centro) ----------

@@ -120,6 +120,20 @@ html[data-tema-app="claro"] .dica-atalho kbd { background: #f1f4f8; border-color
 .trilho button.ativa { background: var(--painel2); color: var(--texto); }
 .trilho button.ativa .ic { filter: none; opacity: 1; }
 .trilho button.ativa::before { content: ''; position: absolute; left: -6px; top: 10px; bottom: 10px; width: 3px; border-radius: 2px; background: var(--acento); }
+/* (1.9.17) assistente no pé da faixa: ícone do Miguel/Mariana e o menu (Dica, Pergunte) que abre ao lado */
+.assist-trilho { margin-top: auto; position: relative; padding-top: 6px; border-top: 1px solid var(--borda); }
+.assist-trilho-btn { width: 100%; }
+.assist-trilho-btn img { width: 34px; height: 34px; object-fit: contain; }
+.assist-trilho-btn[aria-expanded="true"] { background: var(--painel2); color: var(--texto); }
+.assist-menu { position: absolute; left: calc(100% + 12px); bottom: 0; z-index: 60; width: 300px; display: flex; flex-direction: column; gap: 4px;
+  padding: 6px; background: var(--painel); border: 1px solid var(--borda); border-radius: 10px; box-shadow: 0 8px 28px rgba(0, 0, 0, .45); }
+.assist-menu[hidden] { display: none; }
+.trilho .assist-menu button { width: 100%; box-sizing: border-box; align-items: flex-start; text-align: left; gap: 3px; padding: 9px 10px;
+  font-size: 13px; color: var(--texto); white-space: normal; overflow-wrap: break-word; }
+.trilho .assist-menu button b, .trilho .assist-menu button small { display: block; max-width: 100%; white-space: normal; }
+.trilho .assist-menu button small { color: var(--sutil); font-size: 11.5px; line-height: 1.35; font-weight: 400; }
+.assist-menu { border-color: var(--acento); background: var(--painel2); }
+.trilho .assist-menu button:hover { background: var(--painel2); }
 
 .aba { display: none; flex-direction: column; gap: 8px; padding: 10px; overflow: auto; flex: 1; min-height: 0; }
 .aba.ativa { display: flex; }

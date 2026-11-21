@@ -38,6 +38,7 @@ async function iconeAssistente(a = assistente(), cor = corDoCingulo()) {
 async function atualizarAssistente() {
   const a = assistente();
   for (const el of $$('[data-assist-rot]')) {
+    if (el.dataset.assistRot === 'nome') { el.textContent = a.nome; continue; }     // (1.9.17) rótulo do ícone na faixa
     const dica = el.dataset.assistRot === 'dica', rot = dica ? rotuloDica(a) : rotuloPergunte(a);
     if (el.tagName === 'H2') el.textContent = rot;
     else el.textContent = (dica ? '💡 ' : '❓ ') + rot + '…';
@@ -91,13 +92,15 @@ function litCompleta(r) {
 // Nas memórias o padre pode celebrar a Missa do santo ou a do dia de semana: [{ v, id, nome }], a 1ª é a do calendário
 function opcoesMissaDia(lit) {
   if (!lit?.data) return [];
-  const base = chaveMissaDoDia(lit), ops = [{ v: base || 'semana', id: base, nome: base ? nomeEuc(base).replace(/ \((e a semana|dias de semana)\)$/, '') : 'Dia de semana (Próprio do Tempo)' }];
+  // (1.9.17) dias de semana com Missa própria ganharam linha (dia-sem-…), mas o valor guardado no roteiro continua 'semana'
+  const vDe = id => id && !ehMissaDiaDeSemana(id) ? id : 'semana';
+  const base = chaveMissaDoDia(lit), ops = [{ v: vDe(base), id: base, nome: base ? nomeEuc(base).replace(/ \((e a semana|dias de semana)\)$/, '') : 'Dia de semana (Próprio do Tempo)' }];
   const memoria = lit.santo && !lit.padroeiro && /Memória/.test(lit.santo);
   if (memoria || lit.facultativa) {
     const d = lit.data, mmdd = `${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     const outra = memoria ? chaveMissaDoDia({ data: d, titulo: lit.tituloTempo, tituloTempo: lit.tituloTempo }) : 'dia-d-' + mmdd;
     if (outra !== base) ops.push(memoria
-      ? { v: outra || 'semana', id: outra, nome: `Missa da semana (${outra ? nomeEuc(outra).replace(/ \((e a semana|dias de semana)\)$/, '') : lit.tituloTempo})` }
+      ? { v: vDe(outra), id: outra, nome: `Missa da semana (${outra ? nomeEuc(outra).replace(/ \((e a semana|dias de semana)\)$/, '') : lit.tituloTempo})` }
       : { v: outra, id: outra, nome: lit.facultativa + ' (memória facultativa)' });
   }
   return ops;
@@ -383,6 +386,18 @@ async function abrirPergunte(texto = '') {
 }
 
 function ligarAssistente() {
+  // (1.9.17) ícone do assistente no pé da faixa da esquerda: abre o menu com a Dica e o Pergunte
+  const menu = $('#assistMenu'), btn = $('#btnAssistTrilho');
+  const fecharMenu = () => { menu.hidden = true; btn.setAttribute('aria-expanded', 'false'); };
+  btn.addEventListener('click', e => { e.stopPropagation(); menu.hidden = !menu.hidden; btn.setAttribute('aria-expanded', String(!menu.hidden)); });
+  menu.addEventListener('click', e => {
+    const b = e.target.closest('[data-assist-menu]');
+    if (!b) return;
+    fecharMenu();
+    if (b.dataset.assistMenu === 'dica') abrirDica(); else abrirPergunte();
+  });
+  document.addEventListener('click', e => { if (!menu.hidden && !e.target.closest('.assist-trilho')) fecharMenu(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && !menu.hidden) fecharMenu(); });
   $('#btnDicaImprimir').addEventListener('click', imprimirDica);
   $('#btnDicaCatalogo').addEventListener('click', () => { $('#dlgDica').close(); mostrarAba('missa'); mostrarEucaristia(true); });
   document.addEventListener('click', e => { if (e.target.closest('[data-cmd-dica]')) abrirDica(); });

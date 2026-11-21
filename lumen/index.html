@@ -8,8 +8,8 @@
 <script>try { if (localStorage.getItem('lumen.temaApp') === 'claro') document.documentElement.dataset.temaApp = 'claro'; } catch (_) {}
   // (Secretaria MiguelAngelus 1.0) o mesmo programa aberto no modo Secretaria: só Agenda e Avisos (index.html?app=secretaria)
   const SECRETARIA = new URLSearchParams(location.search).get('app') === 'secretaria';
-  const VERSAO_SECRETARIA = '1.5.0';   // versão da Secretaria (a do .iss e do .csproj precisam bater)
-  if (SECRETARIA) { document.documentElement.classList.add('app-secretaria'); document.title = 'Secretaria MiguelAngelus'; }</script>
+  const VERSAO_SECRETARIA = '1.5.1';   // versão da Secretaria (a do .iss e do .csproj precisam bater)
+  if (SECRETARIA) { document.documentElement.classList.add('app-secretaria'); document.title = 'Secretaria MiguelAngelus ' + VERSAO_SECRETARIA; }</script>
 <link rel="icon" type="image/svg+xml" href="img/icone.svg">
 </head>
 <body>
@@ -25,7 +25,7 @@
     </div>
     <div class="splash-info">
       <div class="splash-gratis"><b>Gratuito · uso livre</b></div>
-      <div data-versao>Versão 1.9.16</div>
+      <div data-versao>Versão 1.9.17</div>
       <div>© 2026</div>
       <div><b>PASCOM</b></div>
       <div><b>São José Operário Ilha</b></div>
@@ -213,6 +213,17 @@ if (SECRETARIA) {
     <button data-aba="cameras" title="Câmeras ao vivo no telão (Alt+8)"><span class="ic">📷</span>Câmeras</button>
     <button data-aba="calendario" title="Calendário litúrgico: consultar qualquer data (Alt+9)"><span class="ic">📆</span>Calendário</button>
     <button data-aba="eventos" title="Eventos da paróquia com QR code para a agenda do celular (Alt+0)"><span class="ic">🎉</span>Eventos</button>
+    <!-- (1.9.17) o assistente (Miguel ou Mariana, em Agenda → Paróquia) no pé da faixa: Dica e Pergunte -->
+    <div class="assist-trilho">
+      <button type="button" id="btnAssistTrilho" class="assist-trilho-btn" title="Dica sobre a liturgia do dia e perguntas sobre o MiguelAngelus" aria-haspopup="menu" aria-expanded="false">
+        <img class="assist-icone" alt=""><span data-assist-rot="nome">Miguel</span></button>
+      <div id="assistMenu" class="assist-menu" role="menu" hidden>
+        <button type="button" role="menuitem" data-assist-menu="dica"><b data-assist-rot="dica">💡 Dica do Miguel…</b>
+          <small>A liturgia do dia: prefácio, Oração Eucarística e onde pôr os fitilhos do Missal</small></button>
+        <button type="button" role="menuitem" data-assist-menu="pergunte"><b data-assist-rot="pergunte">❓ Pergunte ao Miguel…</b>
+          <small>Uma dúvida sobre o MiguelAngelus: a resposta vem do Manual</small></button>
+      </div>
+    </div>
   </nav>
 
   <!-- ============ MÓDULO aberto ============ -->
