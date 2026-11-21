@@ -34,22 +34,23 @@ const GRUPOS_PREF = [
   // (1.9.15) a 3ª edição brasileira traz também o I-A e o II-A (mesmos dias que o I e o II)
   { grupo: 'Advento', itens: [['adv1', 'Advento I'], ['adv1a', 'Advento I-A'], ['adv2', 'Advento II'], ['adv2a', 'Advento II-A']] },
   { grupo: 'Natal', itens: [...romanos(3).map((r, i) => [`nat${i + 1}`, `Natal ${r}`]), ['epif', 'Epifania do Senhor']] },
-  { grupo: 'Quaresma', itens: romanos(4).map((r, i) => [`qua${i + 1}`, `Quaresma ${r}`]) },
+  { grupo: 'Quaresma', itens: romanos(5).map((r, i) => [`qua${i + 1}`, `Quaresma ${r}`]) },     // (1.9.16) o V, apontado pelo Luciano
   { grupo: 'Domingos da Quaresma', itens: [['qd1', '1º Domingo da Quaresma — A tentação do Senhor'], ['qd2', '2º Domingo da Quaresma — A Transfiguração'],
     ['qd3', '3º Domingo da Quaresma — A samaritana'], ['qd4', '4º Domingo da Quaresma — O cego de nascença'], ['qd5', '5º Domingo da Quaresma — Lázaro']] },
   { grupo: 'Paixão do Senhor', itens: [['pai1', 'Paixão do Senhor I'], ['pai2', 'Paixão do Senhor II'], ['ramos', 'Domingo de Ramos e da Paixão']] },
-  { grupo: 'Páscoa', itens: [...romanos(5).map((r, i) => [`pas${i + 1}`, `Páscoa ${r}`]), ['asc1', 'Ascensão do Senhor I'], ['asc2', 'Ascensão do Senhor II'], ['pent', 'Pentecostes']] },
+  { grupo: 'Páscoa', itens: [...romanos(5).map((r, i) => [`pas${i + 1}`, `Páscoa ${r}`]), ['asc1', 'Ascensão do Senhor I'], ['asc2', 'Ascensão do Senhor II'], ['asc3', 'Ascensão do Senhor III'], ['pent', 'Pentecostes']] },
   { grupo: 'Domingos do Tempo Comum', itens: romanos(10).map((r, i) => [`tc${i + 1}`, `Domingos do Tempo Comum ${r}`]) },
   { grupo: 'Comuns', itens: romanos(9).map((r, i) => [`com${i + 1}`, `Comum ${r}`]) },     // (1.9.15) a 3ª edição vai até o IX
   { grupo: 'Solenidades e festas do Senhor', itens: [['trin', 'Santíssima Trindade'], ['batismo', 'Batismo do Senhor'], ['apres', 'Apresentação do Senhor'],
     ['anunc', 'Anunciação do Senhor'], ['transf', 'Transfiguração do Senhor'], ['cruz', 'Exaltação da Santa Cruz'], ['corac', 'Sagrado Coração de Jesus'],
     ['cristorei', 'Cristo Rei do Universo'], ['euc1', 'Santíssima Eucaristia I'], ['euc2', 'Santíssima Eucaristia II'], ['euc3', 'Santíssima Eucaristia III']] },
   { grupo: 'Espírito Santo', itens: [['es1', 'Espírito Santo I'], ['es2', 'Espírito Santo II']] },
-  { grupo: 'Nossa Senhora', itens: [['nsra1', 'Virgem Maria I'], ['nsra2', 'Virgem Maria II'], ['imac', 'Imaculada Conceição'], ['assun', 'Assunção de Nossa Senhora'],
+  { grupo: 'Nossa Senhora', itens: [...romanos(5).map((r, i) => [`nsra${i + 1}`, `Virgem Maria ${r}`]), ['imac', 'Imaculada Conceição'], ['assun', 'Assunção de Nossa Senhora'],
     ['aparecida', 'Nossa Senhora Aparecida']] },     // (1.9.15) próprio do Brasil (12/10)
   { grupo: 'Santos', itens: [['jose', 'São José'], ['joaob', 'São João Batista'], ['pedropaulo', 'São Pedro e São Paulo'], ['apost1', 'Apóstolos I'], ['apost2', 'Apóstolos II'],
-    ['santos1', 'Santos I'], ['santos2', 'Santos II'], ['todossantos', 'Todos os Santos'], ['martires', 'Santos Mártires I'], ['martires2', 'Santos Mártires II'], ['pastores', 'Santos Pastores I'], ['pastores2', 'Santos Pastores II'], ['virgens', 'Santas Virgens e Santos Religiosos'], ['anjos', 'Anjos']] },
-  { grupo: 'Outras ocasiões', itens: [['unidade', 'Unidade dos Cristãos'], ['ded1', 'Dedicação de uma igreja I'], ['ded2', 'Dedicação de uma igreja II']] },
+    ['santos1', 'Santos I'], ['santos2', 'Santos II'], ['todossantos', 'Todos os Santos'], ['martires', 'Santos Mártires I'], ['martires2', 'Santos Mártires II'], ['pastores', 'Santos Pastores I'], ['pastores2', 'Santos Pastores II'], ['doutores1', 'Doutores da Igreja I'], ['doutores2', 'Doutores da Igreja II'],
+    ['virgens', 'Santas Virgens e Santos Religiosos'], ['madalena', 'Santa Maria Madalena'], ['anjos', 'Anjos']] },
+  { grupo: 'Outras ocasiões', itens: [['unidade', 'Unidade dos Cristãos'], ['reconc', 'A Reconciliação do Espírito (com as Orações II ou III)'], ['ded1', 'Dedicação de uma igreja I'], ['ded2', 'Dedicação de uma igreja II']] },
   { grupo: 'Defuntos', itens: romanos(5).map((r, i) => [`def${i + 1}`, `Defuntos ${r}`]) },
 ];
 
@@ -293,7 +294,7 @@ const idsEuc = (p, n) => Array.from({ length: n }, (_, i) => p + (i + 1));
 const PREF_PROPRIOS = [
   [/Domingo de Ramos/, ['ramos']], [/Natal do Senhor/, idsEuc('nat', 3)], [/Sagrada Família/, idsEuc('nat', 3)],
   [/Santa Maria, Mãe de Deus/, ['nsra1']], [/Epifania do Senhor/, ['epif']], [/Batismo do Senhor/, ['batismo']],
-  [/Ascensão do Senhor/, ['asc1', 'asc2']], [/Pentecostes/, ['pent']], [/Santíssima Trindade/, ['trin']],
+  [/Ascensão do Senhor/, ['asc1', 'asc2', 'asc3']], [/^Santa Maria Madalena$/, ['madalena']], [/Pentecostes/, ['pent']], [/Santíssima Trindade/, ['trin']],
   [/Corpo e Sangue/, ['euc1', 'euc2', 'euc3']], [/Sagrado Coração/, ['corac']], [/Cristo Rei/, ['cristorei']],
   [/Apresentação do Senhor/, ['apres']], [/São José, Esposo/, ['jose']], [/Anunciação do Senhor/, ['anunc']],
   [/Natividade de São João Batista/, ['joaob']], [/São Pedro e São Paulo/, ['pedropaulo']], [/Transfiguração do Senhor/, ['transf']],
@@ -308,12 +309,14 @@ function prefsDoSanto(nome) {
   const n = semAcento(nome);
   if (/sao joao batista/.test(n)) return ['joaob'];
   if (/arcanjo|anjos/.test(n)) return ['anjos'];
-  if (/nossa senhora|virgem maria|mae da igreja|imaculado coracao|nome de maria/.test(n)) return ['nsra1', 'nsra2'];
+  if (/nossa senhora|virgem maria|mae da igreja|imaculado coracao|nome de maria/.test(n)) return idsEuc('nsra', 5);
   if (/^sao jose( operario|,|$)/.test(n)) return ['jose'];
   if (/dedicacao/.test(n)) return ['ded2', 'ded1'];
   if (/jesus cristo|do senhor\b|nome de jesus/.test(n)) return null;
   if (/apostol|evangelista/.test(n)) return ['apost1', 'apost2'];
   if (/martir/.test(n)) return ['martires', 'martires2', 'santos1', 'santos2'];
+  if (/^santa maria madalena$/.test(n)) return ['madalena'];
+  if (/doutor/.test(n)) return ['doutores1', 'doutores2', ...(/virge|religios/.test(n) ? ['virgens'] : ['pastores', 'pastores2']), 'santos1', 'santos2'];
   if (/virge|religios|abade|abadessa|monge|eremita/.test(n)) return ['virgens', 'santos1', 'santos2'];
   if (/\b(papa|bispo|presbitero|diacono|doutor)/.test(n)) return ['pastores', 'pastores2', 'santos1', 'santos2'];
   return ['santos1', 'santos2'];
@@ -338,7 +341,7 @@ function regraEuc(data = new Date(), padroeiro = null) {
     return def(dias === -3 ? ['euc1'] : ['pas1'], 'rigido');
   }
   const proprio = PREF_PROPRIOS.find(([re]) => re.test(t));
-  const pas = idsEuc('pas', 5), nat = idsEuc('nat', 3), qua = idsEuc('qua', 4);
+  const pas = idsEuc('pas', 5), nat = idsEuc('nat', 3), qua = idsEuc('qua', 5);
   if (proprio) return def(proprio[1], SOLENIDADES_EUC.test(t) || (dom && tempo !== 'Comum') ? 'rigido' : 'aviso');
   if (/Semana Santa/.test(tt)) return def(['pai2'], 'rigido');
   if (dias >= 0 && dias <= 7) return def(['pas1'], 'rigido', 'Na oitava da Páscoa usa-se o Prefácio da Páscoa I.');
@@ -365,7 +368,7 @@ function regraEuc(data = new Date(), padroeiro = null) {
     doTempo = n === 5 ? ['pai1', ...qua] : qua;
     if (n === 5) nota = 'Na 5ª semana da Quaresma: de preferência, Paixão do Senhor I.';
   } else if (tempo === 'Páscoa') {
-    doTempo = dias > 42 ? ['asc1', 'asc2', ...pas] : pas;
+    doTempo = dias > 42 ? ['asc1', 'asc2', 'asc3', ...pas] : pas;
   } else {                                          // Tempo Comum
     r.fixasOk = !lit.padroeiro && lit.santo !== 'Festa';
     doTempo = dom ? idsEuc('tc', 10) : idsEuc('com', 9);
@@ -383,7 +386,7 @@ function regraEuc(data = new Date(), padroeiro = null) {
 
 function regraDoRoteiro(r = S.roteiro) {
   const inf = r ? infoRoteiro(r) : null;
-  return regraEuc(inf?.data || new Date(), inf?.localId ? localDe(inf.localId)?.padroeiro : null);
+  return regraEuc(inf?.dataLit || new Date(), inf?.localId ? localDe(inf.localId)?.padroeiro : null);
 }
 const nomesPrefsRegra = regra => regra.prefs.map(nomeEuc).join(' ou ');
 

@@ -25,7 +25,7 @@
     </div>
     <div class="splash-info">
       <div class="splash-gratis"><b>Gratuito · uso livre</b></div>
-      <div data-versao>Versão 1.9.11</div>
+      <div data-versao>Versão 1.9.16</div>
       <div>© 2026</div>
       <div><b>PASCOM</b></div>
       <div><b>São José Operário Ilha</b></div>
@@ -33,7 +33,11 @@
     <div class="splash-status"><span class="splash-pontos"><i></i><i></i><i></i></span><span id="splashStatus">Carregando…</span></div>
   </div>
 </div>
-<script>if (SECRETARIA) {
+<script src="js/novidades.js"></script>
+<script>
+// (1.9.16) a versão da abertura vem das Novidades (antes era escrita à mão e ficou parada na 1.9.11)
+if (!SECRETARIA && typeof NOVIDADES !== 'undefined' && NOVIDADES[0]?.versao) document.querySelector('.splash [data-versao]').textContent = 'Versão ' + NOVIDADES[0].versao;
+if (SECRETARIA) {
   // mesmo cartão da família (como o do Cast), em amarelo: "MiguelAngelus" igual aos outros e "Secretaria" estilizado
   document.querySelector('.splash-marca img').src = 'img/secretaria.svg';
   document.querySelector('.splash-nome').innerHTML = '<b>Miguel</b>Angelus <span class="marca-sec">Secretaria</span>';
@@ -593,6 +597,10 @@
             <label class="campo">Cor <input type="color" data-cfg="corRotulo"></label>
           </div>
           <label class="check" title="Um pequeno espaço antes e depois da linha do povo (T.), separando a resposta do que o padre diz"><input type="checkbox" data-cfg="espacoResposta"> Espaço entre as falas (separa a resposta do povo)</label>
+          <div class="linha">
+            <label class="check" title="A resposta do povo (linha do T., do — ou do R. e o refrão do salmo) aparece em outra cor, além do negrito. Ajuda quando se projeta na parede ou o telão é fraco."><input type="checkbox" data-cfg="corResposta"> Resposta do povo em outra cor</label>
+            <label class="campo">Cor <input type="color" data-cfg="corRespostaCor"></label>
+          </div>
           <label class="check" title="Junta os versos de cada estrofe do salmo num parágrafo, em vez de uma linha por verso como no folheto"><input type="checkbox" data-cfg="salmoCorrido"> Salmo em texto corrido (não quebra a linha a cada verso)</label>
           <p class="sutil pequeno">As imagens dos cantos da tela (brasão, padroeiro…) ficam em <b>Agenda → Paróquia</b>, para cada comunidade.</p>
 
@@ -1632,7 +1640,6 @@
 <script src="js/folhetosonline.js"></script>
 <script src="js/sincronia.js"></script>
 <script src="js/atualizacao.js"></script>
-<script src="js/novidades.js"></script>
 <script src="js/pixleitor.js"></script>
 <script src="js/pix.js"></script>
 <script src="js/formatacao.js"></script>

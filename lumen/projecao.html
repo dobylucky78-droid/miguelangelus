@@ -90,7 +90,8 @@
   body.pix-on.camera #pixCaixa .pix-qr { flex: none; height: var(--pix-qr-cam); width: var(--pix-qr-cam); padding: 1.2vh; }
   #texto { max-width: 100%; line-height: 1.22; color: #fff; text-align: center; transition: opacity var(--trans, .14s) ease; overflow-wrap: break-word; }
   #texto sup { font-size: .5em; opacity: .75; margin-right: .15em; vertical-align: .6em; }
-  #texto .resp { font-weight: 700; }
+  #texto .resp { font-weight: 700; color: var(--cor-resp, inherit); }
+  #texto .quem.povo { color: var(--cor-resp, var(--cor-quem, #ff5a4f)); }
   #texto .entre { display: block; height: .45em; }
   #texto .quem { font-weight: 700; color: var(--cor-quem, #ff5a4f); }
   #texto .cruz { color: var(--cor-cruz, #c8102e); font-weight: 400; font-family: "Segoe UI Symbol", "Segoe UI", sans-serif; }
@@ -239,7 +240,7 @@ function htmlSlide(s) {
     let quem = '';
     if (m) {
       povo = m[1] === 'T';
-      if (cfg.mostrarRotulos !== false) quem = `<span class="quem">${m[1]}.</span> `;
+      if (cfg.mostrarRotulos !== false) quem = `<span class="quem${povo ? ' povo' : ''}">${m[1]}.</span> `;
       l = l.slice(m[0].length);
     } else if (/^\s*(—|R\.)/.test(l)) povo = true;
     if (i > 0 && povo !== antes) trocas[i] = true;
@@ -685,6 +686,8 @@ function aplicarConfig(c) {
   t.style.textTransform = cfg.maiusculas ? 'uppercase' : 'none';
   t.style.fontWeight = cfg.negrito ? 700 : 400;     // temas claros: letra preta em negrito
   t.style.setProperty('--cor-quem', cfg.corRotulo || '#ff5a4f');
+  // (1.9.16) resposta do povo em outra cor (opcional)
+  if (cfg.corResposta) t.style.setProperty('--cor-resp', cfg.corRespostaCor || '#ffd166'); else t.style.removeProperty('--cor-resp');
   t.style.setProperty('--cor-secao', cfg.corSecao || '#5aa9ff');
   t.style.setProperty('--cor-cruz', cfg.corCruz || '#c8102e');
   estiloCruz = cfg.estiloCruz === 'missal' ? 'missal' : 'latina';

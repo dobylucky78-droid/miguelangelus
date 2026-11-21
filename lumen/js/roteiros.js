@@ -34,7 +34,12 @@ function infoRoteiro(r) {
   const isoChave = /^\d{4}-\d{2}-\d{2}\|/.test(r.celebracao || '') ? r.celebracao.slice(0, 10) : '';
   const iso = r.data || oc?.iso || isoChave || dataDoTexto(r.nome);
   const horaNome = (r.nome.match(/\b([01]\d|2[0-3]):[0-5]\d\b/) || [''])[0];
-  return { data: iso ? deIso(iso) : null, iso, hora: r.hora || oc?.hora || horaNome,
+  const data = iso ? deIso(iso) : null;
+  // (1.9.16) Missa de sábado à tarde/noite feita com o folheto do domingo (vigília): a liturgia é a do domingo
+  //   (roteiros antigos: sábado com o título de um domingo vindo do folheto)
+  const vigilia = r.vigilia || (r.liturgiaDe === iso && /domingo/i.test(r.tituloLiturgico || ''));
+  const dataLit = data && vigilia && data.getDay() === 6 ? new Date(data.getFullYear(), data.getMonth(), data.getDate() + 1) : data;
+  return { data, dataLit, iso, hora: r.hora || oc?.hora || horaNome,
     localId: r.localId || oc?.localId || localPorTexto(r.nome), cancelada: !!oc?.cancelada };
 }
 
@@ -48,7 +53,7 @@ function mostrarCards(sim) {
 // Celebração e cor do card, em ordem de prioridade: cor escolhida à mão › o que veio do folheto/Paulus
 // (só se o roteiro ainda está na data daquele folheto) › calendário litúrgico.
 function liturgiaDoRoteiro(r, inf = infoRoteiro(r)) {
-  const lit = inf.data ? Liturgia.info(inf.data, localDe(inf.localId)?.padroeiro) : null;   // dia do padroeiro = solenidade
+  const lit = inf.dataLit ? Liturgia.info(inf.dataLit, localDe(inf.localId)?.padroeiro) : null;   // dia do padroeiro = solenidade
   const doFolheto = r.liturgiaDe && r.liturgiaDe === inf.iso;
   const titulo = (doFolheto && r.tituloLiturgico && nomeLiturgico(r.tituloLiturgico)) ||(lit?.santo ? `${lit.titulo} (${lit.santo.toLowerCase()})` : lit?.titulo) || '';
   const cor = r.corManual || (doFolheto && r.cor) || lit?.cor || '';

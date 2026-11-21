@@ -7,7 +7,7 @@
  */
 const Perfis = { lista: [] };
 const CAMPOS_PERFIL = ['fonte', 'fonteMax', 'corTexto', 'corFundo', 'alinhamento', 'sombra', 'maiusculas', 'negrito', 'rodape',
-  'mostrarRotulos', 'corRotulo', 'espacoResposta',
+  'mostrarRotulos', 'corRotulo', 'espacoResposta', 'corResposta', 'corRespostaCor',
   // Tamanho dos slides (outra seção dos Ajustes, mas também é "o jeito da tela")
   'slideAuto', 'quebraAuto', 'linhasPorSlide', 'caracteresPorLinha', 'quebraCantos', 'versosPorSlide', 'numerarVersos', 'salmoCorrido',
   'margemLados', 'margemTopo', 'slideSecao', 'numerarSecoes', 'secaoSoNome', 'silencioComunhao', 'contornarCantos',

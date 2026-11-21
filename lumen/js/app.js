@@ -34,6 +34,7 @@ const CONFIG_PADRAO = {
   atualizarAuto: true, versaoIgnorada: '',          // atualização automática (atualizacao.js)
   mostrarRotulos: true, corRotulo: '#ff5a4f',     // letra de quem fala (P., T., L.) colorida no telão
   espacoResposta: true,                          // espaço entre as falas: a resposta do povo fica separada
+  corResposta: false, corRespostaCor: '#ffd166', // (1.9.16, ideia do Luciano) resposta do povo (T., —, R., refrão) em outra cor
   salmoCorrido: true,                            // salmo: versos de cada estrofe em texto corrido (não quebra a cada vírgula)
   // ideias do Hermínio (1.6.5): 1º slide de cada parte do roteiro com o nome dela; área útil do slide (margens, % da tela)
   slideSecao: true, numerarSecoes: false, secaoSoNome: true, silencioComunhao: false, margemLados: 5, margemTopo: 5,
@@ -2696,13 +2697,18 @@ function concluirFolheto(pacote, msg) {
   if (c.cantosNovos.length) abrirNomeacao(c.cantosNovos);
 }
 
-// Celebrações que usam o folheto de um dia: as do próprio dia e, se for domingo, as de sábado à tarde/noite (vigília)
+// Celebrações que usam o folheto de um dia: as do próprio dia e, se for domingo, as de sábado (a Missa de sábado à
+// tarde/noite vale pelo domingo e usa a liturgia dele). (1.9.16, pedido do Luciano) Antes só entravam as de sábado a
+// partir das 16h; agora entram todas as do sábado: de 14h em diante vêm marcadas (vigília), as de antes aparecem
+// desmarcadas, para quem quiser usar o folheto do domingo nelas.
+const HORA_VIGILIA = '14:00';
 function celebracoesDoFolheto(iso) {
   const d = deIso(iso);
   const lista = ocorrencias(d).filter(o => !o.cancelada).map(o => ({ ...o, vigilia: false }));
   if (d.getDay() === 0) {
     const sab = new Date(d.getFullYear(), d.getMonth(), d.getDate() - 1);
-    lista.unshift(...ocorrencias(sab).filter(o => !o.cancelada && o.hora >= '16:00').map(o => ({ ...o, vigilia: true })));
+    lista.unshift(...ocorrencias(sab).filter(o => !o.cancelada)
+      .map(o => ({ ...o, vigilia: o.hora >= HORA_VIGILIA, sabadoCedo: o.hora < HORA_VIGILIA })));
   }
   return lista;
 }
@@ -2728,7 +2734,7 @@ function renderDistribuicao() {
   $('#distAviso').textContent = passado ? 'Este folheto é de uma data que já passou. Se for reaproveitá-lo, escolha a data da Missa acima.' : '';
   $('#distLista').innerHTML = !candidatas.length ? '<p class="sutil">Nenhuma celebração na Agenda nesta data. Use "Só um roteiro".</p>' : candidatas.map((o, i) => {
     const existente = roteiroDaCelebracao(o);
-    const marcado = ehMissa(o.tipo) && !existente;
+    const marcado = ehMissa(o.tipo) && !existente && !o.sabadoCedo;
     const loc = localDe(o.localId);
     const dia = deIso(o.iso);
     return `<label class="dist-item">
@@ -2736,7 +2742,8 @@ function renderDistribuicao() {
       <span class="dist-quando">${DIAS_CURTOS[dia.getDay()]} ${o.hora}</span>
       ${loc ? `<span class="card-ponto" style="background:${loc.cor}"></span>` : ''}
       <span class="dist-txt">${esc(o.texto)}</span>
-      ${o.vigilia ? '<span class="tag">vigília</span>' : ''}
+      ${o.vigilia ? '<span class="tag" title="Missa de sábado à tarde/noite: vale pelo domingo e usa a liturgia dele">vigília (vale pelo domingo)</span>' : ''}
+      ${o.sabadoCedo ? '<span class="tag" title="Missa de sábado antes das 14h: em geral é do sábado, não do domingo. Marque se ela usa este folheto.">sábado, mais cedo</span>' : ''}
       ${o.tipo !== 'Missa' ? `<span class="tag">${esc(o.tipo)}</span>` : ''}
       ${existente ? '<span class="dist-existe">já tem roteiro — não será criado de novo; marque só se quiser substituir os itens</span>' : ''}
     </label>`;
@@ -2769,6 +2776,7 @@ async function distribuirFolheto(modo) {
       r = await criarRoteiroDaCelebracao(o, pacote.itens);
       criados++;
     }
+    if (o.vigilia) r.vigilia = true; else delete r.vigilia;   // (1.9.16) sábado à tarde/noite: regras e Dica pela liturgia do domingo
     marcarCelebracaoDoFolheto(r, pacote);
     await DB.salvar('roteiros', r);
     primeiro ||= r;

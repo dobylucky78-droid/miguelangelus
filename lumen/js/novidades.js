@@ -5,6 +5,14 @@
  * A versão mais nova fica em cima. Ao gerar uma versão nova, acrescente a entrada dela aqui.
  */
 const NOVIDADES = [
+  { versao: '1.9.16', data: '2026-11-20', itens: [
+    '🎨 Resposta do povo em outra cor (ideia do Luciano, da Paróquia Coração Eucarístico de Jesus e Santa Marina): em Ajustes → 🎨 Aparência do telão, "Resposta do povo em outra cor" pinta a linha do T., do — ou do R. e o refrão do salmo, além do negrito. A cor se escolhe ao lado (vem dourada). Ajuda quando se projeta na parede ou o telão é fraco. Vem desligada.',
+    '🌙 Missa de sábado à tarde (pedido do Luciano): ao criar os roteiros a partir do folheto do domingo, entram todas as Missas de sábado. As de 14h em diante (como a das 15h na Santa Marina) vêm marcadas, como vigília, porque valem pelo domingo e usam a liturgia dele; as mais cedo aparecem desmarcadas. Antes só entravam as de 16h em diante.',
+    '🌙 No roteiro da Missa de sábado à tarde feito com o folheto do domingo, a cor do card, o prefácio do dia, a Dica e a Missa do dia nos fitilhos seguem o domingo, e não mais o sábado.',
+    '✝ Catálogo: entram os prefácios Quaresma V, Ascensão do Senhor III, Virgem Maria III, IV e V, Doutores da Igreja I e II, Santa Maria Madalena (22/07, com regra própria) e "A Reconciliação do Espírito" (para as Orações II ou III), apontados pelo Luciano. As páginas que ainda não foram conferidas no livro aparecem com ⚠ ou em branco.',
+    '📖 Notas de "quando usar" melhoradas com a revisão do Luciano: Advento, Comum VIII, Santíssima Eucaristia III (também com o Viático) e Santos Mártires II.',
+    '🏷 A tela de abertura mostra a versão certa (estava com um número antigo fixo).',
+  ] },
   { versao: '1.9.15', data: '2026-11-20', itens: [
     '😇 Assistente do programa: em Agenda → Paróquia, escolha entre o Miguel (o anjinho do MiguelAngelus) e a Mariana, a Expert em Liturgia. O cíngulo do assistente acompanha a cor do tempo litúrgico.',
     '🙏 Uma homenagem ao Miguel, coroinha da Paróquia São José Operário, e à Mariana, acólita da Paróquia Coração Eucarístico de Jesus e Santa Marina. Os dois contribuíram para o MiguelAngelus trazer as referências das Orações Eucarísticas e dos prefácios, para ajudar quem serve no presbitério.',

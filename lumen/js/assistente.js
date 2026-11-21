@@ -84,7 +84,7 @@ function litCompleta(r) {
   try {
     if (!r) return Liturgia.info(new Date());
     const inf = infoRoteiro(r);
-    return inf.data ? Liturgia.info(inf.data, localDe(inf.localId)?.padroeiro) : null;
+    return inf.dataLit ? Liturgia.info(inf.dataLit, localDe(inf.localId)?.padroeiro) : null;
   } catch { return null; }
 }
 
