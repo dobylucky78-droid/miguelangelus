@@ -9,6 +9,8 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="MiguelAngelus">
 <title>MiguelAngelus</title>
+<script>/* (1.9.19) iPhone/iPad (o iPad se apresenta como Mac com toque): ver #acordado */
+if (/iPhone|iPad|iPod/.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1)) document.documentElement.classList.add('ios');</script>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icone.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icone-180.png">
@@ -18,6 +20,9 @@
     --seg-baixo: env(safe-area-inset-bottom, 0px); }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body { margin: 0; height: 100%; background: var(--bg); color: var(--texto); font: 16px/1.4 -apple-system, "Segoe UI", Roboto, Arial, sans-serif; }
+  /* (1.9.19) a página em si nunca rola (no iPhone o dedo arrastava a página inteira e a Dica não descia): só o main rola */
+  html { overflow: hidden; }
+  body { position: fixed; inset: 0; height: auto; overflow: hidden; }
   body { display: flex; flex-direction: column; overscroll-behavior: none; -webkit-user-select: none; user-select: none; }
   button { font: inherit; color: inherit; background: var(--painel2); border: 1px solid var(--borda); border-radius: 12px; padding: 12px 10px; touch-action: manipulation; }
   button:active { transform: scale(.97); filter: brightness(1.2); }
@@ -210,7 +215,11 @@
   .ptz-pad button.ativo, .ptz-zm button.ativo { background: var(--acento); color: #1b1503; }
   /* (1.9.1) tela acesa sem HTTPS: o Chrome atual só segura a tela por um vídeo mudo se ele estiver na tela e for grande
      (≥ 20% da tela, ≥ 75% visível) — o de 1 px era ignorado. Tela inteira, por cima, quase transparente e sem pegar toque. */
-  #acordado { position: fixed; left: 0; top: 0; width: 100vw; height: 100vh; object-fit: cover; opacity: .01; pointer-events: none; z-index: 2147483000; background: transparent; }
+  /* (1.9.19) inset 0 em vez de 100vw/100vh: no iPhone o 100vh é maior que a tela visível (barra do navegador) e deixava a
+     página rolar. E no iPhone/iPad o vídeo fica pequeno e atrás de tudo: lá o toque caía no vídeo (mesmo sem pointer-events)
+     e não rolava a Dica; o iOS não exige vídeo grande para manter a tela acesa. */
+  html.ios #acordado { inset: auto; left: 0; top: 0; width: 2px; height: 2px; z-index: -1; }
+  #acordado { position: fixed; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: .01; pointer-events: none; z-index: 2147483000; background: transparent; }
   /* Tablet: conteúdo centralizado numa coluna confortável, letra e miniaturas maiores */
   @media (min-width: 700px) {
     main > section, .nav .setas, .folha > div { max-width: 760px; margin-left: auto; margin-right: auto; }

@@ -5,6 +5,9 @@
  * A versão mais nova fica em cima. Ao gerar uma versão nova, acrescente a entrada dela aqui.
  */
 const NOVIDADES = [
+  { versao: '1.9.19', data: '2026-11-22', itens: [
+    '📱 Correção no iPhone e no iPad: no Controle pelo celular, o dedo arrastava a página inteira (o topo sumia e abria um vão embaixo das abas) e a 💡 Dica não descia. Agora só a parte do meio rola, como nos outros celulares, e a tela continua acesa.',
+  ] },
   { versao: '1.9.18', data: '2026-11-22', itens: [
     '📺 Margem de segurança da TV: muitas TVs cortam as bordas da imagem e o texto de cima e de baixo some. Em Ajustes → Aparência do telão → 📺 Margem de segurança da TV, aumente a margem (de 0 a 10%) até ver tudo: o telão inteiro fica um pouco menor, no meio da tela, com a mesma proporção. Fica guardada para cada monitor, neste computador, e o envio por NDI para o Cast continua sem a borda preta.',
     '🔍 Tamanho da tela (zoom do programa): agora vai de 50% a 200% e também funciona com Ctrl e a rodinha do mouse (além de Ctrl e +, Ctrl e −, Ctrl e 0). Encolha para os painéis caberem em telas pequenas. O telão não muda. Fica em Ajustes → Aparência do app.',
