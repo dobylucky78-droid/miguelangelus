@@ -5,6 +5,13 @@
  * A versão mais nova fica em cima. Ao gerar uma versão nova, acrescente a entrada dela aqui.
  */
 const NOVIDADES = [
+  { versao: '1.9.18', data: '2026-11-22', itens: [
+    '📺 Margem de segurança da TV: muitas TVs cortam as bordas da imagem e o texto de cima e de baixo some. Em Ajustes → Aparência do telão → 📺 Margem de segurança da TV, aumente a margem (de 0 a 10%) até ver tudo: o telão inteiro fica um pouco menor, no meio da tela, com a mesma proporção. Fica guardada para cada monitor, neste computador, e o envio por NDI para o Cast continua sem a borda preta.',
+    '🔍 Tamanho da tela (zoom do programa): agora vai de 50% a 200% e também funciona com Ctrl e a rodinha do mouse (além de Ctrl e +, Ctrl e −, Ctrl e 0). Encolha para os painéis caberem em telas pequenas. O telão não muda. Fica em Ajustes → Aparência do app.',
+    '🔎 Conferir textos: folhetos em PDF às vezes partem a palavra no fim da linha com hífen ("mor-te"). Ao importar um folheto, o MiguelAngelus mostra a lista dessas palavras para você conferir e junta só as que você marcar. Ênclise (amá-lo, perdoai-nos), mesóclise (dar-se-á) e palavras compostas (segunda-feira, bem-aventurado) ficam como estão. A qualquer hora: botão 🔎 Conferir textos, ao lado de Duplicar.',
+    '💡 Dica do Miguel no celular: o prefácio e a Oração Eucarística aparecem primeiro, antes dos fitilhos, e a aba Dica ganhou mais espaço (sem as setas Anterior/Próximo, que nela não servem). A tela rola com o dedo em todos os celulares.',
+    '☁ Procurar atualizações: quando o GitHub pede uma pausa nas consultas (acontece quando vários computadores da mesma rede procuram ao mesmo tempo), o aviso agora diz isso e a hora em que dá para tentar de novo, em vez de parecer falta de internet.',
+  ] },
   { versao: '1.9.17', data: '2026-11-21', itens: [
     '😇 O assistente ganhou lugar fixo: no pé da faixa da esquerda fica o Miguel (ou a Mariana, conforme Agenda → Paróquia). Um clique abre a 💡 Dica, sobre a liturgia do dia (prefácio, Oração Eucarística e fitilhos), e o ❓ Pergunte, para tirar dúvidas sobre o MiguelAngelus.',
     '💡 A Dica do Miguel (ou da Mariana) também nos celulares e tablets conectados: no Controle pelo celular há a aba "💡 Dica", e no aparelho dos músicos, o botão 💡 ao lado do "Seguir o telão". Mostra onde pôr os fitilhos do Missal, o prefácio e a Oração Eucarística do roteiro aberto, com as páginas. É só para ler: as escolhas continuam no computador. Útil para o coroinha ou o acólito com o Missal, sem papel.',

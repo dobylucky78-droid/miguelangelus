@@ -365,15 +365,19 @@ namespace MiguelAngelus
 
         void Rodar()
         {
-            byte[] buf = null; GCHandle h = default;
+            byte[] buf = null, inteira = null; GCHandle h = default;
             try
             {
                 while (rodando)
                 {
                     if (Conexoes == 0) { Situacao = ""; Thread.Sleep(400); continue; }
-                    int l = 0, a = 0;
+                    int l = 0, a = 0, lj = 0, aj = 0;
                     var hw = JanelaProjecao.Atual;
-                    if (hw != IntPtr.Zero && IsWindow(hw) && !IsIconic(hw) && GetClientRect(hw, out var r)) { l = r.Right - r.Left; a = r.Bottom - r.Top; }
+                    if (hw != IntPtr.Zero && IsWindow(hw) && !IsIconic(hw) && GetClientRect(hw, out var r)) { l = lj = r.Right - r.Left; a = aj = r.Bottom - r.Top; }
+                    // (1.9.18) com a margem da TV, manda só a página do telão (sem a borda preta em volta)
+                    var rc = JanelaProjecao.Recorte;
+                    bool recortar = !rc.IsEmpty && rc.Left >= 0 && rc.Top >= 0 && rc.Right <= lj && rc.Bottom <= aj && rc.Width >= 16 && rc.Height >= 16;
+                    if (recortar) { l = rc.Width; a = rc.Height; }
                     bool temImagem = l >= 16 && a >= 16;
                     if (!temImagem) { l = 320; a = 180; }
                     if (buf == null || buf.Length != l * a * 4)
@@ -381,7 +385,8 @@ namespace MiguelAngelus
                         if (h.IsAllocated) h.Free();
                         buf = new byte[l * a * 4]; h = GCHandle.Alloc(buf, GCHandleType.Pinned);
                     }
-                    if (temImagem) { Copiar(hw, l, a, buf); Situacao = "telão " + l + "×" + a; }
+                    if (temImagem && recortar) { CopiarRecorte(hw, lj, aj, rc, buf, ref inteira); Situacao = "telão " + l + "×" + a + " (margem da TV)"; }
+                    else if (temImagem) { Copiar(hw, l, a, buf); Situacao = "telão " + l + "×" + a; }
                     else { Array.Clear(buf, 0, buf.Length); Situacao = "a projeção está fechada (vai tela preta)"; }
                     var q = new NdiNativo.QuadroVideo
                     {
@@ -393,6 +398,15 @@ namespace MiguelAngelus
             }
             catch (Exception ex) { Situacao = "erro: " + ex.Message; }
             finally { if (h.IsAllocated) h.Free(); }
+        }
+
+        // (1.9.18) copia a janela inteira e fica só com o retângulo da página (margem da TV)
+        static void CopiarRecorte(IntPtr hw, int lj, int aj, System.Drawing.Rectangle rc, byte[] destino, ref byte[] inteira)
+        {
+            if (inteira == null || inteira.Length != lj * aj * 4) inteira = new byte[lj * aj * 4];
+            Copiar(hw, lj, aj, inteira);
+            for (int y = 0; y < rc.Height; y++)
+                Buffer.BlockCopy(inteira, ((rc.Top + y) * lj + rc.Left) * 4, destino, y * rc.Width * 4, rc.Width * 4);
         }
 
         static void Copiar(IntPtr hw, int l, int a, byte[] destino)

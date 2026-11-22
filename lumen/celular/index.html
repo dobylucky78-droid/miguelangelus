@@ -31,7 +31,8 @@
   .selo { font-size: 12px; padding: 3px 8px; border-radius: 20px; background: var(--painel2); color: var(--sutil); white-space: nowrap; }
   .selo.vivo { background: var(--vivo); color: #fff; }
   .faixa { background: #7a5b00; color: #fff; text-align: center; font-size: 14px; padding: 6px; }
-  main { flex: 1; overflow-y: auto; padding: 12px 12px 8px; -webkit-overflow-scrolling: touch; }
+  /* (1.9.18) min-height: 0 e pan-y: a área do meio sempre rola com o dedo (a 💡 Dica não rolava em alguns celulares) */
+  main { flex: 1 1 0; min-height: 0; overflow-y: auto; padding: 12px 12px 8px; -webkit-overflow-scrolling: touch; touch-action: pan-y; overscroll-behavior-y: contain; }
   .rot { font-size: 12px; color: var(--sutil); text-transform: uppercase; letter-spacing: .06em; margin: 10px 2px 6px; display: flex; justify-content: space-between; gap: 8px; }
   .rot b { color: var(--texto); text-transform: none; letter-spacing: 0; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .tela { background: #000; color: #fff; border-radius: 12px; padding: 14px 12px; min-height: 120px; display: flex; align-items: center; justify-content: center;
@@ -805,7 +806,7 @@ function renderRoteiros() {
   $('#btTrocar').classList.toggle('sel', trocando);
   $('#vistaItens').hidden = trocando;
   $('#vistaRoteiros').hidden = !trocando;
-  $('#nav').hidden = aba === 'midia' || trocando;      // escolhendo o roteiro: mais espaço para a lista
+  $('#nav').hidden = aba === 'midia' || aba === 'dica' || trocando;     // escolhendo o roteiro: mais espaço para a lista
   if (!trocando) return;
   if (filtroCap && filtroCap !== '-' && !R.locais.some(l => l.id === filtroCap)) filtroCap = '';
   $('#chipsCapela').innerHTML = R.locais.length < 2 ? '' :
@@ -852,13 +853,13 @@ function renderDica() {
   const cor = /^#[0-9a-f]{3,8}$/i.test(d.cor || '') ? d.cor : '#f2b632', arq = /^[\w.-]+\.svg$/.test(d.icone || '') ? d.icone : 'assistente-miguel.svg';
   $('#dicaCel').innerHTML = `<div class="dica-cab"><img id="dicaIcone" data-k="${esc(arq + cor)}" src="${esc(iconeDica(arq, cor))}" alt="">
       <div><h2>💡 ${esc(d.rotulo)}</h2><div class="sutil">${esc(d.titulo || '')}${d.edicao ? '<br>Páginas do ' + esc(d.edicao) : ''}</div></div></div>
+    <div class="dica-o">Prefácio e Oração Eucarística</div>${d.corpo || ''}
     <div class="dica-o">🎀 Onde pôr os fitilhos, na ordem da Missa</div>
     <ol class="fitas">${(d.fitas || []).map(l => `<li class="${l.junto ? 'fita-junto' : ''} ${l.sobra ? 'fita-sobra' : ''}">
       <span class="fita-n" style="--fita:${cor}">${l.junto ? '↳' : l.n}</span>
       <span class="fita-parte"><b>${esc(l.parte)}</b><small>${esc(l.det)}${l.sobra ? ' · sem fitilho sobrando: use um marcador de papel' : ''}</small></span>
       <span class="fita-pag">${l.junto ? '' : l.pag ? `p. ${esc(l.pag)}${l.conf ? ' <i title="Página ainda a conferir no Missal">⚠</i>' : ''}` : '<span class="sutil">—</span>'}</span></li>`).join('')}</ol>
     ${(d.fitas || []).some(l => l.conf) ? '<p class="sutil">⚠ página ainda a conferir no Missal</p>' : ''}
-    <div class="dica-o">Prefácio e Oração Eucarística</div>${d.corpo || ''}
     <p class="sutil">Só para ler: as escolhas e as páginas se mudam no computador.</p>`;
 }
 
@@ -868,7 +869,7 @@ function irAba(nome) {
   if (nome === 'dica') { dicaChave = ''; if (est) renderDica(); }
   $$('[data-aba]').forEach(s => s.hidden = s.dataset.aba !== nome);
   $$('[data-ir]').forEach(b => b.classList.toggle('sel', b.dataset.ir === nome));
-  $('#nav').hidden = nome === 'midia' || (nome === 'roteiro' && trocando);
+  $('#nav').hidden = nome === 'midia' || nome === 'dica' || (nome === 'roteiro' && trocando);   // (1.9.18) a Dica é só leitura: mais tela
   $('main').scrollTop = 0;
   if (nome === 'musico') { renderMusico.ultimo = ''; renderMusico(true); }
 }

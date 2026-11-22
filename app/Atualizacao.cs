@@ -60,6 +60,16 @@ namespace MiguelAngelus
             if (!Ligada) return new { ok = true, ligada = false, atual, nova = (string)null };
             var r = await http.GetAsync(Url);
             if ((int)r.StatusCode == 404) return new { ok = true, ligada = true, atual, nova = (string)null };   // ainda não há versões publicadas
+            // (1.9.18) o GitHub limita as consultas sem login (60 por hora por endereço de internet; na paróquia vários
+            // computadores dividem o mesmo endereço). Não é falta de internet: avisa com calma e diz quando tenta de novo.
+            if (((int)r.StatusCode == 403 || (int)r.StatusCode == 429) && LimiteZerado(r, out var volta))
+                return new
+                {
+                    ok = true, ligada = true, atual, nova = (string)null,
+                    pausa = "O GitHub (onde ficam as versões novas) pediu uma pausa nas consultas" +
+                            (volta != null ? $"; dá para procurar de novo depois das {volta.Value:HH:mm}." : "; dá para procurar de novo daqui a pouco.") +
+                            " A internet está funcionando e nada foi perdido."
+                };
             r.EnsureSuccessStatusCode();
             var j = new System.Web.Script.Serialization.JavaScriptSerializer().Deserialize<System.Collections.Generic.Dictionary<string, object>>(await r.Content.ReadAsStringAsync());
             var v = LerVersao(j.TryGetValue("tag_name", out var tg) ? tg as string : null);
@@ -79,6 +89,19 @@ namespace MiguelAngelus
                 nome = anexo["name"] as string,
                 tamanho = Convert.ToInt64(anexo["size"])
             };
+        }
+
+        // Limite de consultas do GitHub: X-RateLimit-Remaining = 0 (com X-RateLimit-Reset em segundos Unix), 429 ou Retry-After
+        static bool LimiteZerado(HttpResponseMessage r, out DateTime? volta)
+        {
+            volta = null;
+            string Cab(string nome) => r.Headers.TryGetValues(nome, out var v) ? v.FirstOrDefault() : null;
+            if (long.TryParse(Cab("X-RateLimit-Reset"), out var reset) && reset > 0)
+                volta = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc).AddSeconds(reset).ToLocalTime();
+            var depois = r.Headers.RetryAfter;
+            if (volta == null && depois?.Delta != null) volta = DateTime.Now + depois.Delta.Value;
+            if (volta == null && depois?.Date != null) volta = depois.Date.Value.LocalDateTime;
+            return Cab("X-RateLimit-Remaining") == "0" || (int)r.StatusCode == 429 || depois != null;
         }
 
         // Baixa, confere a assinatura e (fora de teste) abre o instalador em modo silencioso. Devolve o caminho baixado.

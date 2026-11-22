@@ -51,6 +51,31 @@ function mostrarAjuste(sec) {
   $$('#dlgAjustes [data-ajpainel]').forEach(p => p.classList.toggle('ativa', p.dataset.ajpainel === sec));
   try { localStorage.setItem('lumen.ajuste', sec); } catch {}
   if (sec === 'terco' && typeof renderTercoAjustes === 'function') renderTercoAjustes();
+  if (sec === 'aparencia') lerMargemTv();
+}
+
+// (1.9.18) 📺 margem de segurança da TV (overscan): guardada pelo programa por monitor, neste computador
+async function lerMargemTv(pct) {
+  const cx = $('#margemTvCx'); if (!cx) return;
+  if (!NO_APP) { cx.hidden = true; return; }
+  if (typeof escutarRespostasSync === 'function') escutarRespostasSync();
+  try {
+    const r = pct == null ? await arqApp('margemTvLer', {}) : await arqApp('margemTvSalvar', { pct });
+    if (!r.tela) { $('#margemTvTela').textContent = 'Só aparece com um segundo monitor (o telão) ligado neste computador.'; $('#margemTv').disabled = true; return; }
+    $('#margemTv').disabled = false;
+    $('#margemTv').value = r.pct; $('#margemTvValor').textContent = String(r.pct).replace('.', ',') + '%';
+    $('#margemTvTela').textContent = `Telão: ${r.tela}. Guardada para este monitor, só neste computador.` + (r.aberta ? '' : ' Vale na próxima vez que abrir a projeção.');
+  } catch (e) { $('#margemTvTela').textContent = 'Não consegui ler a margem: ' + e.message; }
+}
+{
+  let espera = 0;
+  document.addEventListener('input', e => {
+    if (e.target.id !== 'margemTv') return;
+    const v = +e.target.value;
+    $('#margemTvValor').textContent = String(v).replace('.', ',') + '%';
+    clearTimeout(espera); espera = setTimeout(() => lerMargemTv(v), 150);   // o telão muda enquanto arrasta
+  });
+  document.addEventListener('click', e => { if (e.target.id === 'margemTvZero') lerMargemTv(0); });
 }
 function abrirAjustes(sec) {
   let ultima = 'aparencia';

@@ -11,6 +11,10 @@
 // VERSAO_SECRETARIA fica no <head> do index.html (o splash usa antes deste arquivo carregar)
 
 const NOVIDADES_SECRETARIA = [
+  { versao: '1.5.2', data: '2026-11-22', itens: [
+    '🔍 Tamanho da tela (zoom do programa): agora vai de 50% a 200% e também funciona com Ctrl e a rodinha do mouse (além de Ctrl e +, Ctrl e −, Ctrl e 0). Encolha para os quadros caberem em telas pequenas. Fica em Ajustes → Aparência do app.',
+    '☁ Procurar atualizações: quando o GitHub pede uma pausa nas consultas (acontece quando vários computadores da mesma rede procuram ao mesmo tempo), o aviso agora diz isso e a hora em que dá para tentar de novo, em vez de parecer falta de internet.',
+  ] },
   { versao: '1.5.1', data: '2026-11-21', itens: [
     '🏷 A versão do programa aparece na barra de cima da janela ("Secretaria MiguelAngelus 1.5.1") e, pequena, ao lado do nome, como no MiguelAngelus e no Cast.',
   ] },

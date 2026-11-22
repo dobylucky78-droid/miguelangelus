@@ -333,8 +333,8 @@ namespace MiguelAngelus
                 else if (tipo == "celular") MensagemCelular(m);
                 else if (tipo == "ndiWebcam") AbrirNdiWebcam();
                 else if (tipo == "ptz") EnviarPtz(m);
-                // tamanho das letras da tela do operador (Ajustes → Aparência do app); o telão não muda
-                else if (tipo == "zoom") Web.ZoomFactor = Math.Max(0.8, Math.Min(2.0, Convert.ToDouble(m["fator"], System.Globalization.CultureInfo.InvariantCulture)));
+                // tamanho da tela do operador (zoom do programa; Ajustes → Aparência do app); o telão não muda. (1.9.18) mínimo 50 %
+                else if (tipo == "zoom") Web.ZoomFactor = Math.Max(0.5,Math.Min(2.0, Convert.ToDouble(m["fator"], System.Globalization.CultureInfo.InvariantCulture)));
             }
             catch (Exception ex) { erroNdi = ex.Message; InformarNdi(); }
         }
@@ -503,6 +503,21 @@ namespace MiguelAngelus
                         using (var d = new FolderBrowserDialog { Description = deVideo ? "Pasta dos vídeos neste computador (as subpastas viram pastas no MiguelAngelus)" : "Pasta dos áudios neste computador (as subpastas viram pastas no MiguelAngelus)", ShowNewFolderButton = false })
                             Responder(id, new { ok = true, pasta = d.ShowDialog(this) == DialogResult.OK ? d.SelectedPath : null });
                         return;
+                    // ----- (1.9.18) margem de segurança da TV, por monitor (ver JanelaProjecao) -----
+                    case "margemTvLer":
+                    case "margemTvSalvar":
+                    {
+                        var tl = JanelaProjecao.TelaDoTelao(this);
+                        if (tl == null) { Responder(id, new { ok = true, tela = (string)null, pct = 0.0 }); return; }
+                        if (acao == "margemTvSalvar")
+                        {
+                            JanelaProjecao.SalvarMargem(tl, Convert.ToDouble(m["pct"], System.Globalization.CultureInfo.InvariantCulture));
+                            JanelaProjecao.Aberta?.AplicarMargem();
+                        }
+                        var n = Array.IndexOf(Screen.AllScreens, tl) + 1;
+                        Responder(id, new { ok = true, tela = $"Monitor {(n > 0 ? n : 2)} ({tl.Bounds.Width}×{tl.Bounds.Height})", pct = JanelaProjecao.MargemDe(tl), aberta = JanelaProjecao.Aberta != null });
+                        return;
+                    }
                     // ----- atualização automática (Atualizacao.cs) -----
                     case "atualizacaoVerificar":
                         Responder(id, await Atualizacao.Verificar()); return;
@@ -1011,8 +1026,10 @@ namespace MiguelAngelus
             if (telao != null)
             {
                 noTelao = true;
+                tela = telao;
                 FormBorderStyle = FormBorderStyle.None;
                 Bounds = telao.Bounds;
+                AplicarMargem();
             }
             else
             {
@@ -1036,7 +1053,53 @@ namespace MiguelAngelus
 
         // (1.8.5) a janela de projeção aberta agora, para o envio do telão inteiro por NDI (lida de outra linha)
         internal static volatile IntPtr Atual;
-        protected override void OnHandleCreated(EventArgs e) { base.OnHandleCreated(e); Atual = Handle; }
-        protected override void OnFormClosed(FormClosedEventArgs e) { if (Atual == Handle) Atual = IntPtr.Zero; base.OnFormClosed(e); }
+        internal static JanelaProjecao Aberta;
+        protected override void OnHandleCreated(EventArgs e) { base.OnHandleCreated(e); Atual = Handle; Aberta = this; }
+        protected override void OnFormClosed(FormClosedEventArgs e) { if (Atual == Handle) { Atual = IntPtr.Zero; Recorte = Rectangle.Empty; } if (Aberta == this) Aberta = null; base.OnFormClosed(e); }
+
+        // ---------- (1.9.18) margem de segurança da TV ----------
+        // Muitas TVs cortam as bordas da imagem (overscan): o texto de cima e de baixo some. A janela continua cobrindo a
+        // tela toda (fundo preto), mas a página do telão fica um pouco menor, no meio, com a mesma proporção: as letras,
+        // as imagens e o ajuste automático se refazem sozinhos. Guardada por monitor, neste computador (margens-tv.json).
+        readonly Screen tela;
+        // a parte da janela que é a página (para o NDI mandar ao Cast só o slide, sem a borda preta); lida de outra linha
+        internal static Rectangle Recorte;
+        static string ArquivoMargens => Path.Combine(Program.PastaDados, "margens-tv.json");
+        internal static string ChaveTela(Screen s) => s.DeviceName + " " + s.Bounds.Width + "x" + s.Bounds.Height;
+        internal static System.Collections.Generic.Dictionary<string, object> LerMargens()
+        {
+            try { if (File.Exists(ArquivoMargens)) return new System.Web.Script.Serialization.JavaScriptSerializer().Deserialize<System.Collections.Generic.Dictionary<string, object>>(File.ReadAllText(ArquivoMargens, System.Text.Encoding.UTF8)) ?? new System.Collections.Generic.Dictionary<string, object>(); }
+            catch { }
+            return new System.Collections.Generic.Dictionary<string, object>();
+        }
+        internal static double MargemDe(Screen s)
+        {
+            if (s == null) return 0;
+            var m = LerMargens();
+            return m.TryGetValue(ChaveTela(s), out var v) ? Math.Max(0, Math.Min(10, Convert.ToDouble(v, System.Globalization.CultureInfo.InvariantCulture))) : 0;
+        }
+        internal static void SalvarMargem(Screen s, double pct)
+        {
+            var m = LerMargens();
+            m[ChaveTela(s)] = Math.Round(Math.Max(0, Math.Min(10, pct)), 1);
+            Directory.CreateDirectory(Program.PastaDados);
+            File.WriteAllText(ArquivoMargens, new System.Web.Script.Serialization.JavaScriptSerializer().Serialize(m), new System.Text.UTF8Encoding(false));
+        }
+        // o monitor para onde o telão vai (o mesmo critério do construtor)
+        internal static Screen TelaDoTelao(Form principal)
+        {
+            if (Aberta != null && Aberta.tela != null) return Aberta.tela;
+            var op = Screen.FromControl(principal);
+            return Screen.AllScreens.FirstOrDefault(t => t.DeviceName != op.DeviceName && !t.Primary) ?? Screen.AllScreens.FirstOrDefault(t => t.DeviceName != op.DeviceName);
+        }
+        internal void AplicarMargem()
+        {
+            if (!noTelao || tela == null) return;
+            var pct = MargemDe(tela) / 100.0;
+            int mh = (int)Math.Round(tela.Bounds.Width * pct), mv = (int)Math.Round(tela.Bounds.Height * pct);
+            Web.Dock = DockStyle.None;
+            Web.Bounds = new Rectangle(mh, mv, tela.Bounds.Width - 2 * mh, tela.Bounds.Height - 2 * mv);
+            Recorte = pct > 0 ? Web.Bounds : Rectangle.Empty;
+        }
     }
 }

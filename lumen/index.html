@@ -8,7 +8,7 @@
 <script>try { if (localStorage.getItem('lumen.temaApp') === 'claro') document.documentElement.dataset.temaApp = 'claro'; } catch (_) {}
   // (Secretaria MiguelAngelus 1.0) o mesmo programa aberto no modo Secretaria: só Agenda e Avisos (index.html?app=secretaria)
   const SECRETARIA = new URLSearchParams(location.search).get('app') === 'secretaria';
-  const VERSAO_SECRETARIA = '1.5.1';   // versão da Secretaria (a do .iss e do .csproj precisam bater)
+  const VERSAO_SECRETARIA = '1.5.2';   // versão da Secretaria (a do .iss e do .csproj precisam bater)
   if (SECRETARIA) { document.documentElement.classList.add('app-secretaria'); document.title = 'Secretaria MiguelAngelus ' + VERSAO_SECRETARIA; }</script>
 <link rel="icon" type="image/svg+xml" href="img/icone.svg">
 </head>
@@ -25,7 +25,7 @@
     </div>
     <div class="splash-info">
       <div class="splash-gratis"><b>Gratuito · uso livre</b></div>
-      <div data-versao>Versão 1.9.17</div>
+      <div data-versao>Versão 1.9.18</div>
       <div>© 2026</div>
       <div><b>PASCOM</b></div>
       <div><b>São José Operário Ilha</b></div>
@@ -266,6 +266,7 @@ if (SECRETARIA) {
       </label>
       <div class="linha">
         <button id="btnLetrasRoteiro" hidden title="Roteiro importado antes da versão 1.6.14: põe as letras P. (padre) e T. (todos) nas falas, como nos folhetos importados agora">🅿 Pôr P./T.</button>
+        <button id="btnConferirTextos" title="Procura palavras partidas com hífen no fim da linha do folheto (mor-te) e junta as que você marcar. Ênclise (amá-lo), mesóclise (dar-se-á) e palavras compostas ficam como estão.">🔎 Conferir textos</button>
         <button id="btnDuplicarRoteiro" title="Duplicar este roteiro">⎘ Duplicar</button>
         <button id="btnExcluirRoteiro" class="perigo" title="Excluir este roteiro">✕ Excluir</button>
       </div>
@@ -492,12 +493,12 @@ if (SECRETARIA) {
               <option value="claro">Claro: fundo branco e letras pretas</option>
             </select>
           </label>
-          <div class="campo">Tamanho das letras desta tela (para quem enxerga melhor com letras maiores)
-            <span class="linha zoom-app"><button type="button" data-zoomapp="-1" title="Diminuir (Ctrl e −)">A−</button>
+          <div class="campo">Tamanho da tela (zoom do programa)
+            <span class="linha zoom-app"><button type="button" data-zoomapp="-1" title="Diminuir (Ctrl e −)">−</button>
               <b id="zoomAppValor">100%</b>
-              <button type="button" data-zoomapp="1" title="Aumentar (Ctrl e +)">A+</button>
+              <button type="button" data-zoomapp="1" title="Aumentar (Ctrl e +)">+</button>
               <button type="button" data-zoomapp="0" title="Voltar ao normal (Ctrl e 0)">Normal</button></span>
-            <span class="sutil pequeno">Também pelo teclado: Ctrl e + aumenta, Ctrl e − diminui, Ctrl e 0 volta ao normal. Vale só neste computador.</span>
+            <span class="sutil pequeno">Encolhe ou aumenta o programa inteiro, para os painéis caberem na tela (de 50% a 200%). Também com Ctrl e a rodinha do mouse, ou Ctrl e +, Ctrl e −, Ctrl e 0 (volta ao normal). O telão não muda. Vale só neste computador.</span>
           </div>
           <label class="check"><input type="checkbox" data-cfg="atualizarAuto"> Procurar atualizações ao abrir</label>
           <p class="sutil pequeno">Muda só a tela do MiguelAngelus. O telão continua com o tema dele (quadradinhos <b>Tema</b> na tela de controle ou <b>Agenda → Paróquia → 🖼</b>).</p>
@@ -614,6 +615,14 @@ if (SECRETARIA) {
           </div>
           <label class="check" title="Junta os versos de cada estrofe do salmo num parágrafo, em vez de uma linha por verso como no folheto"><input type="checkbox" data-cfg="salmoCorrido"> Salmo em texto corrido (não quebra a linha a cada verso)</label>
           <p class="sutil pequeno">As imagens dos cantos da tela (brasão, padroeiro…) ficam em <b>Agenda → Paróquia</b>, para cada comunidade.</p>
+
+          <h3 class="aj-sub">📺 Margem de segurança da TV</h3>
+          <div id="margemTvCx" class="campo">
+            <span>Muitas TVs cortam as bordas da imagem e o texto de cima e de baixo some. Aumente a margem até ver tudo na TV: o telão inteiro fica um pouco menor, no meio da tela (a proporção não muda).</span>
+            <span class="linha"><input type="range" id="margemTv" min="0" max="10" step="0.5" value="0" style="flex:1"> <b id="margemTvValor" style="min-width:44px;text-align:right">0%</b>
+              <button type="button" id="margemTvZero" title="Sem margem">Sem margem</button></span>
+            <span class="sutil pequeno" id="margemTvTela">Vale para o monitor do telão, só neste computador.</span>
+          </div>
 
           <h3 class="aj-sub">📏 Tamanho dos slides</h3>
           <label class="check auto-chave" title="A cada slide, o programa calcula o tamanho da letra, as linhas e o espaço entre as palavras para o texto ocupar toda a área das margens abaixo"><input type="checkbox" data-cfg="slideAuto"> ✨ <b>Automático</b>: a letra, as linhas e o espaço entre as palavras se ajustam a cada slide para ocupar toda a área das margens</label>
@@ -1207,6 +1216,17 @@ if (SECRETARIA) {
   </form>
 </dialog>
 
+<!-- ============ (1.9.18) 🔎 Conferir hífens: palavras partidas no fim da linha do folheto ============ -->
+<dialog id="dlgHifens">
+  <form method="dialog" class="form">
+    <h2>🔎 Conferir os hífens do roteiro</h2>
+    <p class="sutil" id="hifResumo"></p>
+    <div id="hifLista" class="hif-lista"></div>
+    <div class="linha"><button type="button" id="hifTodos">Marcar / desmarcar todos</button><span class="espaco"></span>
+      <button value="cancelar">Fechar</button><button type="button" id="hifJuntar" class="primario">Juntar as marcadas</button></div>
+  </form>
+</dialog>
+
 <!-- ============ Assistente (1.9.15): 💡 Dica (cola do coroinha) e ❓ Pergunte (busca no Manual) ============ -->
 <dialog id="dlgDica" class="dlg-assist">
   <form method="dialog" class="form">
@@ -1671,6 +1691,7 @@ if (SECRETARIA) {
 <script src="js/eventos.js"></script>
 <script src="js/campanhas.js"></script>
 <script src="js/boasvindas.js"></script>
+<script src="js/hifens.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>

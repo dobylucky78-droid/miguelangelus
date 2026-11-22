@@ -16,6 +16,7 @@ async function verificarAtualizacao({ silencioso = true } = {}) {
   try { r = await arqApp('atualizacaoVerificar', {}, 20000); }
   catch (e) { if (!silencioso) alert('Não consegui procurar atualizações agora (sem internet?).\n' + e.message); return; }
   if (!r.ligada) { if (!silencioso) alert(`Você está na versão ${r.atual}.\n\nA atualização automática começa a funcionar a partir da primeira versão assinada digitalmente.`); return; }
+  if (r.pausa) { if (!silencioso) alert(r.pausa); return; }   // (1.9.18) limite de consultas do GitHub: não é falta de internet
   if (!r.nova) { if (!silencioso) toast(`Você já está na versão mais nova (${r.atual}).`); return; }
   if (silencioso && S.config.versaoIgnorada === r.nova) return;
   Atual.info = r;

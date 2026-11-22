@@ -1225,8 +1225,9 @@ function limpar() {
   renderControles();
 }
 
-// Tamanho das letras da tela do operador (zoom do aplicativo; o telão não muda). Guardado neste computador.
-const PASSOS_ZOOM = [0.8, 0.9, 1, 1.1, 1.25, 1.4, 1.5, 1.75, 2];
+// Tamanho da tela do operador (zoom do programa inteiro; o telão não muda). Guardado neste computador.
+// (1.9.18) de 50 % a 200 % e também com Ctrl + rodinha do mouse, para os painéis caberem em telas pequenas.
+const PASSOS_ZOOM = [0.5, 0.6, 0.67, 0.75, 0.8, 0.9, 1, 1.1, 1.25, 1.4, 1.5, 1.75, 2];
 function aplicarZoomApp() {
   const f = PASSOS_ZOOM.includes(+S.config.zoomApp) ? +S.config.zoomApp : 1;
   if (NO_APP) window.chrome.webview.postMessage({ tipo: 'zoom', fator: f });
@@ -1238,11 +1239,18 @@ function mudarZoomApp(passo) {
   const i = passo === 0 ? PASSOS_ZOOM.indexOf(1) : Math.max(0, Math.min(PASSOS_ZOOM.length - 1, atual + passo));
   S.config.zoomApp = PASSOS_ZOOM[i]; salvarConfig();
   aplicarZoomApp();
-  toast(`Letras desta tela: ${Math.round(PASSOS_ZOOM[i] * 100)}%`);
+  toast(`Tamanho da tela: ${Math.round(PASSOS_ZOOM[i] * 100)}%`);
 }
 function ligarZoomApp() {
   aplicarZoomApp();
   document.addEventListener('click', e => { const b = e.target.closest('[data-zoomapp]'); if (b) mudarZoomApp(+b.dataset.zoomapp); });
+  let ultimaRoda = 0;   // touchpad manda muitos eventos seguidos: um passo a cada 120 ms
+  addEventListener('wheel', e => {
+    if (!e.ctrlKey) return;
+    e.preventDefault();
+    const agora = Date.now(); if (agora - ultimaRoda < 120 || !e.deltaY) return;
+    ultimaRoda = agora; mudarZoomApp(e.deltaY < 0 ? 1 : -1);
+  }, { passive: false });
   addEventListener('keydown', e => {
     if (!e.ctrlKey || e.altKey) return;
     if (e.key === '+' || e.key === '=') { e.preventDefault(); mudarZoomApp(1); }
@@ -2697,6 +2705,8 @@ function concluirFolheto(pacote, msg) {
   if (pacote.aviso && (typeof ehSiteRio !== 'function' || ehSiteRio())) alert(pacote.aviso);
   if (pacote.avaliar) oferecerAvaliacaoFolheto(pacote.avaliar.arquivo, pacote.avaliar.dica, pacote.avaliar.problema);
   if (c.cantosNovos.length) abrirNomeacao(c.cantosNovos);
+  // (1.9.18) palavras partidas com hífen no fim da linha do PDF ("mor-te"): mostra a lista para conferir (hifens.js)
+  if (typeof conferirHifens === 'function') setTimeout(() => { try { conferirHifens({ auto: true }); } catch (err) { console.warn('conferir hífens', err); } }, 400);
 }
 
 // Celebrações que usam o folheto de um dia: as do próprio dia e, se for domingo, as de sábado (a Missa de sábado à
