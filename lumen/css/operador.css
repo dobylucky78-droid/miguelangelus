@@ -1479,3 +1479,56 @@ html[data-tema-app="claro"] .t-campanhas { background: #fde3ef; color: #9a1d56; 
 .hif-it input { margin-top: 4px; }
 .hif-txt { line-height: 1.45; }
 .hif-txt mark { background: rgba(242, 182, 49, .35); color: inherit; padding: 0 2px; border-radius: 3px; }
+
+/* (1.9.20) cards com as linhas do telão: as quebras vêm do telão (<br class="qb">); aqui nada quebra de novo */
+.slide .corpo.tl { white-space: nowrap; flex: 1 0 auto; line-height: 1.32; }   /* o card cresce até caber tudo, como antes */
+.slide .corpo.tl .resp { font-weight: 700; color: #fff; }
+.slide .corpo.tl .quem { font-weight: 700; color: #ff6b5e; }
+.slide .corpo.tl .entre { display: block; height: .4em; }
+.slide .corpo.tl .vn { color: #ff6b5e; font-weight: 700; margin-right: .12em; }
+.slide .corpo.tl .cruz { color: #e0463c; }
+.slide .corpo.tl .cruz.latina svg { height: .8em; width: auto; vertical-align: -.04em; }
+.slide .corpo.tl .tit-sec { display: block; color: #5aa9ff; font-weight: 700; font-size: .8em; margin-bottom: .2em; }
+.slide .corpo.tl sup { font-size: .6em; opacity: .75; vertical-align: .5em; }
+.slide .corpo.tl big.m-gg { display: inline-block; }
+html[data-tema-app="claro"] .slide .corpo.tl .resp { color: #000; }
+html[data-tema-app="claro"] .slide .corpo.tl .quem, html[data-tema-app="claro"] .slide .corpo.tl .vn { color: #c8102e; }/* (1.9.20) a linha da grade cresce com o card mais alto dela: o texto nunca passa da borda do card (antes ficava em 110 px e o resto vazava por cima do card de baixo) */
+.grade-slides { grid-auto-rows: max-content; }
+
+/* (1.9.20) 📚 Textos da paróquia */
+.tabela-bib { border-collapse: collapse; margin: 6px 0 10px; }
+.tabela-bib td { padding: 3px 10px 3px 0; vertical-align: top; }
+.tabela-bib td:first-child { width: 1.4em; color: var(--ok, #3a9d5d); }
+
+/* (Secretaria 1.6.0) 📋 escala de voluntários */
+.esc-abas { display: flex; gap: 4px; flex-wrap: wrap; margin: 0 0 8px; border-bottom: 1px solid var(--borda); }
+.esc-abas button { border-radius: 8px 8px 0 0; border-bottom: 0; opacity: .75; }
+.esc-abas button.ativo { opacity: 1; background: var(--painel2); border-color: var(--acento, #d4a93a); font-weight: 600; }
+.esc-tabela { max-height: 56vh; overflow: auto; }
+.esc-tab { border-collapse: collapse; width: 100%; font-size: 13px; }
+.esc-tab th { position: sticky; top: 0; background: var(--painel2); text-align: left; padding: 4px 6px; z-index: 1; white-space: nowrap; }
+.esc-tab td { padding: 2px 4px; border-bottom: 1px solid var(--borda); vertical-align: middle; }
+.esc-tab input { width: 100%; min-width: 7em; padding: 3px 5px; }
+.esc-tab input::placeholder { color: var(--texto-sutil, #999); font-style: italic; opacity: .9; }
+.esc-tab tr.editando td { background: var(--painel2); }
+.esc-dia, .esc-missa { white-space: nowrap; }
+.esc-acoes { white-space: nowrap; text-align: right; width: 1%; }
+.esc-chk { display: inline-flex; align-items: center; gap: 4px; margin-right: 10px; white-space: nowrap; }
+.esc-chk input { width: auto; }
+.esc-avulso { font-size: 11px; padding: 1px 6px; border-radius: 8px; background: var(--painel2); border: 1px solid var(--borda); }
+.esc-form { padding: 8px; margin-bottom: 8px; border: 1px solid var(--borda); border-radius: 8px; }.esc-prog { margin: 2px 0; }
+.esc-prog select { flex: 1 1 auto; width: auto; }
+.esc-prog select[data-prog="semana"] { flex: 0 0 auto; }
+.esc-prog-tit { margin: 6px 0 2px; }
+.esc-choque { color: var(--aviso, #e0a030); font-size: 12px; }/* (1.9.20) 💡 Dica: escala da Missa e trecho do carrilhão */
+.dica-trecho { margin: 8px 0; padding: 8px 12px; border-left: 4px solid var(--acento, #d4a93a); background: var(--painel2); border-radius: 0 8px 8px 0; font: 16px/1.45 Georgia, serif; }
+.dica-escala .dica-lista li b { text-align: right; }.dica-trecho-antes { opacity: .72; }
+/* (Secretaria 1.6.0) 📎 arquivos da pastoral e carga da planilha */
+.esc-arq-linha { margin: -2px 0 6px; align-items: center; }
+.esc-arquivos { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.esc-arq { display: inline-flex; align-items: center; gap: 4px; padding: 2px 4px 2px 6px; border: 1px solid var(--borda); border-radius: 8px; background: var(--painel2); }
+.esc-arq button { padding: 2px 6px; }
+.esc-carga-mapa .campo { min-width: 220px; }
+.esc-carga-erro td { opacity: .6; }
+.esc-arq-corpo iframe { width: 100%; height: 66vh; border: 0; background: #fff; border-radius: 8px; }
+.esc-arq-corpo img { max-width: 100%; max-height: 66vh; display: block; margin: auto; }

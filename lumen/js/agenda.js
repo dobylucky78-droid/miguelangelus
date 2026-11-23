@@ -496,6 +496,8 @@ async function criarRoteiroDaCelebracao(o, itens) {
   r.data = o.iso;
   r.hora = o.hora;
   r.localId = o.localId || '';            // define a apresentação (imagens nos cantos) no telão
+  // (1.9.20) 📚 Missa: já nasce com as antífonas e orações que a paróquia guardou para esta celebração (biblioteca.js)
+  if (ehMissa(o.tipo) && typeof aplicarBiblioteca === 'function') try { aplicarBiblioteca(r); } catch (e) { console.warn('biblioteca', e); }
   S.roteiros.push(r);
   await DB.salvar('roteiros', r);
   Agenda.dados.vinculos[o.chave] = r.id;

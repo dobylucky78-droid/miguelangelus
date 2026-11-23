@@ -64,6 +64,8 @@ if (/iPhone|iPad|iPod/.test(navigator.userAgent) || (/Macintosh/.test(navigator.
   .dica-card .dica-o { margin: 0 0 2px; } .dica-nome { font-size: 18px; font-weight: 700; } .dica-pag { font-size: 17px; margin: 4px 0; }
   .dica-pag b { font-size: 22px; color: var(--acento); } .dica-uso { font-size: 14px; color: #c9d1de; } .dica-sem-pag { font-size: 13px; }
   .dica-lista { list-style: none; padding: 0; margin: 6px 0; } .dica-lista li { display: flex; justify-content: space-between; gap: 8px; border-bottom: 1px dashed var(--borda); padding: 4px 0; font-size: 14px; }
+  .dica-trecho { margin: 8px 0; padding: 8px 12px; border-left: 4px solid var(--acento); background: var(--painel2); border-radius: 0 8px 8px 0; font: 17px/1.45 Georgia, serif; }
+  .dica-escala .dica-lista li b { text-align: right; } .dica-trecho-antes { opacity: .72; }
   .dica-aviso { color: #ffcf6e; font-size: 14px; } .dica-nota, .dica-fala { font-size: 14px; color: #c9d1de; } .dica-falta { color: var(--sutil); }
   .tela .entre { display: block; height: .4em; }
   .tela sup { font-size: .6em; opacity: .7; }
@@ -862,7 +864,8 @@ function renderDica() {
   const cor = /^#[0-9a-f]{3,8}$/i.test(d.cor || '') ? d.cor : '#f2b632', arq = /^[\w.-]+\.svg$/.test(d.icone || '') ? d.icone : 'assistente-miguel.svg';
   $('#dicaCel').innerHTML = `<div class="dica-cab"><img id="dicaIcone" data-k="${esc(arq + cor)}" src="${esc(iconeDica(arq, cor))}" alt="">
       <div><h2>💡 ${esc(d.rotulo)}</h2><div class="sutil">${esc(d.titulo || '')}${d.edicao ? '<br>Páginas do ' + esc(d.edicao) : ''}</div></div></div>
-    <div class="dica-o">Prefácio e Oração Eucarística</div>${d.corpo || ''}
+    ${d.escala || ''}
+    <div class="dica-o">Prefácio e Oração Eucarística</div>${d.corpo || ''}${d.carrilhao || ''}
     <div class="dica-o">🎀 Onde pôr os fitilhos, na ordem da Missa</div>
     <ol class="fitas">${(d.fitas || []).map(l => `<li class="${l.junto ? 'fita-junto' : ''} ${l.sobra ? 'fita-sobra' : ''}">
       <span class="fita-n" style="--fita:${cor}">${l.junto ? '↳' : l.n}</span>

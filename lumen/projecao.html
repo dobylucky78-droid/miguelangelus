@@ -192,7 +192,7 @@ const PREVIEW = new URLSearchParams(location.search).has('preview');
 // limite das margens (pontilhado) e a área que o texto ocupou de fato (tracejado) por cima
 const MINI = new URLSearchParams(location.search).get('mini') || '';
 // (1.7.2) 'edicao': prévia das janelas de editar — igual ao telão, sem as linhas-guia das margens
-const GUIAS = !!MINI && MINI !== 'edicao';
+const GUIAS = !!MINI && MINI !== 'edicao' && MINI !== 'medir';
 const alvo = PREVIEW ? window.parent : window.opener;
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -869,6 +869,53 @@ window.addEventListener('message', e => {
   else if (m.tipo === 'posicionar') {
     try { window.moveTo(m.x, m.y); window.resizeTo(m.w, m.h); } catch (_) { /* o usuário arrasta manualmente */ }
   }
+});
+
+// (1.9.20) 'medir': um telão invisível, do tamanho do de verdade, dentro da tela do operador. Para cada slide pedido,
+// desenha como o telão e devolve o HTML do texto com as quebras de linha que o telão fez (<br class="qb">): o card
+// central mostra exatamente as mesmas linhas (pedido do Luciano: o operador lia pelo card e passava antes da hora).
+function comQuebras() {
+  const t = $('texto');
+  const lh = (parseFloat(t.style.fontSize) || parseFloat(getComputedStyle(t).fontSize) || 16) * 1.22;
+  const w = document.createTreeWalker(t, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT,
+    { acceptNode: n => n.nodeType === 1 && n.classList.contains('ct-f') ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT });
+  const r = document.createRange(), pos = [];
+  let topo = null, quebrou = true, bloco = null, n;
+  while ((n = w.nextNode())) {
+    if (n.nodeType === 1) { if (n.tagName === 'BR' || n.classList.contains('entre')) quebrou = true; continue; }
+    const b = n.parentElement.closest('.tit-sec, .contas, big.m-gg');
+    if (b !== bloco) { quebrou = true; bloco = b; }
+    const s = n.data;
+    for (let i = 0; i < s.length; i++) {
+      if (/\s/.test(s[i])) continue;
+      r.setStart(n, i); r.setEnd(n, i + 1);
+      const q = r.getClientRects()[0]; if (!q) continue;
+      const desceu = topo === null || q.top > topo + lh * 0.5;
+      if (desceu && topo !== null && !quebrou) pos.push([n, i]);
+      if (desceu) topo = q.top;
+      quebrou = false;
+    }
+  }
+  for (let k = pos.length - 1; k >= 0; k--) {
+    const [no, i] = pos[k], resto = no.splitText(i), br = document.createElement('br');
+    br.className = 'qb'; no.parentNode.insertBefore(br, resto);
+  }
+  const c = t.cloneNode(true);
+  c.querySelectorAll('.ct-f, .ct-esp, .ct-fim, .contas').forEach(x => x.remove());
+  return c.innerHTML;
+}
+if (MINI === 'medir') window.addEventListener('message', async e => {
+  const m = e.data;
+  if (!m || m.app !== 'lumen' || m.tipo !== 'medir') return;
+  try { await document.fonts.ready; } catch (_) {}
+  const res = (m.slides || []).map(s => {
+    try {
+      slide = s; chaveAtual = JSON.stringify(s); desenhar();
+      const al = getComputedStyle($('texto')).textAlign;
+      return { html: comQuebras(), alinhar: al === 'justify' ? 'left' : al };
+    } catch (_) { return null; }
+  });
+  try { alvo.postMessage({ app: 'lumen', tipo: 'medidas', pedido: m.pedido, chaves: m.chaves, res }, '*'); } catch (_) {}
 });
 
 window.addEventListener('resize', () => { desenharImagem(); ajustar(); });

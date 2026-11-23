@@ -109,18 +109,22 @@ function dicaCelular() {
   if (typeof htmlDica !== 'function' || typeof linhasFitilhos !== 'function') return null;
   const r = S.roteiro;
   const chave = [r?.id || '', r?.atualizado || '', isoData(new Date()), Math.floor(Date.now() / 20000)].join('|');
-  if (Cel.cacheDica?.chave === chave) return Cel.cacheDica.dados;
+  // (1.9.20) a escala da Missa (da Secretaria) é lida do banco aqui, sem esperar: entra na próxima volta
+  if (typeof atualizarEscalaDica === 'function') atualizarEscalaDica();
+  const chEsc = JSON.stringify(typeof DicaExtra !== 'undefined' ? DicaExtra.escala : null).length;
+  if (Cel.cacheDica?.chave === chave && Cel.cacheDica.chEsc === chEsc) return Cel.cacheDica.dados;
   let dados = null;
   try {
     const d = htmlDica(), a = assistente(), n = nFitilhos();
     dados = {
       rotulo: rotuloDica(a), nome: a.nome, icone: a.icone.replace(/^img\//, ''), cor: corDoCingulo(),
       titulo: d.titulo, edicao: d.edicao, corpo: d.corpo,
+      escala: d.escala || '', carrilhao: d.carrilhao || '',     // (1.9.20) 📋 quem serve nesta Missa e 🔔 o trecho do carrilhão
       fitas: linhasFitilhos().map(l => ({ n: l.n || 0, parte: l.parte, det: l.det || '', pag: l.junto ? '' : String(l.pag || ''),
         conf: !!l.conf, junto: !!l.junto, sobra: !l.junto && l.n > n })),
     };
   } catch (err) { console.warn('dica para o celular', err); }
-  Cel.cacheDica = { chave, dados };
+  Cel.cacheDica = { chave, chEsc, dados };
   return dados;
 }
 

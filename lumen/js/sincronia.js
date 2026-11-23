@@ -20,17 +20,22 @@ const Sync = { estado: { vistos: {}, enviados: {}, removidos: [] }, pedidos: {},
 // (1.9.6) secc- = campanhas de arrecadação, na pasta "campanhas/": a Secretaria cria e atualiza; o MiguelAngelus só lê e mostra
 // (Secretaria 1.5.0) secn- = nomes das intenções de cada Missa, na pasta "intencoes/", SÓ quando a paróquia liga a chave
 // "Intenções no MiguelAngelus" (nasce desligada): só o tipo e o texto da intenção. O MiguelAngelus só lê.
-const ehItemSecretaria = id => /^sec[mieucn]-/.test(id || '');
+// (Secretaria 1.6.0) secv- = 📋 escala de voluntários (pessoas, equipes, escala do mês): só entre as Secretarias, na pasta "secretaria/"
+// (Secretaria 1.6.0 / MiguelAngelus 1.9.20) secs- = escala de cada Missa (só função e nomes), na pasta "escalas/", SÓ quando a
+// paróquia liga a chave "Escalas no MiguelAngelus" (nasce desligada). O MiguelAngelus só lê (💡 Dica dos celulares).
+const ehItemSecretaria = id => /^sec[mieucnvs]-/.test(id || '');
+const ehEscalaMA = id => /^secs-/.test(id || '');
 const ehEvento = id => /^sece-/.test(id || '');
 const ehCampanha = id => /^secc-/.test(id || '');
 const ehIntTelao = id => /^secn-/.test(id || '');
 const GRUPOS_SYNC = typeof SECRETARIA !== 'undefined' && SECRETARIA ? [
   { sub: 'config', store: 'config', filtro: r => ['agenda', 'avisos'].includes(r.id) },
-  { sub: 'secretaria', store: 'config', filtro: r => /^sec[miu]-/.test(r.id || '') },   // marcações e intenções: só a Secretaria
+  { sub: 'secretaria', store: 'config', filtro: r => /^sec[miuv]-/.test(r.id || '') },   // marcações, intenções e escala: só a Secretaria
   // eventos numa pasta própria: o MiguelAngelus também lê (aba 🎉 Eventos) e pode criar, como nos avisos
   { sub: 'eventos', store: 'config', filtro: r => ehEvento(r.id) },
   { sub: 'campanhas', store: 'config', filtro: r => ehCampanha(r.id) },
   { sub: 'intencoes', store: 'config', filtro: r => ehIntTelao(r.id) },
+  { sub: 'escalas', store: 'config', filtro: r => ehEscalaMA(r.id) },
 ] : [
   { sub: 'config', store: 'config', filtro: r => ['agenda', 'eucaristia', 'pix', 'avisos', 'perfis', 'ordinario', 'links', 'joyPerfis', 'classificacoes', 'tercos'].includes(r.id) },
   { sub: 'roteiros', store: 'roteiros' },
@@ -42,6 +47,7 @@ const GRUPOS_SYNC = typeof SECRETARIA !== 'undefined' && SECRETARIA ? [
   { sub: 'eventos', store: 'config', filtro: r => ehEvento(r.id) },   // (1.9) 🎉 eventos, os mesmos da Secretaria
   { sub: 'campanhas', store: 'config', filtro: r => ehCampanha(r.id) },   // (1.9.6) 💝 campanhas: só lê (quem mexe é a Secretaria)
   { sub: 'intencoes', store: 'config', filtro: r => ehIntTelao(r.id) },   // (1.9.12) 🕯 nomes das intenções: só lê (se a paróquia ligar)
+  { sub: 'escalas', store: 'config', filtro: r => ehEscalaMA(r.id) },     // (1.9.20) 📋 escala de cada Missa: só lê (se a paróquia ligar)
 ];
 const ligadaSync = () => NO_APP && (S.config.syncModo === 'google' || (S.config.syncModo === 'pasta' && S.config.syncPasta));
 

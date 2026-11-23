@@ -88,7 +88,7 @@ const Liturgia = (() => {
 01-27|m|b|Santa Ângela Merici, virgem
 01-28|M|b|Santo Tomás de Aquino, presbítero e doutor
 01-31|M|b|São João Bosco, presbítero
-02-03|m|v|São Brás, bispo e mártir
+02-03|m|v|São Brás, bispo e mártir; Santo Oscar, bispo
 02-05|M|v|Santa Águeda, virgem e mártir
 02-06|M|v|São Paulo Miki e companheiros, mártires
 02-08|m|b|São Jerônimo Emiliani; Santa Josefina Bakhita, virgem
@@ -123,6 +123,7 @@ const Liturgia = (() => {
 05-01|m|b|São José Operário
 05-02|M|b|Santo Atanásio, bispo e doutor
 05-03|F|v|São Filipe e São Tiago, Apóstolos
+05-10|m|b|São João de Ávila, presbítero e doutor
 05-12|m|v|Santos Nereu e Aquiles, mártires; São Pancrácio, mártir
 05-13|m|b|Nossa Senhora de Fátima
 05-14|F|v|São Matias, Apóstolo
@@ -140,6 +141,7 @@ const Liturgia = (() => {
 06-03|M|v|São Carlos Lwanga e companheiros, mártires
 06-05|M|v|São Bonifácio, bispo e mártir
 06-06|m|b|São Norberto, bispo
+06-08|m|b|Santo Efrém, diácono e doutor
 06-09|M|b|São José de Anchieta, presbítero
 06-11|M|v|São Barnabé, Apóstolo
 06-13|M|b|Santo Antônio de Pádua, presbítero e doutor
@@ -153,12 +155,14 @@ const Liturgia = (() => {
 07-04|m|b|Santa Isabel de Portugal
 07-05|m|b|Santo Antônio Maria Zaccaria, presbítero
 07-06|m|v|Santa Maria Goretti, virgem e mártir
+07-08|m|v|Santo Agostinho Zhao Rong, presbítero, e companheiros, mártires
 07-09|M|b|Santa Paulina do Coração Agonizante de Jesus, virgem
 07-11|M|b|São Bento, abade
 07-13|m|b|Santo Henrique
 07-14|m|b|São Camilo de Lélis, presbítero
 07-15|M|b|São Boaventura, bispo e doutor
 07-16|m|b|Nossa Senhora do Carmo
+07-17|m|v|Beato Inácio de Azevedo, presbítero, e companheiros, mártires
 07-20|m|v|Santo Apolinário, bispo e mártir
 07-21|m|b|São Lourenço de Brindisi, presbítero e doutor
 07-22|F|b|Santa Maria Madalena
@@ -179,7 +183,7 @@ const Liturgia = (() => {
 08-10|F|v|São Lourenço, diácono e mártir
 08-11|M|b|Santa Clara, virgem
 08-12|m|b|Santa Joana Francisca de Chantal, religiosa
-08-13|m|v|Santos Ponciano e Hipólito, mártires
+08-13|m|v|Santos Ponciano e Hipólito, mártires; Santa Dulce Lopes Pontes, virgem
 08-14|M|v|São Maximiliano Maria Kolbe, presbítero e mártir
 08-16|m|b|Santo Estêvão da Hungria
 08-19|m|b|São João Eudes, presbítero
@@ -213,7 +217,7 @@ const Liturgia = (() => {
 10-02|M|b|Santos Anjos da Guarda
 10-03|M|v|Santos André de Soveral, Ambrósio Francisco Ferro e companheiros, mártires
 10-04|M|b|São Francisco de Assis
-10-05|m|b|Santa Faustina Kowalska, virgem
+10-05|m|b|Santa Faustina Kowalska, virgem; São Benedito, o Negro, religioso
 10-06|m|b|São Bruno, presbítero
 10-07|M|b|Nossa Senhora do Rosário
 10-09|m|v|São Dionísio e companheiros, mártires; São João Leonardi, presbítero
@@ -223,7 +227,7 @@ const Liturgia = (() => {
 10-16|m|b|Santa Edwiges; Santa Margarida Maria Alacoque
 10-17|M|v|Santo Inácio de Antioquia, bispo e mártir
 10-18|F|v|São Lucas, Evangelista
-10-19|m|v|Santos João de Brébeuf, Isaac Jogues e companheiros, mártires; São Paulo da Cruz
+10-19|m|v|Santos João de Brébeuf, Isaac Jogues e companheiros, mártires; São Paulo da Cruz; São Pedro de Alcântara, presbítero
 10-22|m|b|São João Paulo II, papa
 10-23|m|b|São João de Capistrano, presbítero
 10-24|m|b|Santo Antônio Maria Claret, bispo
@@ -238,6 +242,7 @@ const Liturgia = (() => {
 11-16|m|b|Santa Margarida da Escócia; Santa Gertrudes, virgem
 11-17|M|b|Santa Isabel da Hungria, religiosa
 11-18|m|b|Dedicação das Basílicas de São Pedro e São Paulo
+11-19|m|v|Santos Roque González, Afonso Rodríguez e João del Castillo, presbíteros e mártires
 11-21|M|b|Apresentação de Nossa Senhora
 11-22|M|v|Santa Cecília, virgem e mártir
 11-23|m|v|São Clemente I, papa e mártir; São Columbano, abade
@@ -249,6 +254,7 @@ const Liturgia = (() => {
 12-06|m|b|São Nicolau, bispo
 12-07|M|b|Santo Ambrósio, bispo e doutor
 12-09|m|b|São João Diego Cuauhtlatoatzin
+12-10|m|b|Nossa Senhora de Loreto
 12-11|m|b|São Dâmaso I, papa
 12-12|F|b|Nossa Senhora de Guadalupe
 12-13|M|v|Santa Luzia, virgem e mártir

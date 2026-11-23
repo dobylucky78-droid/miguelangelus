@@ -416,6 +416,8 @@ function renderLiturgiaReconhecida() {
       ${r.salmo ? `<li>✓ Salmo ${esc(r.salmo.ref.replace(/^Sl /, ''))} (refrão + ${r.salmo.estrofes.length} estrofes)</li>` : ''}
       ${r.aclamacao ? '<li>✓ Aclamação ao Evangelho</li>' : ''}
       <li id="litOraStatus" class="sutil">Orações do dia: buscando…</li>
+      <li><label class="check" title="Antífonas e orações que a paróquia já usou nesta celebração (📚 Textos da paróquia). O que não estiver guardado vem da internet.">
+        <input type="checkbox" id="litBib" checked> 📚 Usar primeiro os textos guardados pela paróquia para este dia</label></li>
     </ul>`;
   pedirOracoesDoDia(d);
   const ocs = ocorrencias(d).filter(o => !o.cancelada);
@@ -459,11 +461,16 @@ async function montarRoteirosDaLiturgia() {
   let ora = null;
   try { ora = await pedirOracoesDoDia(d); } catch { /* sem as orações do dia: fica a Coleta padrão */ }
   const marcadas = $$('#litCelebracoes input:checked').map(el => LitDia.ocs[+el.dataset.i]);
+  // (1.9.20) 📚 os textos guardados pela paróquia para a celebração passam na frente dos da internet
+  const usarBib = $('#litBib')?.checked !== false && typeof aplicarBiblioteca === 'function';
+  let nBib = 0;
+  const comBib = rot => { if (usarBib) try { nBib = Math.max(nBib, aplicarBiblioteca(rot, { substituir: true }).length); } catch (e) { console.warn('biblioteca', e); } };
   let primeiro = null, n = 0;
   if (!LitDia.ocs.length) {
     const rot = novoRoteiro(`${DIAS_CURTOS[d.getDay()]} ${dataCurta(d)} — ${cap1(r.titulo)}`);
     rot.data = isoData(d);
     rot.itens = itensDaLiturgia(r, domingo, comOE2, ora, d);
+    comBib(rot);
     marcarLiturgia(rot, r);
     S.roteiros.push(rot); await DB.salvar('roteiros', rot);
     primeiro = rot; n = 1;
@@ -473,6 +480,7 @@ async function montarRoteirosDaLiturgia() {
     let rot = roteiroDaCelebracao(o);
     if (rot) { rot.itens = manterBoasVindas(rot.itens, itens); rot.atualizado = Date.now(); }   // (1.9.6) o vídeo de boas-vindas fica
     else rot = await criarRoteiroDaCelebracao(o, itens);
+    comBib(rot);
     marcarLiturgia(rot, r);
     await DB.salvar('roteiros', rot);
     primeiro ||= rot; n++;
@@ -480,7 +488,7 @@ async function montarRoteirosDaLiturgia() {
   if (primeiro) { trocarRoteiro(primeiro); mostrarAba('roteiros'); }
   const ro = primeiro?.itens || [], itOE = ro.find(i => i.tipo === 'eucaristica'), itPref = ro.find(i => i.tipo === 'prefacio');
   const faltam = comOE2 ? [itPref?.prefId, itOE?.oeId].filter(id => id && !temTexto(id)).map(nomeEuc) : [];
-  toast(`${n} roteiro(s) montado(s) com a liturgia de ${dataCurta(d)}.` + (faltam.length ? ` Cadastre no catálogo (✝) o texto de: ${faltam.join(' e ')}.` : ''));
+  toast(`${n} roteiro(s) montado(s) com a liturgia de ${dataCurta(d)}.` + (nBib ? ` 📚 ${nBib} texto(s) guardado(s) pela paróquia.` : '') + (faltam.length ? ` Cadastre no catálogo (✝) o texto de: ${faltam.join(' e ')}.` : ''));
 }
 
 // Título em CAIXA ALTA (Paulus) vira "Só a primeira maiúscula"; o da API já vem escrito normalmente

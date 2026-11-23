@@ -49,7 +49,7 @@ const GRUPOS_PREF = [
     ['aparecida', 'Nossa Senhora Aparecida']] },     // (1.9.15) próprio do Brasil (12/10)
   { grupo: 'Santos', itens: [['jose', 'São José'], ['joaob', 'São João Batista'], ['pedropaulo', 'São Pedro e São Paulo'], ['apost1', 'Apóstolos I'], ['apost2', 'Apóstolos II'],
     ['santos1', 'Santos I'], ['santos2', 'Santos II'], ['todossantos', 'Todos os Santos'], ['martires', 'Santos Mártires I'], ['martires2', 'Santos Mártires II'], ['pastores', 'Santos Pastores I'], ['pastores2', 'Santos Pastores II'], ['doutores1', 'Doutores da Igreja I'], ['doutores2', 'Doutores da Igreja II'],
-    ['virgens', 'Santas Virgens e Santos Religiosos'], ['madalena', 'Santa Maria Madalena'], ['anjos', 'Anjos']] },
+    ['virgens', 'Santas Virgens e Santos Religiosos'], ['anjos', 'Anjos']] },     // (1.9.20) Santa Maria Madalena saiu: não tem prefácio próprio (Luciano)
   { grupo: 'Outras ocasiões', itens: [['unidade', 'Unidade dos Cristãos'], ['reconc', 'A Reconciliação do Espírito (com as Orações II ou III)'], ['ded1', 'Dedicação de uma igreja I'], ['ded2', 'Dedicação de uma igreja II']] },
   { grupo: 'Defuntos', itens: romanos(5).map((r, i) => [`def${i + 1}`, `Defuntos ${r}`]) },
 ];
@@ -188,11 +188,14 @@ function salvarMissalItem(id, pag, uso) {
   else delete m.itens[id];
 }
 
+// (1.9.20) saíram do catálogo, mas o nome continua para os roteiros antigos que os usaram
+const PREF_RETIRADOS = [{ id: 'madalena', nome: 'Santa Maria Madalena (retirado: não tem prefácio próprio)', grupo: 'Retirados', retirado: true }];
 const listaOEs = () => [...OES, ...Euc.dados.extras.filter(x => x.tipo === 'oe').map(x => ({ ...x, pref: 'livre', extra: true }))];
 // todos = true: inclui os avulsos que duplicam um do catálogo (para achar o nome em roteiros antigos)
 function listaPrefacios(todos = false) {
   const base = GRUPOS_PREF.flatMap(g => g.itens.map(([id, nome]) => ({ id, nome, grupo: g.grupo })));
-  return [...base, ...Euc.dados.extras.filter(x => x.tipo === 'pref' && (todos || !x.duplica)).map(x => ({ ...x, extra: true }))];
+  return [...base, ...Euc.dados.extras.filter(x => x.tipo === 'pref' && (todos || !x.duplica)).map(x => ({ ...x, extra: true })),
+    ...(todos ? PREF_RETIRADOS : [])];
 }
 const oeDe = id => listaOEs().find(o => o.id === id) || null;
 const prefDe = id => listaPrefacios(true).find(p => p.id === id) || null;
@@ -213,6 +216,11 @@ const FESTAS_DATA = [['01-20', 'São Sebastião, mártir'], ['02-02', 'Apresenta
   ['08-06', 'Transfiguração do Senhor'], ['08-15', 'Assunção de Nossa Senhora'], ['09-14', 'Exaltação da Santa Cruz'],
   ['10-12', 'Nossa Senhora da Conceição Aparecida'], ['11-01', 'Todos os Santos'], ['11-02', 'Comemoração de Todos os Fiéis Defuntos'],
   ['11-09', 'Dedicação da Basílica do Latrão'], ['12-08', 'Imaculada Conceição de Nossa Senhora']];
+// os santos de uma data do santoral ("São Beda; São Gregório VII; Santa Maria Madalena de Pazzi" → 3)
+function santosDaData(mmdd, nome) {
+  nome ??= Liturgia.SANTORAL?.[mmdd]?.nome || '';
+  return String(nome).split(/\s*;\s*/).filter(Boolean);
+}
 function listaMissaDoDia() {
   if (listaMissaDoDia.c) return listaMissaDoDia.c;
   const T = 'Missa do dia: tempos e solenidades', SG = 'Missa do dia: santos (pela data)', L = [];
@@ -237,16 +245,19 @@ function listaMissaDoDia() {
   for (let n = 1; n <= 3; n++) DIAS_SEM_MISSA.forEach(([k, nd]) => w(`adv-${n}-${k}`, `${nd} da ${n}ª Semana do Advento`));
   for (let d = 17; d <= 24; d++) w('adv-12-' + d, `${d} de dezembro (Advento, dias antes do Natal)`);
   for (const d of [29, 30, 31]) w('nat-12-' + d, `${d} de dezembro (Oitava do Natal)`);
-  for (let d = 2; d <= 7; d++) w('nat-01-0' + d, `${d} de janeiro (Tempo do Natal, antes da Epifania)`);
-  DIAS_SEM_MISSA.forEach(([k, nd]) => w('nat-epi-' + k, `${nd} depois da Epifania`));
+  // (1.9.20, Luciano) de 2 de janeiro até o sábado antes do Batismo do Senhor: uma Missa por dia da semana
+  DIAS_SEM_MISSA.forEach(([k, nd]) => w('nat-epi-' + k, `${nd} (de 2 de janeiro ao sábado antes do Batismo do Senhor)`));
   [['qui', 'Quinta-feira'], ['sex', 'Sexta-feira'], ['sab', 'Sábado']].forEach(([k, nd]) => w('qua-0-' + k, `${nd} depois das Cinzas`));
   for (let n = 1; n <= 5; n++) DIAS_SEM_MISSA.forEach(([k, nd]) => w(`qua-${n}-${k}`, `${nd} da ${n}ª Semana da Quaresma`));
   [['seg', 'Segunda-feira'], ['ter', 'Terça-feira'], ['qua', 'Quarta-feira']].forEach(([k, nd]) => w('santa-' + k, `${nd} Santa`));
   for (let n = 1; n <= 7; n++) DIAS_SEM_MISSA.forEach(([k, nd]) => w(`pas-${n}-${k}`, `${nd} da ${n === 1 ? 'Oitava' : n + 'ª Semana'} da Páscoa`));
   const sant = { ...Object.fromEntries(Object.entries(Liturgia.SANTORAL || {}).map(([k, s]) => [k, s.nome])), ...Object.fromEntries(FESTAS_DATA) };
-  for (const k of Object.keys(sant).sort()) L.push({ id: 'dia-d-' + k, nome: `${k.slice(3)}/${k.slice(0, 2)} · ${sant[k]}`, grupo: SG });
+  // (1.9.20, Luciano) dia com mais de um santo: uma linha para cada (são Missas diferentes, com páginas diferentes);
+  // o 1º continua com o id da data, os outros ganham "-2", "-3"
+  for (const k of Object.keys(sant).sort())
+    santosDaData(k, sant[k]).forEach((nome, i) => L.push({ id: 'dia-d-' + k + (i ? '-' + (i + 1) : ''), nome: `${k.slice(3)}/${k.slice(0, 2)} · ${nome}`, grupo: SG }));
+  // (1.9.20, Luciano) Jesus Cristo, Sumo e Eterno Sacerdote saiu: não tem Missa própria no Missal (é Missa votiva)
   L.push({ id: 'dia-mae-igreja', nome: 'Maria, Mãe da Igreja (2ª-feira depois de Pentecostes)', grupo: SG },
-    { id: 'dia-sumo-sacerdote', nome: 'Jesus Cristo, Sumo e Eterno Sacerdote (5ª-feira depois de Pentecostes)', grupo: SG },
     { id: 'dia-imac-coracao', nome: 'Imaculado Coração de Maria (sábado depois do Sagrado Coração)', grupo: SG });
   return (listaMissaDoDia.c = L);
 }
@@ -261,7 +272,8 @@ function chaveMissaDoDia(lit) {
   if (fixas[t]) return fixas[t];
   if (lit.santo) {
     if (/Mãe da Igreja/.test(t)) return 'dia-mae-igreja';
-    if (/Sumo e Eterno Sacerdote/.test(t)) return 'dia-sumo-sacerdote';
+    // (1.9.20) sem Missa própria: vale a Missa do dia de semana (Tempo Comum: a do domingo)
+    if (/Sumo e Eterno Sacerdote/.test(t)) return chaveMissaDoDia({ data: d, titulo: lit.tituloTempo, tituloTempo: lit.tituloTempo });
     if (/Imaculado Coração/.test(t)) return 'dia-imac-coracao';
     return 'dia-d-' + mmdd;
   }
@@ -286,12 +298,8 @@ function chaveMissaDoDia(lit) {
   }
   if (tt === 'Tempo do Natal') {
     if (d.getMonth() === 11 && d.getDate() >= 29) return 'dia-sem-nat-' + mmdd;
-    if (d.getMonth() === 0 && d.getDate() >= 2 && d.getDate() <= 7) {
-      // de 2 a 7/1, os dias depois da Epifania (no Brasil, num domingo) já são "depois da Epifania"
-      const epi = new Date(d.getFullYear(), 0, 2 + (7 - new Date(d.getFullYear(), 0, 2).getDay()) % 7);
-      return d > epi ? 'dia-sem-nat-epi-' + ds : 'dia-sem-nat-' + mmdd;
-    }
-    if (d.getMonth() === 0) return 'dia-sem-nat-epi-' + ds;
+    // (1.9.20, Luciano) de 2 de janeiro até o sábado antes do Batismo: a Missa do dia da semana
+    if (d.getMonth() === 0 && d.getDate() >= 2) return 'dia-sem-nat-epi-' + ds;
     return null;
   }
   if (tt === 'Depois das Cinzas') return 'dia-sem-qua-0-' + ds;
@@ -309,7 +317,11 @@ const BENCAOS_SOLENES = [['advento', 'Advento'], ['natal', 'Natal do Senhor'], [
   ['todos-santos', 'Todos os Santos'], ['dedicacao', 'Dedicação de igreja'], ['defuntos', 'Celebração pelos fiéis defuntos']]
   .map(([id, nome]) => ({ id: 'ben-' + id, nome: 'Bênção solene: ' + nome, grupo: 'Bênçãos solenes' }));
 const parteMissal = id => PARTES_MISSAL.find(p => p.id === id) || BENCAOS_SOLENES.find(p => p.id === id) || (id?.startsWith('dia-') ? listaMissaDoDia().find(p => p.id === id) : null) || null;
-const nomeEuc = id => (oeDe(id) || prefDe(id) || parteMissal(id))?.nome || '?';
+const nomeEuc = id => {
+  // (1.9.20) textos da paróquia (biblioteca.js): "dia-tc-34#coleta" → "34º Domingo do Tempo Comum · Oração do Dia (Coleta)"
+  if (id?.includes('#') && typeof nomeTextoParoquia === 'function') return nomeTextoParoquia(id);
+  return (oeDe(id) || prefDe(id) || parteMissal(id))?.nome || '?';
+};
 const temTexto = id => !!Euc.dados.textos[id]?.texto;
 
 // Prefácios que podem ser usados com uma oração eucarística
@@ -331,7 +343,7 @@ const idsEuc = (p, n) => Array.from({ length: n }, (_, i) => p + (i + 1));
 const PREF_PROPRIOS = [
   [/Domingo de Ramos/, ['ramos']], [/Natal do Senhor/, idsEuc('nat', 3)], [/Sagrada Família/, idsEuc('nat', 3)],
   [/Santa Maria, Mãe de Deus/, ['nsra1']], [/Epifania do Senhor/, ['epif']], [/Batismo do Senhor/, ['batismo']],
-  [/Ascensão do Senhor/, ['asc1', 'asc2', 'asc3']], [/^Santa Maria Madalena$/, ['madalena']], [/Pentecostes/, ['pent']], [/Santíssima Trindade/, ['trin']],
+  [/Ascensão do Senhor/, ['asc1', 'asc2', 'asc3']], [/Pentecostes/, ['pent']], [/Santíssima Trindade/, ['trin']],
   [/Corpo e Sangue/, ['euc1', 'euc2', 'euc3']], [/Sagrado Coração/, ['corac']], [/Cristo Rei/, ['cristorei']],
   [/Apresentação do Senhor/, ['apres']], [/São José, Esposo/, ['jose']], [/Anunciação do Senhor/, ['anunc']],
   [/Natividade de São João Batista/, ['joaob']], [/São Pedro e São Paulo/, ['pedropaulo']], [/Transfiguração do Senhor/, ['transf']],
@@ -352,7 +364,6 @@ function prefsDoSanto(nome) {
   if (/jesus cristo|do senhor\b|nome de jesus/.test(n)) return null;
   if (/apostol|evangelista/.test(n)) return ['apost1', 'apost2'];
   if (/martir/.test(n)) return ['martires', 'martires2', 'santos1', 'santos2'];
-  if (/^santa maria madalena$/.test(n)) return ['madalena'];
   if (/doutor/.test(n)) return ['doutores1', 'doutores2', ...(/virge|religios/.test(n) ? ['virgens'] : ['pastores', 'pastores2']), 'santos1', 'santos2'];
   if (/virge|religios|abade|abadessa|monge|eremita/.test(n)) return ['virgens', 'santos1', 'santos2'];
   if (/\b(papa|bispo|presbitero|diacono|doutor)/.test(n)) return ['pastores', 'pastores2', 'santos1', 'santos2'];

@@ -25,6 +25,7 @@ const MENU_SECRETARIA = `
       <hr>
       <button data-menu="sec-paroquia">🏛 Paróquia e comunidades…</button>
       <button data-menu="sec-intTelao">🕯 Intenções no MiguelAngelus (telão)…</button>
+      <button data-menu="sec-escMA">📋 Escalas no MiguelAngelus (celulares)…</button>
       <button data-menu="sec-lgpd">🔒 Dados de uma pessoa (LGPD)…</button>
       <hr>
       <button data-menu="sec-tema">🌓 Tema claro / escuro</button>
@@ -60,6 +61,7 @@ function acaoMenuSecretaria(acao) {
       return escolherPastaImagens().then(ok => ok && toast('🖼 Pasta das imagens: ' + S.config.avisosPastaImagens));
     case 'paroquia': return abrirAgenda('paroquia');
     case 'intTelao': return abrirIntTelao();
+    case 'escMA': return abrirEscMA();     // (1.6.0) escala.js
     case 'lgpd': return abrirLgpd();
     case 'tema':
       S.config.temaApp = S.config.temaApp === 'claro' ? 'escuro' : 'claro';
@@ -97,6 +99,15 @@ const HTML_COMO_USAR_SEC = `
         nem para o telão, nem para o site.</p>
       <p class="sutil">Se uma pessoa pedir para ver ou apagar os dados dela (LGPD): <b>Ajustes → 🔒 Dados de uma pessoa</b> procura pelo nome ou telefone,
         imprime o relatório e apaga o que for marcado.</p>
+      <h3>📋 Escalas (só entre as Secretarias)</h3>
+      <p>Comece por <b>⚙ Funções</b> (quais existem, quantas vagas, por equipes ou rodízio) e <b>🙋 Pessoas</b>. Em <b>👥 Equipes e agenda</b>, cada equipe
+        com os membros e a agenda dela, como nas celebrações recorrentes: a Missa e a semana do mês (toda semana, 1ª, 2ª… última).
+        Em <b>📅 Escala do mês</b> aparece tudo: escreva por cima para trocar numa Missa só, use <b>🎲 Sugerir o rodízio</b> para
+        coroinhas e acólitos e <b>🖨 Imprimir</b> a folha do mês.</p>
+      <p>Se a equipe já faz a escala dela: <b>⬇ Planilha padrão…</b> baixa a planilha do mês com as Missas da Agenda para o coordenador
+        preencher (uma coluna por vaga). Quando ela voltar, <b>📎 Subir arquivo ou planilha…</b> guarda o arquivo no mês, lê os nomes
+        e mostra a prévia: diga qual coluna é qual função, confira e clique em <b>Pôr na escala</b>. PDF também é lido (quando tem texto,
+        não foto); imagem fica só guardada para consulta.</p>
       <h3>4. Eventos com QR code</h3>
       <p><b>🎉 Eventos</b>: título, data, local, descrição e o cartaz. Quem aponta a câmera do celular para o QR salva o evento na agenda.
         A Secretaria monta a <b>imagem para o Holyrics</b> (cartaz à esquerda, QR à direita) e o <b>cartaz A4 com QR</b> para o mural.</p>
@@ -123,7 +134,7 @@ const lerReais = s => { const n = parseFloat(String(s || '').replace(/[^\d,.-]/g
 const nomeIgreja = id => { const l = localDe(id); return l ? `${l.tipo} ${l.nome}` : '—'; };
 
 // ---------------------------------------------------------------- itens compartilhados entre as Secretarias
-const PREF_SEC = { marc: 'secm-', int: 'seci-', ev: 'sece-', usu: 'secu-', camp: 'secc-' };   // usu: pessoas da 📆 agenda (secretariaagendag.js); camp: 💝 campanhas (campanhas.js)
+const PREF_SEC = { marc: 'secm-', int: 'seci-', ev: 'sece-', usu: 'secu-', camp: 'secc-', esc: 'secv-' };   // esc: 📋 escala de voluntários (escala.js)   // usu: pessoas da 📆 agenda (secretariaagendag.js); camp: 💝 campanhas (campanhas.js)
 const horaCurta = t => new Date(t).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
 
 // versao = quando o item foi gravado pela última vez (o "atualizado" do registro), para conferir conflitos
@@ -149,9 +160,14 @@ async function gravarItemSec(tipo, item, { versaoAberta = 0, rotulo = 'este item
   item.versao = reg.atualizado;
   avisarMudancaSec();
   if (tipo === 'int') aposMudarIntencoes();
+  if (tipo === 'esc' && typeof aposMudarEscala === 'function') aposMudarEscala();   // (1.6.0) escala.js
   return true;
 }
-async function apagarItemSec(tipo, id) { await DB.remover('config', PREF_SEC[tipo] + id); avisarMudancaSec(); if (tipo === 'int') aposMudarIntencoes(); }
+async function apagarItemSec(tipo, id) {
+  await DB.remover('config', PREF_SEC[tipo] + id); avisarMudancaSec();
+  if (tipo === 'int') aposMudarIntencoes();
+  if (tipo === 'esc' && typeof aposMudarEscala === 'function') aposMudarEscala();
+}
 // (1.5.0) intenção nova, mudada ou apagada: refaz o que vai para o MiguelAngelus (só se a chave estiver ligada)
 let timerPubInt = 0;
 function aposMudarIntencoes() { clearTimeout(timerPubInt); timerPubInt = setTimeout(() => SECRETARIA && publicarIntencoesTelao(), 400); }
@@ -168,6 +184,7 @@ async function recarregarCadastrosSecretaria() {
   if (SECRETARIA) publicarIntencoesTelao();      // (1.5.0) a chave pode ter sido mudada em outro computador
   if ($('#dlgEventos')?.open) renderEventos();
   if ($('#dlgCampanhas')?.open) renderCampanhas();
+  if (typeof recarregarEscala === 'function') await recarregarEscala();   // (1.6.0) escala.js
   aposMudarEventos();
   aposMudarCampanhas();      // (1.9.6) campanhas.js: o item 💝 Campanhas do roteiro mostra o andamento novo
 }
@@ -176,10 +193,11 @@ async function recarregarCadastrosSecretaria() {
 function aposMudarEventos() { if (typeof aposMudarEventosMA === 'function') aposMudarEventosMA(); }
 
 // Folha A4 (mesmo jeito da folha dos avisos): título, linha da paróquia e "Página X de Y"
-function imprimirFolhaSec(titulo, subtitulo, corpo, arquivo) {
+// (1.6.0) { paisagem: true } = A4 deitada (escala do mês, com uma coluna por função)
+function imprimirFolhaSec(titulo, subtitulo, corpo, arquivo, { paisagem = false } = {}) {
   const par = Agenda.dados.paroquia || {};
   const html = `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>${esc(arquivo || titulo)}</title><style>
-    @page { size: A4; margin: 16mm 15mm 18mm;
+    @page { size: A4${paisagem ? ' landscape' : ''}; margin: ${paisagem ? '12mm 12mm 14mm' : '16mm 15mm 18mm'};
       @bottom-right { content: "Página " counter(page) " de " counter(pages); font: 8pt "Segoe UI", Arial, sans-serif; color: #999; } }
     body { font: 11pt/1.4 "Segoe UI", Arial, sans-serif; color: #111; margin: 0; }
     header { border-bottom: 3px solid #b98507; padding-bottom: 6px; margin-bottom: 12px; }
@@ -861,7 +879,7 @@ const HTML_LGPD = `
       <button type="button" id="lgProcurar" class="primario">Procurar</button>
     </div>
     <div id="lgLista" class="lg-lista"><p class="sutil">Digite um nome ou telefone.</p></div>
-    <p class="sutil pequeno">Não entram aqui: folhas já impressas, cópias de segurança (backup) e os textos de avisos e eventos — confira e corrija esses à mão.</p>
+    <p class="sutil pequeno">Não entram aqui: folhas já impressas, cópias de segurança (backup), os textos de avisos e eventos e os arquivos 📎 das escalas (PDF, imagem, planilha) — confira e corrija esses à mão.</p>
     <div class="linha">
       <button type="button" id="lgTodos">Marcar todos</button>
       <button type="button" id="lgImprimir" title="Folha com tudo o que foi achado (só os itens marcados)">🖨 Relatório para a pessoa…</button>
@@ -881,7 +899,12 @@ async function procurarLgpd() {
   const ints = Int.lista.filter(i => casaLgpd(q, [i.texto, i.aPedidoDe, i.pedidoPor]))
     .sort((a, b) => (a.data + (a.hora || '')).localeCompare(b.data + (b.hora || '')));
   const pessoas = (await lerItensSec('usu')).filter(p => casaLgpd(q, [p.nome]));
-  Lgpd.achados = [...marc.map(m => ({ tipo: 'marc', item: m })), ...ints.map(i => ({ tipo: 'int', item: i }))];
+  // (1.6.0) voluntários da 📋 escala
+  const vols = (await lerItensSec('esc')).filter(p => p.id.startsWith('p-') && casaLgpd(q, [p.nome, p.contato, p.obs]));
+  Lgpd.achados = [...marc.map(m => ({ tipo: 'marc', item: m })), ...ints.map(i => ({ tipo: 'int', item: i })), ...vols.map(p => ({ tipo: 'esc', item: p }))];
+  const linhaVol = p => `<label class="lg-item"><input type="checkbox" data-lg="esc:${p.id}" checked><span>
+      <b>📋 Pessoa das escalas</b>
+      <small>Nome: ${marcarLgpd(p.nome, q)}${p.contato ? ` · Telefone: ${marcarLgpd(p.contato, q)}` : ''}${p.obs ? ` · Obs.: ${marcarLgpd(p.obs, q)}` : ''} · o nome continua nas escalas já feitas</small></span></label>`;
   const linhaMarc = m => `<label class="lg-item"><input type="checkbox" data-lg="marc:${m.id}" checked><span>
       <b>${tipoMarc(m.tipo)[2]} ${esc(tipoMarc(m.tipo)[1])} · ${dataBR(m.data)} ${esc(m.hora || '')} · ${esc(nomeIgreja(m.localId))}</b>
       <small>Nomes: ${marcarLgpd((m.nomes || '').replace(/\n/g, ' · '), q)}${m.contato ? ` · Contato: ${marcarLgpd(m.contato, q)}` : ''}${m.obs ? ` · Obs.: ${marcarLgpd(m.obs, q)}` : ''}${m.celebrante ? ` · Celebrante: ${marcarLgpd(m.celebrante, q)}` : ''}</small></span></label>`;
@@ -891,6 +914,7 @@ async function procurarLgpd() {
   $('#lgLista').innerHTML = (!Lgpd.achados.length && !pessoas.length) ? '<p class="sutil">Nada encontrado com esse nome ou telefone.</p>'
     : (marc.length ? `<div class="lg-grupo-tit">📒 Marcações (${marc.length})</div>${marc.map(linhaMarc).join('')}` : '')
     + (ints.length ? `<div class="lg-grupo-tit">🕯 Intenções de Missa (${ints.length})</div>${ints.map(linhaInt).join('')}` : '')
+    + (vols.length ? `<div class="lg-grupo-tit">📋 Escalas (${vols.length})</div>${vols.map(linhaVol).join('')}` : '')
     + (pessoas.length ? `<div class="lg-grupo-tit">📆 Login na Agenda da secretaria</div><p class="sutil pequeno">${pessoas.map(p => esc(p.nome)).join(', ')}: o nome e a senha (guardada só como código) servem para entrar na agenda. Quem é responsável remove em 📆 Agenda da secretaria → Pessoas.</p>` : '');
   $('#lgImprimir').disabled = $('#lgApagar').disabled = $('#lgTodos').disabled = !Lgpd.achados.length;
 }
@@ -906,21 +930,23 @@ function imprimirLgpd() {
     + (ms.length ? `<h2>Marcações</h2><table><thead><tr><th>Dia</th><th>Tipo</th><th>Igreja</th><th>Nomes</th><th>Contato</th><th>Observações</th><th>Situação</th></tr></thead><tbody>${ms.map(m =>
       `<tr><td>${dataBR(m.data)} ${esc(m.hora || '')}</td><td>${esc(tipoMarc(m.tipo)[1])}</td><td>${esc(nomeIgreja(m.localId))}</td><td>${esc((m.nomes || '').replace(/\n/g, ', '))}</td><td>${esc(m.contato || '')}</td><td>${esc(m.obs || '')}</td><td>${esc(SITUACOES_MARC.find(s => s[0] === (m.situacao || 'pre'))?.[1] || '')}</td></tr>`).join('')}</tbody></table>` : '')
     + (is.length ? `<h2>Intenções de Missa</h2><table><thead><tr><th>Dia</th><th>Igreja</th><th>Tipo</th><th>Intenção</th><th>A pedido de</th><th>Responsável</th><th class="num">Oferta</th></tr></thead><tbody>${is.map(i =>
-      `<tr><td>${dataBR(i.data)} ${esc(i.hora || '')}</td><td>${esc(nomeIgreja(i.localId))}</td><td>${esc(tipoInt(i.tipo)[3])}</td><td>${esc(i.texto)}</td><td>${esc(i.aPedidoDe || '')}</td><td>${esc(i.pedidoPor || '')}</td><td class="num">${i.oferta ? reais(i.oferta) : '—'}</td></tr>`).join('')}</tbody></table>` : '');
+      `<tr><td>${dataBR(i.data)} ${esc(i.hora || '')}</td><td>${esc(nomeIgreja(i.localId))}</td><td>${esc(tipoInt(i.tipo)[3])}</td><td>${esc(i.texto)}</td><td>${esc(i.aPedidoDe || '')}</td><td>${esc(i.pedidoPor || '')}</td><td class="num">${i.oferta ? reais(i.oferta) : '—'}</td></tr>`).join('')}</tbody></table>` : '')
+    + ((vs => vs.length ? `<h2>Escalas</h2><table><thead><tr><th>Nome</th><th>Telefone</th><th>Observação</th></tr></thead><tbody>${vs.map(p =>
+      `<tr><td>${esc(p.nome)}</td><td>${esc(p.contato || '')}</td><td>${esc(p.obs || '')}</td></tr>`).join('')}</tbody></table>` : '')(sel.filter(a => a.tipo === 'esc').map(a => a.item)));
   imprimirFolhaSec('Dados pessoais guardados pela secretaria', `Procura por "${q}" · ${sel.length} registro${sel.length > 1 ? 's' : ''}`, corpo, `Dados LGPD ${q}`);
 }
 
 async function apagarLgpd() {
   const sel = marcadosLgpd();
   if (!sel.length) return toast('Marque pelo menos um item.');
-  const nm = sel.filter(a => a.tipo === 'marc').length, ni = sel.length - nm;
+  const nm = sel.filter(a => a.tipo === 'marc').length, ni = sel.filter(a => a.tipo === 'int').length, nv = sel.filter(a => a.tipo === 'esc').length;
   // intenções de 7º dia lançadas por uma marcação apagada vão junto
   const extras = Int.lista.filter(i => i.marcacaoId && sel.some(a => a.tipo === 'marc' && a.item.id === i.marcacaoId) && !sel.some(a => a.tipo === 'int' && a.item.id === i.id));
-  const txt = [nm ? `${nm} marcaç${nm > 1 ? 'ões' : 'ão'}` : '', ni ? `${ni} intenç${ni > 1 ? 'ões' : 'ão'}` : '', extras.length ? `${extras.length} intenção(ões) de 7º dia ligada(s) a essas marcações` : ''].filter(Boolean).join(', ');
+  const txt = [nm ? `${nm} marcaç${nm > 1 ? 'ões' : 'ão'}` : '', ni ? `${ni} intenç${ni > 1 ? 'ões' : 'ão'}` : '', nv ? `${nv} pessoa${nv > 1 ? 's' : ''} das escalas` : '', extras.length ? `${extras.length} intenção(ões) de 7º dia ligada(s) a essas marcações` : ''].filter(Boolean).join(', ');
   if (!confirm(`Apagar de vez: ${txt}?\n\nSome também dos outros computadores da secretaria e NÃO dá para desfazer.\nSugestão: antes, imprima ou salve o relatório em PDF.`)) return;
   for (const a of sel) await apagarItemSec(a.tipo, a.item.id);
   for (const i of extras) await apagarItemSec('int', i.id);
-  await Promise.all([carregarMarcacoes(), carregarIntencoes()]);
+  await Promise.all([carregarMarcacoes(), carregarIntencoes(), typeof carregarEscala === 'function' && carregarEscala()]);
   toast(`🗑 Apagado: ${txt}.`);
   procurarLgpd();
 }
@@ -1305,6 +1331,7 @@ function iniciarCadastrosSecretaria() {
   ligarEventosSec();
   ligarCampanhasSec();      // (1.9.6) 💝 campanhas de arrecadação (campanhas.js)
   if (typeof iniciarAgendaG === 'function') iniciarAgendaG();   // (protótipo) 📆 agenda da secretaria numa conta própria
+  if (typeof iniciarEscala === 'function') iniciarEscala();     // (1.6.0) 📋 escala de voluntários (escala.js)
   // F1 abre o "Como usar" da Secretaria (o manual do MiguelAngelus não serve aqui)
   document.addEventListener('keydown', e => {
     if (e.key !== 'F1') return;

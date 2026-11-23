@@ -44,7 +44,8 @@ const DB = (() => {
     || (store === 'config' && ['agenda', 'eucaristia', 'avisos', 'perfis', 'pix', 'ordinario', 'links', 'joyPerfis', 'classificacoes', 'tercos'].includes(obj?.id))
     // (Secretaria 1.1) cada marcação (secm-), intenção (seci-) e evento (sece-) é um registro: sincroniza item por item
     // (1.9.6) e cada campanha de arrecadação (secc-); (1.9.12) e os nomes das intenções de cada Missa (secn-)
-    || (store === 'config' && /^sec[mieucn]-/.test(obj?.id || ''));
+    // (Secretaria 1.6.0) e a escala de voluntários (secv-)
+    || (store === 'config' && /^sec[mieucnvs]-/.test(obj?.id || ''));
 
   const api = {
     todos: store => tx(store, 'readonly', s => s.getAll()),

@@ -103,7 +103,13 @@ function opcoesMissaDia(lit) {
       ? { v: vDe(outra), id: outra, nome: `Missa da semana (${outra ? nomeEuc(outra).replace(/ \((e a semana|dias de semana)\)$/, '') : lit.tituloTempo})` }
       : { v: outra, id: outra, nome: lit.facultativa + ' (memória facultativa)' });
   }
-  return ops;
+  // (1.9.20, Luciano) dia com mais de um santo: uma opção para cada (linhas "dia-d-MM-DD", "-2", "-3" da tabela 📖)
+  return ops.flatMap(o => {
+    const m = /^dia-d-(\d\d-\d\d)$/.exec(o.id || ''), santos = m ? santosDaData(m[1]) : [];
+    if (santos.length < 2) return [o];
+    const fac = / \(memória facultativa\)$/.test(o.nome) ? ' (memória facultativa)' : '';
+    return santos.map((s, i) => { const id = o.id + (i ? '-' + (i + 1) : ''); return { v: id, id, nome: s + fac }; });
+  });
 }
 
 function linhasFitilhos() {
@@ -163,6 +169,8 @@ function ligarFormFitilhos() {
     for (const k of Object.keys(f)) if (!f[k]) delete f[k];
     if (Object.keys(f).length) r.fitilhos = f; else delete r.fitilhos;
     salvarRoteiro(); re();
+    // (1.9.20) a bênção da Dica é a mesma do item "Bênção e despedida" do roteiro: o telão acompanha
+    try { renderRoteiroLista(); if (S.atual?.item?.parte === 'bencao-final') { atualizarSlides(); renderCabecalho(); } } catch (_) {}
   };
   $('#fitDia').addEventListener('input', guardar);
   $('#fitMissa')?.addEventListener('change', () => {
@@ -177,6 +185,72 @@ function ligarFormFitilhos() {
     guardar();
   });
   $('#fitN').addEventListener('input', e => { const v = +e.target.value; if (v >= 1 && v <= 12) { Euc.dados.nFitilhos = v; salvarEucaristia(); re(); } });
+}
+
+// ---------- (1.9.20) 📋 escala da Missa e 🔔 carrilhão na Dica ----------
+// Escala: vem da Secretaria (registro secs-<chave da celebração>, só função e nomes), se a paróquia ligou lá a chave
+// "Escalas no MiguelAngelus". Lida do banco de tempos em tempos (a Dica do celular é montada sem esperar).
+const DicaExtra = { escala: null, chave: '', quando: 0 };
+async function atualizarEscalaDica(forcar) {
+  const ch = S.roteiro?.celebracao || '';
+  if (!forcar && ch === DicaExtra.chave && Date.now() - DicaExtra.quando < 20000) return;
+  DicaExtra.chave = ch; DicaExtra.quando = Date.now();
+  try { DicaExtra.escala = ch ? (await DB.obter('config', 'secs-' + String(ch).replace(/[^\w-]+/g, '_')))?.item || null : null; }
+  catch { DicaExtra.escala = null; }
+}
+function htmlEscalaDica() {
+  const e = DicaExtra.escala;
+  if (!e?.funcoes?.length || !S.roteiro || e.chave !== S.roteiro.celebracao) return '';
+  return `<div class="dica-card dica-escala"><div class="dica-o">📋 Escala desta Missa</div><ul class="dica-lista">${e.funcoes.map(f =>
+    `<li><span>${esc(f.nome)}</span><b>${esc((f.pessoas || []).join(', '))}</b></li>`).join('')}</ul></div>`;
+}
+
+// Carrilhão: o trecho da Oração Eucarística do roteiro em que o padre pede o Espírito Santo sobre os dons (epiclese),
+// logo antes da narrativa da instituição ("tomou o pão…"): é quando o coroinha toca e a comunidade se ajoelha.
+// O texto é o que a paróquia já tem no roteiro (nada vem junto com o programa).
+const RX_EPI_ACAO = /(santifi[cq]|abencoe|abencoai|derram|envia|mandai|aceit)/;
+const RX_EPI_OBJ = /\b(dons|oferendas|ofertas|oblacao|pao e (o )?vinho)\b/;
+const RX_INSTITUICAO = /(tomou o pao|na noite em que|estando para ser entregue|na vespera de sua paixao|ceia com seus)/;
+function trechoCarrilhao(r = S.roteiro) {
+  const it = r?.itens.find(i => i.tipo === 'eucaristica') || r?.itens.find(i => i.tipo === 'texto' && ehTextoDeOE(i));
+  if (!it) return null;
+  let blocos;
+  try { blocos = gerarSlidesBase(it).map(s => String(s.texto || '')); } catch { return null; }
+  const n = blocos.map(b => semAcento(b).toLowerCase());
+  const fim = n.findIndex(b => RX_INSTITUICAO.test(b));
+  const casa = (b, k) => (fim < 0 || k <= fim) && RX_EPI_ACAO.test(b) && RX_EPI_OBJ.test(b);
+  // a mais perto da instituição (na Oração Eucarística I, a primeira menção às oferendas ainda não é a hora)
+  let i = -1;
+  n.forEach((b, k) => { if (casa(b, k) && (fim >= 0 || i < 0)) i = k; });
+  if (i < 0) return null;
+  // no mesmo slide da instituição: corta antes dela
+  const linhas = blocos[i].split('\n'), corte = linhas.findIndex(l => RX_INSTITUICAO.test(semAcento(l).toLowerCase()));
+  const texto = (corte > 0 ? linhas.slice(0, corte) : linhas).join('\n').trim();
+  // o trecho vai inteiro (pedido do usuário, 23/11); no bloco comprido (o slide junta o texto de antes com a epiclese),
+  // a hora de tocar fica em destaque: da última frase que pede a santificação dos dons até o fim
+  // (na OE I, "Aceitai… a oblação" vem antes de "Dignai-vos… santificar estas oferendas": vale a última)
+  let antes = '';
+  if (texto.length > 320) {
+    const prim = texto.split('\n')[0];
+    const frases = prim.split(/(?<=[.;!?])\s+/);
+    let k = -1;
+    frases.forEach((f, j) => { const s = semAcento(f).toLowerCase(); if (RX_EPI_ACAO.test(s) && RX_EPI_OBJ.test(s)) k = j; });
+    if (k > 0) antes = frases.slice(0, k).join(' ') + ' ';
+  }
+  return texto ? { texto, antes } : null;
+}
+function htmlCarrilhaoDica() {
+  const { r, oeId } = itensDaDica();
+  if (!r) return '';
+  const t = trechoCarrilhao(r);
+  if (!t) return oeId || r.itens.some(i => i.tipo === 'texto' && ehTextoDeOE(i))
+    ? '<div class="dica-card dica-falta">🔔 Carrilhão: o trecho aparece aqui quando a Oração Eucarística do roteiro tiver o texto.</div>' : '';
+  return `<div class="dica-card dica-carrilhao"><div class="dica-o">🔔 Carrilhão: toque quando o padre disser</div>
+    <blockquote class="dica-trecho">${t.antes && t.texto.startsWith(t.antes)
+      ? `<span class="dica-trecho-antes">${esc(t.antes)}</span><b>${esc(t.texto.slice(t.antes.length)).replace(/\n/g, '<br>')}</b>`
+      : esc(t.texto).replace(/\n/g, '<br>')}</blockquote>
+    <div class="dica-uso">É quando o padre estende as mãos sobre o pão e o vinho: toque o carrilhão e a comunidade se ajoelha.
+      <span class="sutil">Onde for costume, toque também quando ele mostrar a Hóstia e o Cálice.</span></div></div>`;
 }
 
 function htmlDica() {
@@ -203,21 +277,24 @@ function htmlDica() {
   if (regra.semMissa) corpo = `<p class="dica-aviso">${esc(regra.nota || 'Neste dia não há Missa.')}</p>`;
   corpo += `<p class="dica-fala">💡 ${esc(a.nome)} lembra: antes da Missa, deixe as fitas do Missal nestas páginas.</p>`;
   const lit = r ? liturgiaDoRoteiro(r) : null;
-  return { corpo, titulo: r ? `${r.nome}${lit?.titulo ? ' · ' + lit.titulo : ''}` : regra.titulo, edicao: edicaoMissal() };
+  return { corpo, titulo: r ? `${r.nome}${lit?.titulo ? ' · ' + lit.titulo : ''}` : regra.titulo, edicao: edicaoMissal(),
+    escala: htmlEscalaDica(), carrilhao: htmlCarrilhaoDica() };
 }
 
 async function abrirDica() {
+  await atualizarEscalaDica(true);
   const d = htmlDica();
   $('#dicaRoteiro').textContent = `${d.titulo} · páginas do ${d.edicao}`;
-  $('#dicaCorpo').innerHTML = `<div class="dica-o">🎀 Onde pôr os fitilhos, na ordem da Missa</div>
+  $('#dicaCorpo').innerHTML = `${d.escala}<div class="dica-o">🎀 Onde pôr os fitilhos, na ordem da Missa</div>
     <div id="dicaFitas">${htmlFitilhos()}</div>${formFitilhos()}
-    <div class="dica-o dica-det">Prefácio e Oração Eucarística</div>${d.corpo}`;
+    <div class="dica-o dica-det">Prefácio e Oração Eucarística</div>${d.corpo}${d.carrilhao}`;
   ligarFormFitilhos();
   atualizarAssistente();
   abrirDialogo('dlgDica');
 }
 
 async function imprimirDica() {
+  await atualizarEscalaDica(true);
   const d = htmlDica(), a = assistente(), icone = await iconeAssistente(a);
   $('#quadroImpressao')?.remove();
   const f = document.createElement('iframe');
@@ -239,10 +316,12 @@ async function imprimirDica() {
     .fita-parte { flex: 1; display: flex; flex-direction: column; } .fita-parte small { font-size: 10pt; color: #555; }
     .fita-pag { font-size: 20pt; font-weight: 700; white-space: nowrap; } .fita-pag i { font-size: 12pt; font-style: normal; }
     .fita-junto { opacity: .7; } h2 { font-size: 12pt; text-transform: uppercase; color: #555; margin: 10px 0 4px; }
+    .dica-escala .dica-lista { columns: 1; } .dica-trecho { margin: 6px 0; padding: 6px 12px; border-left: 4px solid ${corDoCingulo()}; font: 14pt/1.4 Georgia, serif; } .dica-trecho-antes { color: #555; }
   </style></head><body><header><img src="${icone}" alt=""><div><h1>💡 ${esc(rotuloDica(a))}</h1>
     <div class="sutil">${esc(d.titulo)}<br>Páginas do ${esc(d.edicao)}</div></div></header>
+    ${d.escala}
     <h2>🎀 Onde pôr os fitilhos</h2>${htmlFitilhos()}${linhasFitilhos().some(l => l.conf) ? '<p class="sutil">⚠ página ainda a conferir no Missal</p>' : ''}
-    <h2>Prefácio e Oração Eucarística</h2>${d.corpo}</body></html>`;
+    <h2>Prefácio e Oração Eucarística</h2>${d.corpo}${d.carrilhao}</body></html>`;
   f.onload = () => { try { f.contentWindow.focus(); f.contentWindow.print(); } catch (e) { toast('Não consegui abrir a impressão: ' + e.message); } };
   document.body.appendChild(f);
 }

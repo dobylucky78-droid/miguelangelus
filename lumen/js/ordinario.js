@@ -200,13 +200,55 @@ const Ordinario = (() => {
   // Texto editado pela paróquia (1.6.5): Orações → Missa → duplo clique (ou ✎ Editar texto no item). Fica em config
   // 'ordinario' e vai pela nuvem para os outros computadores; o texto original continua aqui para "Restaurar".
   let editados = {};
-  const parte = id => {
+  const base = id => {
     const p = indice.get(id);
     if (!p) return null;
     return editados[id]?.length ? { ...p, slides: editados[id], editado: true } : p;
   };
+
+  // (1.9.20, pedido do Luciano) Fórmulas do Missal: a saudação, o Mistério da Fé e a bênção final têm mais de uma.
+  // O programa não traz textos novos do Missal: as fórmulas que ainda não têm texto aqui a paróquia escreve uma vez
+  // (✎ Editar texto, com a fórmula escolhida) e o texto fica guardado nos computadores dela, como as outras edições.
+  // { id, nome, pag (id da página na tabela 📖), proprio: texto próprio da fórmula (chave "parte#fórmula") }
+  const CRUZ = 'P. Em nome do Pai e do Filho e do Espírito Santo.\nT. Amém.';
+  const formulas = id => {
+    if (id === 'saudacao') return [
+      { id: '', nome: 'Só o sinal da cruz' },
+      { id: 'a', nome: 'Saudação A: "A graça de nosso Senhor Jesus Cristo…"', pag: 'mr-inicio', proprio: true },
+      { id: 'b', nome: 'Saudação B: "A graça e a paz de Deus, nosso Pai…"', pag: 'mr-inicio', proprio: true },
+      { id: 'c', nome: 'Saudação C: "O Senhor esteja convosco"', pag: 'mr-inicio', proprio: true, padrao: ['P. O Senhor esteja convosco.\nT. Ele está no meio de nós.'] },
+    ];
+    if (id === 'misterio-fe') return [
+      { id: '', nome: 'As três aclamações (o padre escolhe na hora)' },
+      { id: '1', nome: '1ª: "Anunciamos, Senhor, a vossa morte…"', n: 0 },
+      { id: '2', nome: '2ª: "Todas as vezes que comemos deste pão…"', n: 1 },
+      { id: '3', nome: '3ª: "Salvador do mundo, salvai-nos…"', n: 2 },
+    ];
+    if (id === 'bencao-final' && typeof opcoesBencao === 'function')
+      return opcoesBencao().map(([k, nome, pag]) => ({ id: k === 'simples' ? '' : k, nome: nome.replace(/ \(anote.*\)$/, ''), pag, proprio: k !== 'simples' }));
+    return null;
+  };
+  const formulaDe = (id, f) => (formulas(id) || []).find(x => x.id === (f || '')) || null;
+  const textoProprio = (id, f) => {
+    const fo = formulaDe(id, f);
+    if (!fo?.proprio) return null;
+    return editados[id + '#' + f]?.length ? { slides: editados[id + '#' + f], editado: true } : fo.padrao ? { slides: fo.padrao } : null;
+  };
+  // a parte com a fórmula escolhida; falta = a fórmula ainda não tem texto (o telão mostra a forma de sempre)
+  const parte = (id, f) => {
+    const p = base(id);
+    if (!p || !f) return p;
+    const fo = formulaDe(id, f);
+    if (!fo) return p;
+    if (fo.n != null) return p.slides[fo.n] ? { ...p, slides: [p.slides[fo.n]], formula: fo } : p;
+    const tp = textoProprio(id, f);
+    if (!tp) return { ...p, formula: fo, falta: true };
+    if (id === 'saudacao') return { ...p, slides: [p.slides[0] || CRUZ, ...tp.slides], formula: fo };
+    if (id === 'bencao-final') return { ...p, slides: [p.slides[0], ...tp.slides, p.slides.at(-1)], formula: fo };   // "O Senhor esteja…" e a despedida ficam
+    return p;
+  };
   return {
-    grupos, modelos, parte,
+    grupos, modelos, parte, formulas, formulaDe, textoProprio,
     original: id => indice.get(id) || null,
     usarEditados: t => { editados = t && typeof t === 'object' ? { ...t } : {}; },
     editar: (id, slides) => { if (slides && slides.length) editados[id] = slides; else delete editados[id]; return { ...editados }; },
@@ -219,23 +261,34 @@ async function carregarOrdinarioEditado() {
   const textos = { ...(r?.valor?.textos || {}) };
   for (const [id, sl] of Object.entries(textos))
     if (Ordinario.original(id) && sl.join('\n\n') === Ordinario.original(id).slides.join('\n\n')) delete textos[id];
+    else if (!Array.isArray(sl) || !sl.length) delete textos[id];
   Ordinario.usarEditados(textos);
 }
 
 // Editor das partes fixas da Missa (mesma janela das orações não serve: aqui não há categoria nem apagar)
-function abrirEditorOrdinario(id) {
+// (1.9.20) f = fórmula com texto próprio (saudação A/B/C, bênção solene…): edita só a parte própria dela, guardada
+// como "parte#fórmula"; o sinal da cruz, o "O Senhor esteja convosco" e a despedida continuam na parte de sempre
+function abrirEditorOrdinario(id, f) {
   const p = Ordinario.parte(id), orig = Ordinario.original(id);
   if (!p) return;
+  const fo = f ? Ordinario.formulaDe(id, f) : null, proprio = fo?.proprio;
+  const tp = proprio ? Ordinario.textoProprio(id, f) : null;
   const dlg = $('#dlgOrdinario');
-  dlg.dataset.id = id;
-  $('#ordTitulo').textContent = p.titulo;
-  $('#ordTexto').value = p.slides.join('\n\n');
-  $('#ordRestaurar').hidden = !p.editado;
-  $('#ordAviso').hidden = !p.editado;
+  dlg.dataset.id = proprio ? id + '#' + f : id;
+  $('#ordTitulo').textContent = proprio ? `${p.titulo}: ${fo.nome.replace(/:\s*".*$/, '').replace(/^Saudação /, 'fórmula ')}` : p.titulo;
+  $('#ordTexto').value = proprio ? (tp?.slides || []).join('\n\n') : p.slides.join('\n\n');
+  $('#ordTexto').placeholder = proprio ? (id === 'saudacao'
+    ? 'Escreva só a saudação desta fórmula, com P. e T. (o sinal da cruz já vem antes). Linha em branco = outro slide.'
+    : 'Escreva só a bênção desta fórmula, com P. e T. ("O Senhor esteja convosco" vem antes e o "Ide em paz" depois). Linha em branco = outro slide.') : '';
+  const editado = proprio ? !!tp?.editado : !!p.editado;
+  $('#ordRestaurar').hidden = !editado;
+  $('#ordAviso').hidden = !editado;
   dlg.returnValue = '';
   dlg.showModal();
   $('#ordTexto').focus();
-  $('#ordOriginal').textContent = orig.slides.join('\n\n');
+  $('#ordOriginal').textContent = proprio
+    ? (fo.padrao ? fo.padrao.join('\n\n') : 'O MiguelAngelus não traz o texto desta fórmula: copie do Missal da paróquia. Fica guardado só nos computadores da paróquia.')
+    : orig.slides.join('\n\n');
 }
 
 async function salvarOrdinario(id, slides) {
@@ -255,8 +308,10 @@ function ligarEditorOrdinario() {
     const id = $('#dlgOrdinario').dataset.id;
     if (e.submitter?.value === 'salvar') {
       const slides = dividir($('#ordTexto').value);
-      if (!slides.length) { e.preventDefault(); return toast('O texto não pode ficar vazio (para voltar ao original, use Restaurar).'); }
-      const igualOriginal = slides.join('\n\n') === Ordinario.original(id).slides.join('\n\n');
+      const [pid, f] = id.split('#'), fo = f ? Ordinario.formulaDe(pid, f) : null;
+      if (!slides.length && !fo) { e.preventDefault(); return toast('O texto não pode ficar vazio (para voltar ao original, use Restaurar).'); }
+      const orig = fo ? (fo.padrao || []) : Ordinario.original(id).slides;
+      const igualOriginal = !slides.length || slides.join('\n\n') === orig.join('\n\n');
       salvarOrdinario(id, igualOriginal ? null : slides);
       toast('Texto salvo. Vale para todos os roteiros (e vai para os outros computadores pela nuvem).');
     } else if (e.submitter?.value === 'restaurar') {

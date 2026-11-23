@@ -8,7 +8,7 @@
 <script>try { if (localStorage.getItem('lumen.temaApp') === 'claro') document.documentElement.dataset.temaApp = 'claro'; } catch (_) {}
   // (Secretaria MiguelAngelus 1.0) o mesmo programa aberto no modo Secretaria: só Agenda e Avisos (index.html?app=secretaria)
   const SECRETARIA = new URLSearchParams(location.search).get('app') === 'secretaria';
-  const VERSAO_SECRETARIA = '1.5.2';   // versão da Secretaria (a do .iss e do .csproj precisam bater)
+  const VERSAO_SECRETARIA = '1.6.0';   // versão da Secretaria (a do .iss e do .csproj precisam bater)
   if (SECRETARIA) { document.documentElement.classList.add('app-secretaria'); document.title = 'Secretaria MiguelAngelus ' + VERSAO_SECRETARIA; }</script>
 <link rel="icon" type="image/svg+xml" href="img/icone.svg">
 </head>
@@ -25,7 +25,7 @@
     </div>
     <div class="splash-info">
       <div class="splash-gratis"><b>Gratuito · uso livre</b></div>
-      <div data-versao>Versão 1.9.19</div>
+      <div data-versao>Versão 1.9.20</div>
       <div>© 2026</div>
       <div><b>PASCOM</b></div>
       <div><b>São José Operário Ilha</b></div>
@@ -186,6 +186,8 @@ if (SECRETARIA) {
       <span>A agenda do Google que a secretaria já usa, numa conta própria. Ver é livre; para mexer, cada pessoa entra com a sua senha. (protótipo)</span></button>
     <button type="button" data-sec="intencoes" class="sec-local"><span class="ic">🕯</span><b>Intenções de Missa</b>
       <span>As intenções de cada Missa, a folha para ler e o relatório das ofertas. Só entre as Secretarias.</span></button>
+    <button type="button" data-sec="escala" class="sec-local"><span class="ic">📋</span><b>Escalas</b>
+      <span>Coordenação de liturgia, ministros, leitores, cantores, projeção, coroinhas… a agenda das equipes e a escala do mês para imprimir. Só entre as Secretarias.</span></button>
     <button type="button" data-sec="eventos"><span class="ic">🎉</span><b>Eventos com QR code</b>
       <span>Retiro, festa, curso… com cartaz e um QR code que põe o evento na agenda do celular.</span></button>
     <button type="button" data-sec="campanhas"><span class="ic">💝</span><b>Campanhas de arrecadação</b>
@@ -267,6 +269,7 @@ if (SECRETARIA) {
       <div class="linha">
         <button id="btnLetrasRoteiro" hidden title="Roteiro importado antes da versão 1.6.14: põe as letras P. (padre) e T. (todos) nas falas, como nos folhetos importados agora">🅿 Pôr P./T.</button>
         <button id="btnConferirTextos" title="Procura palavras partidas com hífen no fim da linha do folheto (mor-te) e junta as que você marcar. Ênclise (amá-lo), mesóclise (dar-se-á) e palavras compostas ficam como estão.">🔎 Conferir textos</button>
+        <button id="btnTextosParoquia" title="Antífonas e orações do dia guardadas pela paróquia para esta celebração (só nos computadores dela)">📚 Textos da paróquia</button>
         <button id="btnDuplicarRoteiro" title="Duplicar este roteiro">⎘ Duplicar</button>
         <button id="btnExcluirRoteiro" class="perigo" title="Excluir este roteiro">✕ Excluir</button>
       </div>
@@ -500,6 +503,8 @@ if (SECRETARIA) {
               <button type="button" data-zoomapp="0" title="Voltar ao normal (Ctrl e 0)">Normal</button></span>
             <span class="sutil pequeno">Encolhe ou aumenta o programa inteiro, para os painéis caberem na tela (de 50% a 200%). Também com Ctrl e a rodinha do mouse, ou Ctrl e +, Ctrl e −, Ctrl e 0 (volta ao normal). O telão não muda. Vale só neste computador.</span>
           </div>
+          <label class="check"><input type="checkbox" data-cfg="cardsTelao"> Cards do centro com as mesmas linhas do telão</label>
+          <p class="sutil pequeno" style="margin-top:-4px">Cada card mostra o texto quebrado exatamente como aparece no telão (a letra do card diminui para a linha caber). Assim, quem lê pelo card sabe onde o povo está e não passa o slide antes da hora.</p>
           <label class="check"><input type="checkbox" data-cfg="atualizarAuto"> Procurar atualizações ao abrir</label>
           <p class="sutil pequeno">Muda só a tela do MiguelAngelus. O telão continua com o tema dele (quadradinhos <b>Tema</b> na tela de controle ou <b>Agenda → Paróquia → 🖼</b>).</p>
         </section>
@@ -1688,10 +1693,13 @@ if (SECRETARIA) {
 <script src="js/secretaria.js"></script>
 <script src="js/secretariacadastros.js"></script>
 <script src="js/secretariaagendag.js"></script>
+<script src="js/escala.js"></script>
+<script src="js/escalacarga.js"></script>
 <script src="js/eventos.js"></script>
 <script src="js/campanhas.js"></script>
 <script src="js/boasvindas.js"></script>
 <script src="js/hifens.js"></script>
+<script src="js/biblioteca.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>

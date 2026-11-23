@@ -11,6 +11,18 @@
 // VERSAO_SECRETARIA fica no <head> do index.html (o splash usa antes deste arquivo carregar)
 
 const NOVIDADES_SECRETARIA = [
+  { versao: '1.6.0', data: '2026-11-23', itens: [
+    '📋 Escalas (pedido do Luciano, da Paróquia Coração Eucarístico de Jesus e Santa Marina): coordenação de liturgia, ministros, liturgia, músicos, projeção, coroinhas, acólitos… A escala do mês sai numa folha para imprimir, por igreja.',
+    '👥 Equipes e agenda: cada equipe tem nome, função e membros, e se programa igual às celebrações recorrentes: em quais Missas da Agenda serve, toda semana ou só na 1ª, 2ª, 3ª, 4ª ou última semana do mês. Aparecem as próximas datas e o aviso quando duas equipes da mesma função caem na mesma Missa.',
+    '✍ Na escala do mês, a equipe programada vem em cinza; escreva por cima para trocar só numa Missa (o nome de outra equipe ou de pessoas). Apagando, volta a programada; "—" = ninguém. Na folha sai o nome da equipe e os membros.',
+    '🎲 Rodízio para coroinhas e acólitos: o programa só sugere, dividindo por igual entre quem faz aquela função, sem repetir a pessoa no mesmo dia. Tudo se muda à mão.',
+    '🙋 Pessoas: nome, telefone (fica só na Secretaria), igreja, funções e "avulso" para quem pode cobrir qualquer Missa. Os avulsos saem no fim da folha.',
+    '📎 Subir arquivo ou planilha: guarde a escala que a equipe já usa (PDF, imagem, planilha .xlsx ou .csv) junto do mês. De PDF e planilha, a Secretaria lê os nomes, procura cada Missa na Agenda (data, hora e igreja) e mostra uma prévia: você diz qual coluna é qual função e põe na escala.',
+    '⬇ Planilha padrão: escolha as funções e baixe uma planilha do mês com todas as Missas da Agenda (data, dia, hora, igreja e as colunas de cada função: 6 por função, 10 para os músicos, o que não for usado fica em branco), com o brasão da paróquia no canto e os títulos em negrito. Mande para o coordenador da equipe preencher; quando voltar, é só subir e conferir.',
+    '⚙ Funções: mude os nomes, a ordem, quantas vagas e se é equipe fixa ou rodízio; crie outras (acolhida, comentarista…).',
+    '📱 Escalas no MiguelAngelus (Ajustes, vem desligado): ligado, a escala de cada Missa dos próximos 45 dias vai para a 💡 Dica dos celulares do MiguelAngelus 1.9.20 (a cola dos coroinhas). Vão só a função e os nomes.',
+    '🔒 Os telefones, igrejas e observações das escalas ficam só entre os computadores da Secretaria (os nomes também, se a chave acima estiver desligada), e entram na procura de 🔒 Dados de uma pessoa (LGPD).',
+  ] },
   { versao: '1.5.2', data: '2026-11-22', itens: [
     '🔍 Tamanho da tela (zoom do programa): agora vai de 50% a 200% e também funciona com Ctrl e a rodinha do mouse (além de Ctrl e +, Ctrl e −, Ctrl e 0). Encolha para os quadros caberem em telas pequenas. Fica em Ajustes → Aparência do app.',
     '☁ Procurar atualizações: quando o GitHub pede uma pausa nas consultas (acontece quando vários computadores da mesma rede procuram ao mesmo tempo), o aviso agora diz isso e a hora em que dá para tentar de novo, em vez de parecer falta de internet.',
@@ -113,6 +125,7 @@ function abrirSecretaria(qual) {
     case 'eventos': return abrirEventos();
     case 'campanhas': return abrirCampanhas();     // (1.9.6) campanhas.js
     case 'agendaG': return abrirAgendaG();
+    case 'escala': return abrirEscala();           // (1.6.0) escala.js
   }
 }
 

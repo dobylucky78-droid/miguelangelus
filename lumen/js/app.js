@@ -32,6 +32,7 @@ const CONFIG_PADRAO = {
   textoAltar: 'TODOS DIRIJAM SEU OLHAR PARA O ALTAR',
   temaApp: 'escuro',                                // aparência do próprio aplicativo: 'escuro' ou 'claro'
   atualizarAuto: true, versaoIgnorada: '',          // atualização automática (atualizacao.js)
+  cardsTelao: true,                                 // (1.9.20) cards do painel central com as linhas do telão
   mostrarRotulos: true, corRotulo: '#ff5a4f',     // letra de quem fala (P., T., L.) colorida no telão
   espacoResposta: true,                          // espaço entre as falas: a resposta do povo fica separada
   corResposta: false, corRespostaCor: '#ffd166', // (1.9.16, ideia do Luciano) resposta do povo (T., —, R., refrão) em outra cor
@@ -79,6 +80,8 @@ function salvarRoteiroAgora() {
   if (typeof registrarHistorico === 'function') registrarHistorico(S.roteiro);     // Desfazer (historico.js)
   S.roteiro.atualizado = Date.now();
   if (!S.roteiros.includes(S.roteiro)) S.roteiros.push(S.roteiro);
+  // (1.9.20) 📚 antífonas e orações do dia ficam guardadas para a celebração (biblioteca.js)
+  try { if (typeof guardarNaBiblioteca === 'function') guardarNaBiblioteca(S.roteiro); } catch (e) { console.warn('biblioteca', e); }
   return DB.salvar('roteiros', S.roteiro);
 }
 const salvarRoteiro = debounce(salvarRoteiroAgora, 400);
@@ -126,6 +129,7 @@ function slideAmostra() {
 function atualizarMini(w) {
   const tipo = Minis.get(w);
   if (!tipo) return;
+  if (tipo === 'medir') return atualizarMedir(w);       // (1.9.20) telão invisível dos cards
   const ed = tipo === 'layout' ? Apresentacao.alvo : null;
   const cfg = ed ? configTelao(temaDoEditorLayout().id) : configTelao();
   const cantos = ed ? layoutEfetivo(ed.localId || '') : layoutEfetivo(localDoRoteiro(S.roteiro));
@@ -166,6 +170,8 @@ window.addEventListener('message', e => {
       if (S.posAlvo) enviar({ tipo: 'posicionar', ...S.posAlvo }, [e.source]);
       renderEstadoProj();
     }
+  } else if (m.tipo === 'medidas') {
+    receberMedidas(m);
   } else if (m.tipo === 'tecla') {
     tratarTecla(m.key);
   } else if (m.tipo === 'midiaStatus') {
@@ -769,7 +775,10 @@ function gerarSlidesBase(item) {
     case 'texto': {
       // (1.7.7, Thiago) Intenções da Missa: uma por linha, cada uma na sua linha do slide
       if (item.intencoes) return dividir(item.texto).map(t => ({ texto: t, rodape: item.titulo || '', semCorrido: true }));
-      const ts = dividir(item.texto);           // falas: prévia do editor das partes fixas (continua o negrito do povo)
+      let ts = dividir(item.texto);           // falas: prévia do editor das partes fixas (continua o negrito do povo)
+      if (item.mf && ehTextoDeOE(item)) ts = trocarMisterioFe(ts, item.mf);   // (1.9.20) Oração Eucarística vinda do folheto
+      if (item.creio && ehTextoDeCreio(item) && Ordinario.parte(item.creio))      // (1.9.20) o outro Creio no lugar do texto do folheto
+        return continuarFalas(Ordinario.parte(item.creio).slides).map(t => ({ texto: t, rodape: item.titulo || '' }));
       return (item.falas ? continuarFalas(ts) : ts).map(t => ({ texto: t, rodape: item.titulo || '' }));
     }
     case 'avisos':
@@ -802,7 +811,7 @@ function gerarSlidesBase(item) {
       return ap ? slidesDaApresentacao(ap) : [];
     }
     case 'ordinario': {
-      const p = Ordinario.parte(item.parte);
+      const p = Ordinario.parte(item.parte, formulaDoItem(item));
       return p ? continuarFalas(p.slides).map(t => ({ texto: t, rodape: p.titulo })) : [];
     }
     case 'oracao': {
@@ -834,7 +843,8 @@ function gerarSlidesBase(item) {
     case 'eucaristica': {
       const id = item.tipo === 'prefacio' ? item.prefId : item.oeId;
       const t = Euc.dados.textos[id]?.texto;
-      return t ? dividir(t).map(x => ({ texto: x, rodape: nomeEuc(id) })) : [];
+      const blocos = t ? dividir(t) : [];
+      return (item.tipo === 'eucaristica' ? trocarMisterioFe(blocos, item.mf) : blocos).map(x => ({ texto: x, rodape: nomeEuc(id) }));
     }
     case 'salmo': {
       const rodape = [item.titulo, item.ref].filter(Boolean).join(' — ');
@@ -1398,6 +1408,94 @@ function mensagemVazia(item) {
   return 'Nada para mostrar.';
 }
 
+// ---------- (1.9.20) Cards como o telão (pedido do Luciano) ----------
+// O operador lê pelo card do painel central; se o card quebra as linhas de outro jeito que o telão, ele perde o ponto
+// onde o povo está e passa o slide antes da hora. Um telão invisível (projecao.html?mini=medir), do tamanho do telão de
+// verdade e com o mesmo tema, desenha cada slide e devolve o texto com as quebras de linha dele; o card mostra as
+// mesmas linhas (sem quebrar outras), com a letra diminuindo até a linha mais comprida caber. Desliga em Ajustes →
+// Aparência do app. Só texto: slides com imagem, avisos, seções e a Bíblia em lista continuam como antes.
+const CardsTelao = { frame: null, w: null, chave: '', cache: new Map(), pend: new Set(), pedido: 0, timer: 0 };
+const cardsComoTelao = () => S.config.cardsTelao !== false;
+const cardMedivel = (a, s) => !!s && !!s.texto && !s.img && !s.avisos && !s.secao && a?.item.tipo !== 'biblia';
+const chaveCard = s => JSON.stringify([s.texto, s.refrao, s.numerado, s.escala, s.largo, s.secaoTit, s.contas]);
+function tamTelao() {
+  try { const w = S.projWin; if (w && !w.closed && w.innerWidth > 300 && w.innerHeight > 150) return [w.innerWidth, w.innerHeight]; } catch (_) {}
+  return [1920, 1080];
+}
+function frameMedir() {
+  let f = CardsTelao.frame;
+  if (!f) {
+    f = document.createElement('iframe');
+    f.src = 'projecao.html?preview&mini=medir'; f.tabIndex = -1; f.title = ''; f.setAttribute('aria-hidden', 'true');
+    Object.assign(f.style, { position: 'fixed', left: '-30000px', top: '0', border: '0', visibility: 'hidden', pointerEvents: 'none' });
+    document.body.appendChild(f);
+    CardsTelao.frame = f;
+  }
+  const [W, H] = tamTelao();
+  if (f.style.width !== W + 'px' || f.style.height !== H + 'px') { f.style.width = W + 'px'; f.style.height = H + 'px'; CardsTelao.cache.clear(); }
+  return f;
+}
+// o telão invisível recebe o mesmo tema e as mesmas imagens dos cantos do telão; se algo mudou, mede tudo de novo
+function atualizarMedir(w) {
+  CardsTelao.w = w;
+  const cfg = configTelao(), cantos = layoutEfetivo(localDoRoteiro(S.roteiro)), [W, H] = tamTelao();
+  const chave = JSON.stringify([cfg, cantos, W, H]);
+  if (chave === CardsTelao.chave) return;
+  CardsTelao.chave = chave; CardsTelao.cache.clear(); CardsTelao.pend.clear();
+  for (const msg of [{ tipo: 'config', config: cfg }, { tipo: 'layout', cantos }])
+    try { w.postMessage({ app: 'lumen', ...msg }, '*'); } catch (_) {}
+  medirCards();
+}
+function medirCards() {
+  clearTimeout(CardsTelao.timer);
+  CardsTelao.timer = setTimeout(() => {
+    const a = S.atual;
+    if (!cardsComoTelao() || !a?.slides?.length) return;
+    frameMedir();
+    const w = CardsTelao.w; if (!w) return;          // ainda carregando: o "olá" dele chama de novo
+    const [W, H] = tamTelao(); if (!CardsTelao.chave.endsWith(`,${W},${H}]`)) return atualizarMedir(w);
+    const falta = [], chaves = [];
+    for (const s of a.slides) {
+      if (!cardMedivel(a, s)) continue;
+      const k = chaveCard(s);
+      if (CardsTelao.cache.has(k) || CardsTelao.pend.has(k) || chaves.includes(k)) continue;
+      falta.push(s); chaves.push(k);
+    }
+    if (!falta.length) return;
+    chaves.forEach(k => CardsTelao.pend.add(k));
+    try { w.postMessage({ app: 'lumen', tipo: 'medir', pedido: ++CardsTelao.pedido, chaves, slides: falta }, '*'); } catch (_) {}
+  }, 60);
+}
+function receberMedidas(m) {
+  (m.chaves || []).forEach((k, i) => { CardsTelao.pend.delete(k); if (m.res?.[i]) CardsTelao.cache.set(k, m.res[i]); });
+  aplicarCardsTelao();
+}
+// troca o texto dos cards já desenhados (sem redesenhar a grade) e encolhe a letra até a linha mais comprida caber
+function aplicarCardsTelao() {
+  const a = S.atual, el = $('#slides');
+  if (!a || !el || !cardsComoTelao()) return;
+  for (const card of el.querySelectorAll('.slide[data-i]')) {
+    const s = a.slides[+card.dataset.i], corpo = card.querySelector(':scope > .corpo');
+    if (!corpo || !cardMedivel(a, s)) continue;
+    const r = CardsTelao.cache.get(chaveCard(s));
+    if (!r) continue;
+    if (corpo.dataset.tl !== r.html) { corpo.innerHTML = r.html; corpo.dataset.tl = r.html; corpo.classList.add('tl'); corpo.style.textAlign = r.alinhar || 'center'; }
+    encaixarCard(corpo);
+  }
+}
+function corpoCard(a, s) {
+  const r = cardsComoTelao() && cardMedivel(a, s) ? CardsTelao.cache.get(chaveCard(s)) : null;
+  return r ? `<div class="corpo tl" style="text-align:${r.alinhar || 'center'}">${r.html}</div>` : `<div class="corpo">${htmlCartao(s)}</div>`;
+}
+function encaixarCard(corpo) {
+  corpo.style.fontSize = '';
+  const larg = corpo.clientWidth; if (!larg) return;
+  const base = parseFloat(getComputedStyle(corpo).fontSize) || 13.5;
+  if (corpo.scrollWidth > larg + 1) corpo.style.fontSize = Math.max(8, Math.floor(base * larg / corpo.scrollWidth * 10) / 10) + 'px';
+}
+if (typeof ResizeObserver === 'function') new ResizeObserver(() => { if (cardsComoTelao()) for (const c of document.querySelectorAll('#slides .corpo.tl')) encaixarCard(c); })
+  .observe(document.getElementById('slides') || document.documentElement);
+
 function renderSlides() {
   const el = $('#slides'), a = S.atual;
   // Bíblia: texto corrido (um versículo por linha) em vez de cartões
@@ -1419,7 +1517,7 @@ function renderSlides() {
   el.innerHTML = a.slides.map((s, i) => `
     <div class="slide ${vivoAqui && S.live.idx === i ? 'vivo' : ''} ${a.idx === i ? 'foco' : ''} ${editAp && Apres.sel === i ? 'editando' : ''} ${s.img ? 'com-img lay-' + s.layout : ''} ${s.secao ? 'secao' : ''} ${s.escala ? 'com-tam' : ''}" data-i="${i}">
       <span class="num">${i + 1}</span>${botoesTam(s, i)}
-      ${s.img ? `<div class="mini"><img src="${s.img}" alt="">${s.texto ? `<div class="corpo">${htmlCartao(s)}</div>` : ''}</div>` : `<div class="corpo">${htmlCartao(s)}</div>`}
+      ${s.img ? `<div class="mini"><img src="${s.img}" alt="">${s.texto ? `<div class="corpo">${htmlCartao(s)}</div>` : ''}</div>` : corpoCard(a, s)}
       ${s.rodape ? `<div class="rod">${esc(s.rodape)}</div>` : ''}
     </div>`).join('')
     // (1.8.9) canto: depois do último slide, um cartão para recomeçar a música (projeta o 1º slide)
@@ -1427,6 +1525,7 @@ function renderSlides() {
       ? `<button type="button" class="slide-recomecar" data-recomecar title="Projeta de novo o começo da letra deste canto">↺ Recomeçar<small>volta ao começo da música</small></button>` : '');
   const f = el.querySelector('.foco');
   if (f) f.scrollIntoView({ block: 'nearest' });
+  aplicarCardsTelao(); medirCards();       // (1.9.20) linhas do telão nos cards
 }
 
 // A aspersão da água substitui o Ato Penitencial nos domingos: no item do Ato Penitencial aparecem também os de Aspersão
@@ -1509,6 +1608,71 @@ function opcoesCantos(momento, sel, soFav = false, rezado = false, termo = '') {
   return h;
 }
 
+// (1.9.20) Fórmula escolhida no item da Missa. A bênção final do roteiro é uma só: fica em r.fitilhos.bencao, a mesma
+// escolha da 💡 Dica (fitilhos), para o telão e a página do Missal não ficarem diferentes.
+function formulaDoItem(it) {
+  if (it?.parte === 'bencao-final' && S.roteiro?.itens?.includes(it)) return S.roteiro.fitilhos?.bencao || '';
+  return it?.formula || '';
+}
+function escolherFormula(it, f) {
+  if (it.parte === 'bencao-final' && S.roteiro?.itens?.includes(it)) {
+    const fi = { ...(S.roteiro.fitilhos || {}) };
+    if (f) fi.bencao = f; else delete fi.bencao;
+    if (Object.keys(fi).length) S.roteiro.fitilhos = fi; else delete S.roteiro.fitilhos;
+    delete it.formula;
+  } else if (f) it.formula = f; else delete it.formula;
+}
+function opcoesFormula(parte, sel, rotuloVazio) {
+  return (Ordinario.formulas(parte) || []).map(f => {
+    const pag = f.pag && typeof missalDe === 'function' ? missalDe(f.pag).pag : '';
+    const semTexto = f.proprio && !Ordinario.textoProprio(parte, f.id);
+    return `<option value="${esc(f.id)}" ${f.id === (sel || '') ? 'selected' : ''}>${esc(!f.id && rotuloVazio ? rotuloVazio : f.nome)}${pag ? ' · p. ' + esc(pag) : ''}${semTexto ? ' (sem texto)' : ''}</option>`;
+  }).join('');
+}
+// (1.9.20) Mistério da Fé dentro da Oração Eucarística: troca a aclamação que veio no texto (do folheto ou colada) pela
+// fórmula escolhida; se o texto trouxer as três, fica só a escolhida. A resposta do povo vai até a próxima fala do padre.
+// (1.9.20, pedido do usuário) Creio: Niceno-Constantinopolitano ou Símbolo dos Apóstolos, no próprio item.
+// Na Quaresma e no Tempo Pascal o Missal recomenda o Símbolo dos Apóstolos (a escolha continua livre).
+const CREIOS = [['creio-niceno', 'Niceno-Constantinopolitano'], ['creio-apostolico', 'Símbolo dos Apóstolos']];
+const ehTextoDeCreio = it => it?.tipo === 'texto' && /^\s*(profiss[ãa]o de f[ée]|creio|s[íi]mbolo)/i.test(it.titulo || '');
+function selCreio(campo, sel, comoVeio) {
+  let rec = '';
+  try { if (/quaresma|p[áa]scoa|pascal/i.test(litCompleta(S.roteiro)?.tituloTempo || '')) rec = 'creio-apostolico'; } catch (_) {}
+  return `<label class="check" title="Qual Creio vai no telão${rec ? '. Neste tempo o Missal recomenda o Símbolo dos Apóstolos' : ''}">Creio <select data-campo="${campo}" class="estreito">
+    ${comoVeio ? `<option value="" ${!sel ? 'selected' : ''}>Como está no texto</option>` : ''}
+    ${CREIOS.map(([id, nome]) => `<option value="${id}" ${id === sel ? 'selected' : ''}>${nome}${id === rec ? ' (recomendado neste tempo)' : ''}</option>`).join('')}</select></label>`;
+}
+const RX_MF = /mist[ée]rio da f[ée]/i;
+// item de texto com a Oração Eucarística (roteiros montados pelo folheto)
+const ehTextoDeOE = it => it?.tipo === 'texto' && /ora[çc][ãa]o eucar[íi]stica/i.test(it.titulo || '') && RX_MF.test(it.texto || '');
+function trocarMisterioFe(blocos, mf) {
+  const nova = mf ? Ordinario.parte('misterio-fe', mf) : null;
+  if (!nova?.formula) return blocos;
+  const RX = /mist[ée]rio da f[ée]/i, PADRE = /^\s*P\.\s/;
+  let feito = false, cortando = false;
+  const out = [];
+  for (const b of blocos) {
+    let L = b.split('\n');
+    if (cortando) {                       // a resposta ficou no slide seguinte ao do convite
+      const k = L.findIndex(l => PADRE.test(l) || RX.test(l));
+      L = k < 0 ? [] : L.slice(k);
+      cortando = k < 0;
+    }
+    let i;
+    while ((i = L.findIndex(l => RX.test(l))) >= 0) {
+      let j = i + 1;
+      while (j < L.length && !PADRE.test(L[j]) && !RX.test(L[j])) j++;
+      const semResposta = !L.slice(i + 1, j).some(l => l.trim()) && j >= L.length;
+      L = [...L.slice(0, i), ...(feito ? [] : ['\u0000']), ...L.slice(j)];
+      feito = true;
+      if (semResposta) cortando = true;
+    }
+    const txt = L.join('\n').replace('\u0000', nova.slides[0]).trim();
+    if (txt) out.push(txt);
+  }
+  return feito ? out : blocos;
+}
+
 function opcoesOrdinario(sel) {
   return Ordinario.grupos.map(g => `<optgroup label="${esc(g.grupo)}">${g.partes.map(p =>
     `<option value="${p.id}" ${p.id === sel ? 'selected' : ''}>${esc(p.titulo)}</option>`).join('')}</optgroup>`).join('');
@@ -1578,6 +1742,8 @@ function renderCabecalho() {
       h = `<div class="cab-linha"><span class="tag t-texto">Texto</span>
              <input data-campo="titulo" value="${esc(it.titulo)}" placeholder="Título (aparece no rodapé)">
              ${it.formas ? `<label class="chave-forma" title="Esta leitura tem forma breve. Desligado: a completa (padrão). Ligado: a breve — título e texto trocam juntos."><input type="checkbox" data-campo="breve" ${it.breve ? 'checked' : ''}><span class="trilho"></span> Forma breve</label>` : ''}
+             ${ehTextoDeCreio(it) ? selCreio('creio', it.creio, true) : ''}
+             ${ehTextoDeOE(it) ? `<label class="check" title="(1.9.20) Qual aclamação depois da consagração vai no telão">Mistério da Fé <select data-campo="mf" class="estreito">${opcoesFormula('misterio-fe', it.mf, 'Como está no texto')}</select></label>` : ''}
              ${it.intencoes && Agenda.dados.paroquia?.intencoesTelao && !SECRETARIA ? `<button data-cmd="intencoesSec" title="Traz as intenções que a Secretaria lançou para a Missa deste roteiro (só o tipo e a intenção)">🕯 Trazer da Secretaria</button>` : ''}</div>
            <textarea data-campo="texto" rows="5" placeholder="${it.antifona ? 'Cole aqui a antífona do Missal (ou do folheto), com a referência no fim, ex.: (Sl 104,3s).'
              : it.intencoes ? 'Uma intenção por linha, ex.:&#10;Pelas almas de João da Silva e Maria de Souza&#10;Em ação de graças pelos 50 anos de casamento de José e Ana&#10;(linha em branco: começa outro slide)'
@@ -1611,11 +1777,16 @@ function renderCabecalho() {
       break;
     }
     case 'ordinario': {
-      const p = Ordinario.parte(it.parte);
-      const btnEd = `<button data-cmd="editarOrdinario" title="Corrigir o texto desta parte (vale para todos os roteiros)">✎ Editar texto</button>`;
+      const fSel = formulaDoItem(it), p = Ordinario.parte(it.parte, fSel);
+      const btnEd = `<button data-cmd="editarOrdinario" title="${p?.formula?.proprio ? 'Escrever o texto desta fórmula (vale para todos os roteiros e fica só nos computadores da paróquia)' : 'Corrigir o texto desta parte (vale para todos os roteiros)'}">✎ Editar texto</button>`;
+      // (1.9.20) fórmulas do Missal: saudação, Mistério da Fé e bênção final
+      const selF = Ordinario.formulas(it.parte)
+        ? `<select data-campo="formula" class="estreito" title="Qual fórmula do Missal vai no telão${it.parte === 'bencao-final' ? ' (é a mesma bênção dos fitilhos da 💡 Dica)' : ''}">${opcoesFormula(it.parte, fSel)}</select>`
+        : CREIOS.some(([id]) => id === it.parte) ? selCreio('parte', it.parte) : '';
+      const aviso = p?.falta ? `<div class="cab-linha"><span class="sutil pequeno">⚠ O MiguelAngelus não traz o texto desta fórmula. Clique em <b>✎ Editar texto</b> e copie do Missal uma vez: fica guardado só nos computadores da paróquia. Até lá, o telão mostra ${it.parte === 'saudacao' ? 'só o sinal da cruz' : 'a bênção simples'}.</span></div>` : '';
       h = noRoteiro
-        ? `<div class="cab-linha"><span class="tag t-ordinario">Missa</span><select data-campo="parte">${opcoesOrdinario(it.parte)}</select>${btnEd}</div>`
-        : `<div class="cab-linha"><span class="tag t-ordinario">Missa</span><h2>${esc(p?.titulo)}</h2><span class="espaco"></span>${btnEd}${btnAdd}</div>`;
+        ? `<div class="cab-linha"><span class="tag t-ordinario">Missa</span><select data-campo="parte">${opcoesOrdinario(it.parte)}</select>${selF}${btnEd}</div>${aviso}`
+        : `<div class="cab-linha"><span class="tag t-ordinario">Missa</span><h2>${esc(p?.titulo)}</h2>${selF}<span class="espaco"></span>${btnEd}${btnAdd}</div>${aviso}`;
       break;
     }
     case 'oracao': {
@@ -1689,6 +1860,7 @@ function renderCabecalho() {
       h = noRoteiro
         ? `<div class="cab-linha"><span class="tag t-oracao">${pref ? 'Prefácio' : 'Or. Eucarística'}</span>
              <select data-campo="${pref ? 'prefId' : 'oeId'}">${opcoesEuc(pref ? 'pref' : 'oe', id)}</select>${pagTag}
+             ${!pref && /mist[ée]rio da f[ée]/i.test(Euc.dados.textos[id]?.texto || '') ? `<label class="check" title="(1.9.20) Qual aclamação depois da consagração vai no telão">Mistério da Fé <select data-campo="mf" class="estreito">${opcoesFormula('misterio-fe', it.mf, 'Como está no texto')}</select></label>` : ''}
              <button data-cmd="editarEuc">✎ Texto</button><button data-cmd="catalogoEuc" title="Escolher a combinação no catálogo">Catálogo…</button><button data-cmd="dicaAssist" title="A cola do coroinha: prefácio e oração com a página do Missal">💡</button></div>`
         : `<div class="cab-linha"><span class="tag t-oracao">${pref ? 'Prefácio' : 'Or. Eucarística'}</span><h2>${esc(nomeEuc(id))}</h2>${pagTag}
              <span class="espaco"></span><button data-cmd="editarEuc">✎ Texto</button><button data-cmd="catalogoEuc">Voltar ao catálogo</button></div>`;
@@ -1741,10 +1913,15 @@ function resumoItem(it) {
       const tit = it.rotulo === 'Canto' ? it.titulo : it.ref || (it.refrao || '').split('\n')[0];
       return { rot: it.rotulo || 'Salmo', tit: tit || 'preencher salmo…', vazio: !it.refrao && !it.texto };
     }
-    case 'texto': return { rot: 'Texto', tit: (it.titulo || (it.texto || '').split('\n')[0] || 'texto livre…') + (it.formas && it.breve ? ' · forma breve' : ''), vazio: !it.texto };
+    case 'texto': return { rot: 'Texto', tit: (it.titulo || (it.texto || '').split('\n')[0] || 'texto livre…') + (it.formas && it.breve ? ' · forma breve' : '')
+      + (it.creio && ehTextoDeCreio(it) ? ' · ' + (CREIOS.find(c => c[0] === it.creio)?.[1] || '') : ''), vazio: !it.texto };
     case 'homilia': return { rot: 'Homilia', tit: [it.titulo || 'Homilia', refEvangelho(S.roteiro?.itens || [])].filter(Boolean).join(' · '), vazio: false };
     case 'imagem': return { rot: it.abertura ? 'Abertura' : 'Imagem', tit: it.titulo || (it.texto || '').split('\n')[0] || (it.imagem ? 'imagem' : 'escolher imagem…'), vazio: !it.imagem };
-    case 'ordinario': return { rot: 'Missa', tit: Ordinario.parte(it.parte)?.titulo || '?', vazio: false };
+    case 'ordinario': {
+      const p = Ordinario.parte(it.parte, formulaDoItem(it));
+      const nf = p?.formula?.nome || '', fo = nf ? ' · ' + nf.replace(/:\s*".*$/, '').replace(/^Saudação /, '') : '';
+      return { rot: 'Missa', tit: (p?.titulo || '?') + fo + (p?.falta ? ' (sem texto)' : ''), vazio: !!p?.falta };
+    }
     case 'oracao': {
       const o = oracaoDe(it);
       return { rot: 'Oração', tit: o ? o.titulo : 'escolher oração…', vazio: !o };
@@ -2873,6 +3050,7 @@ function ligarAjustes() {
       S.config[k] = el.type === 'checkbox' ? el.checked : (el.type === 'range' || el.type === 'number') ? +el.value : el.value;
       salvarConfig();
       if (k === 'temaApp') return aplicarTemaApp();     // só o aplicativo; o telão não muda
+      if (k === 'cardsTelao') return renderSlides();     // (1.9.20) só a tela do operador
       if (k === 'textoAltar') return atualizarAltarNoAr();
       if (k === 'silencioComunhao') return aposMudarSilencio();
       enviarConfigTelao(); renderTemasRapidos(); desenharPreviaMargens();
@@ -3023,6 +3201,13 @@ function ligarEventos() {
       e.target.value = it[campo] || '';
       return;
     }
+    if (campo === 'formula' && it.tipo === 'ordinario') {           // (1.9.20) fórmulas do Missal
+      escolherFormula(it, e.target.value);
+      if (S.atual.rIdx >= 0) { salvarRoteiro(); renderRoteiroLista(); }
+      atualizarSlides(); return renderCabecalho();
+    }
+    if (campo === 'creio' && !e.target.value) { delete it.creio; if (S.atual.rIdx >= 0) { salvarRoteiro(); renderRoteiroLista(); } atualizarSlides(); return renderCabecalho(); }
+    if (campo === 'mf' && !e.target.value) { delete it.mf; if (S.atual.rIdx >= 0) { salvarRoteiro(); renderRoteiroLista(); } atualizarSlides(); return renderCabecalho(); }
     it[campo] = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
     if (campo === 'cantoId' || campo === 'momento') { BuscaCanto.item = null; BuscaCanto.termo = ''; }      // escolheu: a busca limpa
     if (it.tipo === 'terco') aoMudarTerco(it, campo);
@@ -3049,7 +3234,10 @@ function ligarEventos() {
     const it = S.atual.item;
     if (cmd.startsWith('ap')) return comandoApresentacao(cmd);
     if (cmd.startsWith('evento')) return comandoEvento(cmd, it);      // (1.9) eventos.js
-    if (cmd === 'editarOrdinario') return abrirEditorOrdinario(it.parte);
+    if (cmd === 'editarOrdinario') {
+      const f = formulaDoItem(it), fo = f ? Ordinario.formulaDe(it.parte, f) : null;
+      return abrirEditorOrdinario(it.parte, fo?.proprio ? f : undefined);
+    }
     if (cmd === 'fundoEscolher') return $('#arqFundoItem').click();
     if (cmd === 'fundoTirar') { delete it.fundoImg; it.usarFundo = false; return aposMudarFundoItem(); }
     if (cmd === 'partituraTirar') return tirarPartituraDoItem(it);
