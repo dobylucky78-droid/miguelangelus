@@ -5,6 +5,9 @@
  * A versão mais nova fica em cima. Ao gerar uma versão nova, acrescente a entrada dela aqui.
  */
 const NOVIDADES = [
+  { versao: '1.9.21', data: '2026-11-24', itens: [
+    '💡 Dica do Miguel com roteiros do folheto: quando o folheto traz a Oração Eucarística e o prefácio como texto, a Dica e os 🎀 fitilhos agora reconhecem os dois e mostram a página do Missal. Antes, ela pedia para escolher o prefácio mesmo com o texto já no roteiro. Vale também para os roteiros que já estavam carregados.',
+  ] },
   { versao: '1.9.20', data: '2026-11-23', itens: [
     '🔔 Carrilhão na 💡 Dica (no computador, na cola impressa e nos celulares): o trecho da Oração Eucarística do roteiro em que o padre estende as mãos sobre o pão e o vinho, com a hora de tocar em destaque, para a comunidade se ajoelhar. O texto é o que já está no roteiro (do catálogo ou do folheto); serve para todas as Orações Eucarísticas.',
     '📋 Escala da Missa na 💡 Dica: quem serve na Missa do roteiro aberto (coordenação de liturgia, ministros, leitores, coroinhas…), vinda da Secretaria MiguelAngelus 1.6.0. Só aparece se a paróquia ligar lá Ajustes → 📋 Escalas no MiguelAngelus (vem desligado); vão só a função e os nomes.',

@@ -53,7 +53,53 @@ async function atualizarAssistente() {
 function itensDaDica() {
   const r = S.roteiro, regra = regraDoRoteiro(r || null);
   const itPref = r?.itens.find(i => i.tipo === 'prefacio'), itOE = r?.itens.find(i => i.tipo === 'eucaristica');
-  return { r, regra, prefId: itPref?.prefId || null, oeId: itOE?.oeId || null };
+  let prefId = itPref?.prefId || null, oeId = itOE?.oeId || null;
+  // (1.9.21) roteiro montado do folheto: a oração vem como TEXTO (diálogo + prefácio + Santo + oração), sem os itens do
+  // ✝ catálogo. A oração sai do título; o prefácio, do texto que o folheto guardou no catálogo (ou da própria oração)
+  if (r && (!prefId || !oeId)) {
+    const tx = r.itens.find(i => i.tipo === 'texto' && /ora[çc][ãa]o eucar[íi]stica/i.test(i.titulo || ''));
+    if (tx) {
+      // o prefácio pode vir num bloco à parte ("Diálogo e Prefácio"), antes do Santo
+      const txPref = r.itens.filter(i => i.tipo === 'texto' && /pref[aá]cio/i.test(i.titulo || ''));
+      const daTx = idsDoTextoDeOE(tx, regra, txPref);
+      oeId = oeId || daTx.oeId; prefId = prefId || daTx.prefId;
+    }
+  }
+  return { r, regra, prefId, oeId };
+}
+
+// "Oração Eucarística III (…)" + o texto corrido do folheto → { oeId, prefId } do catálogo (null no que não achar)
+const _normTx = s => semAcento(String(s || '')).toLowerCase().replace(/(^|\n)\s*[ptlcd]\.\s/g, ' ').replace(/[^a-z0-9]+/g, ' ').trim();
+function idsDoTextoDeOE(tx, regra, outros = []) {
+  if (typeof listaOEs !== 'function') return { oeId: null, prefId: null };
+  const nomeTit = String(tx.titulo || '').replace(/\s*\([^)]*\)/g, '').trim();
+  const oe = listaOEs().find(o => [o.nome, o.nome.split(' — ')[0]].some(n => normEuc(n) === normEuc(nomeTit))) || null;
+  let prefId = null;
+  if (oe && oe.pref === 'fixo' && oe.proprio) prefId = oe.proprio;     // prefácio próprio que não se troca
+  else {
+    // o prefácio cujo texto guardado está no roteiro. O começo ("Na verdade, é digno e justo…") é igual em quase todos:
+    // conta trechos de 10 palavras do meio e do fim; ganha quem casar mais (empate: o do dia, que vem primeiro)
+    const corpo = [tx, ...outros].map(i => _normTx(i.texto)).join(' ');
+    const pontos = id => {
+      const t = Euc.dados.textos[id]?.texto;
+      if (!t) return 0;
+      const pal = _normTx(t).split(' '), n = pal.length;
+      if (n < 30) return 0;
+      return [0.35, 0.55, 0.75, 0.9].filter(f => {
+        const k = Math.min(n - 10, Math.floor(n * f));
+        return corpo.includes(pal.slice(k, k + 10).join(' '));
+      }).length;
+    };
+    const candidatos = [...new Set([...(regra?.prefs || []), ...listaPrefacios(true).map(p => p.id)])];
+    let melhor = 0;
+    for (const id of candidatos) { const p = pontos(id); if (p > melhor) { melhor = p; prefId = id; } }
+    if (melhor < 2) prefId = null;
+    // sem texto que case: dia com um prefácio só (Páscoa, Pentecostes…) é ele
+    if (!prefId && regra?.modo === 'rigido' && regra.prefs?.length === 1) prefId = regra.prefs[0];
+    // Reconciliação: o próprio dela, se nada mais casou
+    if (!prefId && oe?.pref === 'fixo-flex' && oe.proprio) prefId = oe.proprio;
+  }
+  return { oeId: oe?.id || null, prefId };
 }
 
 function cartaoDica(rotulo, id, extra = '') {
