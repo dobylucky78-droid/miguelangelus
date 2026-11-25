@@ -5,6 +5,12 @@
  * A versão mais nova fica em cima. Ao gerar uma versão nova, acrescente a entrada dela aqui.
  */
 const NOVIDADES = [
+  { versao: '1.9.22', data: '2026-11-25', itens: [
+    '🙏 Bênção final do folheto (pedido do Luciano): quando o folheto traz uma bênção solene (Advento, Tempo Comum I a VI, Nossa Senhora, Todos os Santos, Fiéis Defuntos…) ou a oração sobre o povo, a 💡 Dica e os 🎀 fitilhos já mostram essa bênção e a página do Missal. Antes ficava "Bênção final simples". Se o padre for usar outra, é só trocar na Dica: a escolha vale para o roteiro. Vale também para os roteiros que já estavam carregados.',
+    '🙋 Saudação inicial com todas as fórmulas do Missal (pedido do Luciano): além do sinal da cruz, as saudações A até H e a do Bispo, cada uma com a página do Missal ao lado (A e B na p. 430, C a H na p. 431, Bispo na p. 432). A antiga "C" ("O Senhor esteja convosco") agora aparece como H, como no Missal; os roteiros que já a usavam continuam iguais. O MiguelAngelus não traz os textos: a paróquia escreve uma vez em ✎ Editar texto, ou traz de outro computador pelo ⬆ Importar textos (o ⬇ Exportar textos agora leva também as fórmulas da saudação e das bênçãos).',
+    '✝ Mistério da Fé conferido com o Missal pelo Luciano: a 1ª aclamação agora começa com "Mistério da fé!", como na 3ª edição (antes estava "Eis o mistério da fé!"). As outras duas já estavam iguais.',
+    '📖 Páginas do Missal com a revisão do Luciano, da Paróquia Coração Eucarístico de Jesus e Santa Marina, de 24/11: os santos celebrados no mesmo dia agora têm cada um a sua linha e a sua página (ex.: 25/05, São Beda, São Gregório VII e Santa Maria Madalena de Pazzi). Notas novas de "quando usar" (Natal com as quatro Missas, Epifania com as duas, Quaresma, Ascensão, Assunção, Todos os Santos…). Ainda há 19 páginas marcadas com ⚠ para conferir. Os prefácios dos Domingos da Quaresma saíram da tabela, porque ficam dentro da Missa de cada domingo, que já está mais abaixo; a 💡 Dica continua indicando o prefácio e a página certa.',
+  ] },
   { versao: '1.9.21', data: '2026-11-24', itens: [
     '💡 Dica do Miguel com roteiros do folheto: quando o folheto traz a Oração Eucarística e o prefácio como texto, a Dica e os 🎀 fitilhos agora reconhecem os dois e mostram a página do Missal. Antes, ela pedia para escolher o prefácio mesmo com o texto já no roteiro. Vale também para os roteiros que já estavam carregados.',
   ] },

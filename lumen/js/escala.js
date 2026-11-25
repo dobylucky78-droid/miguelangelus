@@ -51,6 +51,7 @@ async function carregarEscala() {
   Esc.equipes = itens.filter(i => i.id.startsWith('e-')).sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
   Esc.meses = Object.fromEntries(itens.filter(i => i.id.startsWith('m-')).map(i => [i.id.slice(2), i]));
   Esc.arquivos = itens.filter(i => i.id.startsWith('a-'));     // 📎 arquivos da pastoral (escalacarga.js)
+  Esc.portal = itens.find(i => i.id === 'portal') || null;     // 🌐 endereço e chave do portal das pastorais (portal.js)
 }
 
 // chegou coisa de outro computador da secretaria
@@ -103,6 +104,7 @@ const HTML_ESCALA = `
       <button type="button" data-esc-aba="equipes">👥 Equipes e agenda</button>
       <button type="button" data-esc-aba="pessoas">🙋 Pessoas</button>
       <button type="button" data-esc-aba="funcoes">⚙ Funções</button>
+      <button type="button" data-esc-aba="portal" title="Página na internet onde as pastorais escrevem a própria escala">🌐 Portal</button>
     </div>
     <div data-esc-painel="mes">
       <div class="linha">
@@ -162,6 +164,7 @@ const HTML_ESCALA = `
       <div id="escFuncoes"></div>
       <div class="linha"><button type="button" id="escFuncaoNova">＋ Função</button></div>
     </div>
+    <div data-esc-painel="portal" hidden></div>
     <div class="linha"><span class="espaco"></span><button value="fechar">Fechar</button></div>
   </form>
 </dialog>`;
@@ -172,6 +175,7 @@ function renderEscala() {
   if (Esc.aba === 'mes') renderEscalaMes();
   else if (Esc.aba === 'equipes') renderEquipes();
   else if (Esc.aba === 'pessoas') renderPessoasEsc();
+  else if (Esc.aba === 'portal') { if (typeof abrirAbaPortal === 'function') abrirAbaPortal(); }   // portal.js
   else renderFuncoesEsc();
 }
 
@@ -601,6 +605,7 @@ function iniciarEscala() {
   $('#escTabela').insertAdjacentHTML('beforebegin', '<p id="escMaAviso" class="pequeno in-telao-aviso"></p>');
   ligarEscala();
   if (typeof ligarCargaEsc === 'function') ligarCargaEsc();      // (1.6.0) 📎 arquivo da pastoral e planilha padrão (escalacarga.js)
+  if (typeof ligarPortalEsc === 'function') ligarPortalEsc();    // 🌐 portal das pastorais (portal.js)
   $('#emLigada').addEventListener('change', e => {
     Agenda.dados.paroquia ||= {};
     Agenda.dados.paroquia.escalasMA = e.target.checked;

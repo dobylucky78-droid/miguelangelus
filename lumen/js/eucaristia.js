@@ -202,6 +202,8 @@ const prefDe = id => listaPrefacios(true).find(p => p.id === id) || null;
 // (1.9.15) Partes fixas do Missal, para os fitilhos (a página fica na mesma tabela das orações e prefácios)
 const PARTES_MISSAL = [
   { id: 'mr-inicio', nome: 'Rito da Missa (ritos iniciais)' },
+  { id: 'mr-saudacoes', nome: 'Saudações C a H (ritos iniciais)' },        // (1.9.22) a e b ficam na página do mr-inicio
+  { id: 'mr-saud-bispo', nome: 'Saudação do Bispo (ritos iniciais)' },
   { id: 'mr-comunhao', nome: 'Rito da Comunhão (Pai-Nosso)' },
   { id: 'mr-bencao', nome: 'Bênção final simples' },
   { id: 'mr-solenes', nome: 'Bênçãos solenes (começo)' },
@@ -790,20 +792,25 @@ function abrirEditorEuc(id) {
 function exportarTextosEuc() {
   const ids = Object.keys(Euc.dados.textos).filter(temTexto), mItens = missalItens();
   const nPag = Object.values(mItens).filter(v => v.pag).length, nUso = Object.values(mItens).filter(v => v.uso).length;
-  if (!ids.length && !nPag && !nUso) return toast('Nenhum texto nem página do Missal para exportar.');
+  // (1.9.22) fórmulas das partes fixas que a paróquia escreveu (saudação A–H e do bispo, bênçãos solenes): "parte#fórmula"
+  const ord = Object.fromEntries(Object.entries(Ordinario.editados()).filter(([k, sl]) => k.includes('#') && sl?.length)
+    .map(([k, sl]) => [k, sl.join('\n\n')]));
+  const nOrd = Object.keys(ord).length;
+  if (!ids.length && !nPag && !nUso && !nOrd) return toast('Nenhum texto nem página do Missal para exportar.');
   const extras = Euc.dados.extras.filter(x => ids.includes(x.id) || mItens[x.id]);
   const textos = Object.fromEntries(ids.map(id => [id, { nome: nomeEuc(id), ...Euc.dados.textos[id] }]));
   // (1.9.14) páginas no Missal e "quando usar" (com a edição) vão juntas
   const dados = { app: 'MiguelAngelus', tipo: 'eucaristia', versao: 2, exportado: new Date().toISOString(), textos, extras,
+    ...(nOrd ? { ordinario: ord } : {}),
     missal: { edicao: edicaoMissal(), itens: mItens, ...(Euc.dados.nFitilhos ? { fitilhos: Euc.dados.nFitilhos } : {}) } };
   baixar(`Orações eucarísticas e prefácios MiguelAngelus ${isoData(new Date())}.json`, JSON.stringify(dados, null, 1));
-  toast(`${ids.length} texto(s), ${nPag} página(s) e ${nUso} nota(s) "quando usar" exportados.`);
+  toast(`${ids.length} texto(s), ${nOrd ? nOrd + ' fórmula(s) das partes fixas, ' : ''}${nPag} página(s) e ${nUso} nota(s) "quando usar" exportados.`);
 }
 
 async function importarTextosEuc(d) {
   // aceita o arquivo exportado aqui ou um backup completo (pega só a parte da Eucaristia)
   const fonte = d?.tipo === 'eucaristia' ? d : d?.app === 'lumen' && d.eucaristia ? d.eucaristia : null;
-  if (!fonte?.textos && !fonte?.missal?.itens) throw new Error('Este arquivo não tem orações eucarísticas nem prefácios do MiguelAngelus.');
+  if (!fonte?.textos && !fonte?.missal?.itens && !fonte?.ordinario) throw new Error('Este arquivo não tem orações eucarísticas nem prefácios do MiguelAngelus.');
   const extrasArq = new Map((fonte.extras || []).map(x => [x.id, x]));
   const idLocal = (idArq, nomeArq) => {
     const ex = extrasArq.get(idArq);
@@ -855,6 +862,33 @@ async function importarTextosEuc(d) {
     + diferentes.slice(0, 12).map(([id]) => nomeEuc(id)).join('\n• ') + (diferentes.length > 12 ? '\n• …' : '')
     + '\n\nOK = substituir esses pelo texto do arquivo · Cancelar = manter os daqui (os novos entram do mesmo jeito)');
   for (const [id, reg] of [...novos, ...(trocar ? diferentes : [])]) Euc.dados.textos[id] = reg;
+  // (1.9.22) fórmulas das partes fixas ("saudacao#a", "bencao-final#ben-natal"…): só as que o programa conhece
+  if (fonte.ordinario && typeof fonte.ordinario === 'object') {
+    const atuais = Ordinario.editados(), oNovas = [], oDif = [];
+    let oIguais = 0;
+    for (const [k, v] of Object.entries(fonte.ordinario)) {
+      const [pid, f] = String(k).split('#'), fo = f ? Ordinario.formulaDe(pid, f) : null;
+      const slides = typeof v === 'string' ? dividir(v) : Array.isArray(v) ? v.map(String).filter(s => s.trim()) : [];
+      if (!fo?.proprio || !slides.length) continue;
+      const atual = atuais[k] || fo.padrao || null;
+      if (!atual) oNovas.push([k, slides]);
+      else if (atual.join('\n\n').trim() === slides.join('\n\n').trim()) oIguais++;
+      else oDif.push([k, slides]);
+    }
+    let oTrocar = false;
+    if (oDif.length) oTrocar = confirm(`${oDif.length} fórmula(s) das partes fixas já têm texto diferente aqui:\n• `
+      + oDif.map(([k]) => { const [pid, f] = k.split('#'); return Ordinario.formulaDe(pid, f).nome; }).join('\n• ')
+      + '\n\nOK = usar o texto do arquivo · Cancelar = manter os daqui');
+    const aplicar = [...oNovas, ...(oTrocar ? oDif : [])];
+    for (const [k, slides] of aplicar) Ordinario.editar(k, slides);
+    if (aplicar.length) {
+      await DB.salvar('config', { id: 'ordinario', valor: { textos: Ordinario.editados() } });
+      if (typeof renderOrdinario === 'function') renderOrdinario();
+      if (typeof renderRoteiroLista === 'function') renderRoteiroLista();
+      if (S.atual) { atualizarSlides(); renderCabecalho(); }
+    }
+    msgMissal += `\nFórmulas das partes fixas: ${aplicar.length} gravada(s), ${oIguais} já iguais${oDif.length && !oTrocar ? `, ${oDif.length} mantida(s)` : ''}.`;
+  }
   salvarEucaristia();
   aposMudarEuc();
   alert(`Importação concluída: ${novos.length} novo(s), ${trocar ? diferentes.length : 0} substituído(s), `
@@ -876,7 +910,9 @@ function carregarRascMissal(ed) {
   Ms.edicao = ed;
 }
 function abrirTabelaMissal() {
-  Ms.todos = [...listaOEs().map(o => ({ id: o.id, nome: o.nome, grupo: 'Orações Eucarísticas' })), ...listaPrefacios(), ...PARTES_MISSAL, ...BENCAOS_SOLENES, ...listaMissaDoDia()];
+  Ms.todos = [...listaOEs().map(o => ({ id: o.id, nome: o.nome, grupo: 'Orações Eucarísticas' })), // (1.9.22, Luciano) os prefácios dos Domingos da Quaresma ficam dentro da Missa do domingo: na tabela só aparece a
+    // celebração (mais abaixo); a página deles continua em MISSAL_PAGINAS (qd1–qd5) para a 💡 Dica e o seletor
+    ...listaPrefacios().filter(p => !/^qd\d$/.test(p.id)), ...PARTES_MISSAL, ...BENCAOS_SOLENES, ...listaMissaDoDia()];
   Ms.rascs = {}; Ms.edicao = '';
   carregarRascMissal(edicaoMissal());
   $('#msEdicao').value = Ms.edicao;

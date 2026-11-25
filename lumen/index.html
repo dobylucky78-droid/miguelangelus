@@ -8,7 +8,7 @@
 <script>try { if (localStorage.getItem('lumen.temaApp') === 'claro') document.documentElement.dataset.temaApp = 'claro'; } catch (_) {}
   // (Secretaria MiguelAngelus 1.0) o mesmo programa aberto no modo Secretaria: só Agenda e Avisos (index.html?app=secretaria)
   const SECRETARIA = new URLSearchParams(location.search).get('app') === 'secretaria';
-  const VERSAO_SECRETARIA = '1.6.0';   // versão da Secretaria (a do .iss e do .csproj precisam bater)
+  const VERSAO_SECRETARIA = '1.7.1';   // versão da Secretaria (a do .iss e do .csproj precisam bater)
   if (SECRETARIA) { document.documentElement.classList.add('app-secretaria'); document.title = 'Secretaria MiguelAngelus ' + VERSAO_SECRETARIA; }</script>
 <link rel="icon" type="image/svg+xml" href="img/icone.svg">
 </head>
@@ -25,7 +25,7 @@
     </div>
     <div class="splash-info">
       <div class="splash-gratis"><b>Gratuito · uso livre</b></div>
-      <div data-versao>Versão 1.9.21</div>
+      <div data-versao>Versão 1.9.22</div>
       <div>© 2026</div>
       <div><b>PASCOM</b></div>
       <div><b>São José Operário Ilha</b></div>
@@ -188,6 +188,8 @@ if (SECRETARIA) {
       <span>As intenções de cada Missa, a folha para ler e o relatório das ofertas. Só entre as Secretarias.</span></button>
     <button type="button" data-sec="escala" class="sec-local"><span class="ic">📋</span><b>Escalas</b>
       <span>Coordenação de liturgia, ministros, leitores, cantores, projeção, coroinhas… a agenda das equipes e a escala do mês para imprimir. Só entre as Secretarias.</span></button>
+    <button type="button" data-sec="calPastoral"><span class="ic">📆</span><b>Calendário pastoral</b>
+      <span>Os eventos das pastorais e da paróquia no portal, quem pode mexer e os 📝 relatórios do mês de cada pastoral.</span></button>
     <button type="button" data-sec="eventos"><span class="ic">🎉</span><b>Eventos com QR code</b>
       <span>Retiro, festa, curso… com cartaz e um QR code que põe o evento na agenda do celular.</span></button>
     <button type="button" data-sec="campanhas"><span class="ic">💝</span><b>Campanhas de arrecadação</b>
@@ -1695,6 +1697,7 @@ if (SECRETARIA) {
 <script src="js/secretariaagendag.js"></script>
 <script src="js/escala.js"></script>
 <script src="js/escalacarga.js"></script>
+<script src="js/portal.js"></script>
 <script src="js/eventos.js"></script>
 <script src="js/campanhas.js"></script>
 <script src="js/boasvindas.js"></script>

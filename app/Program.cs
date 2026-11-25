@@ -449,6 +449,8 @@ namespace MiguelAngelus
         GoogleDrive Google => google ?? (google = new GoogleDrive(cliente));
         GoogleAgenda agendaG;   // (protótipo, Secretaria) agenda compartilhada da secretaria, numa conta própria
         GoogleAgenda AgendaG { get { if (agendaG == null) agendaG = new GoogleAgenda(cliente); agendaG.UsarClienteSeFaltar(Google.ClienteId, Google.ClienteSegredo); return agendaG; } }
+        GooglePortal portalG;   // (Secretaria) cria e atualiza o portal das pastorais (Apps Script) na conta da paróquia
+        GooglePortal PortalG { get { if (portalG == null) portalG = new GooglePortal(cliente); portalG.UsarCliente(Google.ClienteId, Google.ClienteSegredo); return portalG; } }
 
         async void Arquivo(System.Collections.Generic.Dictionary<string, object> m)
         {
@@ -497,6 +499,31 @@ namespace MiguelAngelus
                         Responder(id, new { ok = true }); return;
                     case "agendaApi":
                         Responder(id, new { ok = true, dados = await AgendaG.Chamar(Convert.ToString(m["metodo"]), Convert.ToString(m["caminho"]), m.TryGetValue("corpo", out var cp) ? cp : null) }); return;
+                    // ----- (Secretaria) portal das pastorais: criar/atualizar o projeto do Apps Script na conta da paróquia -----
+                    case "portalStatus":
+                        Responder(id, new { ok = true, temCliente = PortalG.TemCliente, conectado = PortalG.Conectado, email = PortalG.Email, proprio = PortalG.Proprio }); return;
+                    // (1.7.1) conta à parte para o portal e as agendas: arquivo do Google próprio, sem mexer na ☁ nuvem
+                    case "portalCarregarCliente":
+                        using (var d = new OpenFileDialog { Title = "Arquivo JSON do Google da conta do portal (Google Cloud → Clientes → Fazer download do JSON)", Filter = "Arquivo do Google (*.json)|*.json" })
+                        {
+                            if (d.ShowDialog(this) != DialogResult.OK) { Responder(id, new { ok = false, erro = "cancelado" }); return; }
+                            PortalG.DefinirCliente(File.ReadAllText(d.FileName));
+                            // as agendas do Google (escalas, agenda pastoral) passam a usar a mesma conta à parte
+                            AgendaG.DefinirCliente(File.ReadAllText(d.FileName));
+                        }
+                        Responder(id, new { ok = true, temCliente = PortalG.TemCliente, conectado = PortalG.Conectado, proprio = PortalG.Proprio }); return;
+                    case "portalUsarNuvem":
+                        PortalG.UsarDaNuvem(Google.ClienteId, Google.ClienteSegredo);
+                        Responder(id, new { ok = true, temCliente = PortalG.TemCliente, proprio = false }); return;
+                    case "portalConectar":
+                        await PortalG.Conectar();
+                        Activate();
+                        Responder(id, new { ok = true, email = PortalG.Email }); return;
+                    case "portalDesconectar":
+                        PortalG.Desconectar();
+                        Responder(id, new { ok = true }); return;
+                    case "portalApi":
+                        Responder(id, new { ok = true, dados = await PortalG.Chamar(Convert.ToString(m["metodo"]), Convert.ToString(m["caminho"]), m.TryGetValue("corpo", out var cpp) ? cpp : null) }); return;
                     // ----- pastas de vídeos e áudios (independe da sincronização) -----
                     case "midiaEscolherPasta":
                         var deVideo = Convert.ToString(m["tipoMidia"]) != "audio";

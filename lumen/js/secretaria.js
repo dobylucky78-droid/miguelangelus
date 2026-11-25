@@ -11,6 +11,23 @@
 // VERSAO_SECRETARIA fica no <head> do index.html (o splash usa antes deste arquivo carregar)
 
 const NOVIDADES_SECRETARIA = [
+  { versao: '1.7.1', data: '2026-11-25', itens: [
+    '📆 Calendário pastoral (card novo na tela inicial; portal 0.2.0): no portal, cada coordenação põe os eventos da sua pastoral em qualquer dia, e todos veem tudo, num calendário do mês ou numa lista. Cada um muda e apaga só os eventos da própria pastoral; quem tem "muda tudo" muda qualquer evento, inclusive os da paróquia. Quando duas pastorais marcam o mesmo dia aparece um ⚠, mas pode.',
+    '🎉 Os eventos com cartaz (Eventos com QR code) entram sozinhos no calendário pastoral, como da paróquia. Mudou ou apagou na Secretaria, muda ou some lá também; no portal ninguém mexe neles.',
+    '📝 Relatório do mês: cada coordenação escreve no portal o resumo das atividades da sua pastoral no mês; a secretaria vê e imprime o relatório de atividades das pastorais (um mês ou vários).',
+    '📲 No portal, ao tocar num evento aparecem os detalhes e os botões para pôr na agenda do celular (ou no Google Agenda).',
+    '👀 Calendário aberto: quem recebe o link pode só ver o calendário, sem entrar e sem mudar nada (não aparecem os nomes de quem lançou). A escala nunca abre sem entrar.',
+    '🙋 Cada coisa no seu lugar: quem pode mexer no calendário se aprova no card 📆 Calendário pastoral; quem pode mudar a escala, em 📋 Escalas → 🌐 Portal. No "Pedir acesso", a pessoa marca o que precisa.',
+    '⚙ Ajustes → 🌐 Portal das pastorais e conta Google: a conta (a mesma da ☁ nuvem ou uma à parte, só para o portal e as agendas), criar e atualizar o portal. 📋 Copiar o link já vem com um recado pronto para o WhatsApp.',
+    '📥 Trazer uma programação: a secretaria põe de uma vez o calendário do ano da paróquia (arquivo .json); o que já está lá não se repete.',
+    '⛪ O brasão da paróquia e o logo da Pascom (opcional) aparecem grandes na entrada do portal.',
+  ] },
+  { versao: '1.7.0', data: '2026-11-24', itens: [
+    '🌐 Portal das pastorais (ideia do Luciano, da Paróquia Coração Eucarístico de Jesus e Santa Marina; em teste): uma página na internet, na conta Google da paróquia, onde cada coordenação entra com nome e senha e escreve a escala da sua pastoral. A secretaria aprova quem pode entrar e o que chega do portal passa por uma prévia, para aplicar ou descartar.',
+    '🧭 A Secretaria cria o portal sozinha: em 📋 Escalas → 🌐 Portal, clique em "🌐 Criar o portal da paróquia". Ela cria o projeto na conta Google da paróquia, põe o código, publica e abre o portal para você clicar em Permitir. Depois é só copiar o link e mandar para as coordenações.',
+    '⬆ Atualizar o portal: quando sair uma versão nova do portal, o botão aparece na aba, e a Secretaria atualiza o código sem mudar o link.',
+    '⛪ O portal tem a cara da Secretaria MiguelAngelus, com o nome e o brasão da paróquia no alto. Os dados ficam numa pasta do Drive da paróquia, que só o portal enxerga.',
+  ] },
   { versao: '1.6.0', data: '2026-11-23', itens: [
     '📋 Escalas (pedido do Luciano, da Paróquia Coração Eucarístico de Jesus e Santa Marina): coordenação de liturgia, ministros, liturgia, músicos, projeção, coroinhas, acólitos… A escala do mês sai numa folha para imprimir, por igreja.',
     '👥 Equipes e agenda: cada equipe tem nome, função e membros, e se programa igual às celebrações recorrentes: em quais Missas da Agenda serve, toda semana ou só na 1ª, 2ª, 3ª, 4ª ou última semana do mês. Aparecem as próximas datas e o aviso quando duas equipes da mesma função caem na mesma Missa.',
@@ -126,6 +143,7 @@ function abrirSecretaria(qual) {
     case 'campanhas': return abrirCampanhas();     // (1.9.6) campanhas.js
     case 'agendaG': return abrirAgendaG();
     case 'escala': return abrirEscala();           // (1.6.0) escala.js
+    case 'calPastoral': return abrirCalPastoral(); // (1.7.1) portal.js
   }
 }
 

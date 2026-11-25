@@ -20,6 +20,7 @@ const MENU_SECRETARIA = `
   <div class="menu"><button class="menu-titulo">Ajustes</button>
     <div class="menu-itens">
       <button data-menu="sec-nuvem">☁ Nuvem da paróquia (Google Drive)…</button>
+      <button data-menu="sec-portal">🌐 Portal das pastorais e conta Google…</button>
       <button data-menu="sec-agendaG">📆 Agenda da secretaria (conta própria)…</button>
       <button data-menu="sec-pasta">🖼 Pasta das imagens do Holyrics…</button>
       <hr>
@@ -56,6 +57,7 @@ function acaoMenuSecretaria(acao) {
   switch (acao) {
     case 'nuvem': return abrirAjustes('sync');
     case 'agendaG': return abrirAgendaG();
+    case 'portal': return abrirPortalCfg();      // (1.7.1) portal.js
     case 'pasta':
       if (!NO_APP) return toast('A pasta das imagens se escolhe só no aplicativo para Windows.');
       return escolherPastaImagens().then(ok => ok && toast('🖼 Pasta das imagens: ' + S.config.avisosPastaImagens));
@@ -190,7 +192,10 @@ async function recarregarCadastrosSecretaria() {
 }
 
 // MiguelAngelus (aba 🎉 Eventos, eventos.js): a lista da aba e o slide aberto/no ar acompanham as mudanças
-function aposMudarEventos() { if (typeof aposMudarEventosMA === 'function') aposMudarEventosMA(); }
+function aposMudarEventos() {
+  if (typeof aposMudarEventosMA === 'function') aposMudarEventosMA();
+  if (typeof enviarEventosSecPortalLogo === 'function') enviarEventosSecPortalLogo();   // (1.7.1) 📆 calendário pastoral do portal
+}
 
 // Folha A4 (mesmo jeito da folha dos avisos): título, linha da paróquia e "Página X de Y"
 // (1.6.0) { paisagem: true } = A4 deitada (escala do mês, com uma coluna por função)

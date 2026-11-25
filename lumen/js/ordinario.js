@@ -83,7 +83,7 @@ const Ordinario = (() => {
           'Bendito o que vem em nome do Senhor!\nHosana nas alturas!',
         ] },
         { id: 'misterio-fe', titulo: 'Mistério da Fé', slides: [
-          'P. Eis o mistério da fé!\nT. Anunciamos, Senhor, a vossa morte\ne proclamamos a vossa ressurreição.\nVinde, Senhor Jesus!',
+          'P. Mistério da fé!\nT. Anunciamos, Senhor, a vossa morte\ne proclamamos a vossa ressurreição.\nVinde, Senhor Jesus!',
           'P. Mistério da fé e do amor!\nT. Todas as vezes que comemos deste pão\ne bebemos deste cálice,\nanunciamos, Senhor, a vossa morte,\nenquanto esperamos a vossa vinda!',
           'P. Mistério da fé para a salvação do mundo!\nT. Salvador do mundo, salvai-nos,\nvós que nos libertastes\npela cruz e ressurreição.',
         ] },
@@ -212,11 +212,19 @@ const Ordinario = (() => {
   // { id, nome, pag (id da página na tabela 📖), proprio: texto próprio da fórmula (chave "parte#fórmula") }
   const CRUZ = 'P. Em nome do Pai e do Filho e do Espírito Santo.\nT. Amém.';
   const formulas = id => {
+    // (1.9.22, Luciano 24/11/2026) as oito do Missal (a até h) e a do bispo. Os ids não são as letras: o "c" de antes
+    // (1.9.20) era "O Senhor esteja convosco", que no Missal é a h; o id ficou para não mudar os roteiros já salvos.
     if (id === 'saudacao') return [
       { id: '', nome: 'Só o sinal da cruz' },
       { id: 'a', nome: 'Saudação A: "A graça de nosso Senhor Jesus Cristo…"', pag: 'mr-inicio', proprio: true },
       { id: 'b', nome: 'Saudação B: "A graça e a paz de Deus, nosso Pai…"', pag: 'mr-inicio', proprio: true },
-      { id: 'c', nome: 'Saudação C: "O Senhor esteja convosco"', pag: 'mr-inicio', proprio: true, padrao: ['P. O Senhor esteja convosco.\nT. Ele está no meio de nós.'] },
+      { id: 'constancia', nome: 'Saudação C: "O Senhor, que encaminha os nossos corações…"', pag: 'mr-saudacoes', proprio: true },
+      { id: 'esperanca', nome: 'Saudação D: "O Deus da esperança…"', pag: 'mr-saudacoes', proprio: true },
+      { id: 'paz-fe', nome: 'Saudação E: "A vós, irmãos, paz e fé…"', pag: 'mr-saudacoes', proprio: true },
+      { id: 'eleitos', nome: 'Saudação F: "Irmãos eleitos…"', pag: 'mr-saudacoes', proprio: true },
+      { id: 'que-vem', nome: 'Saudação G: "…daquele que é, que era e que vem"', pag: 'mr-saudacoes', proprio: true },
+      { id: 'c', nome: 'Saudação H: "O Senhor esteja convosco"', pag: 'mr-saudacoes', proprio: true, padrao: ['P. O Senhor esteja convosco.\nT. Ele está no meio de nós.'] },
+      { id: 'bispo', nome: 'Saudação do Bispo: "A paz esteja convosco"', pag: 'mr-saud-bispo', proprio: true },
     ];
     if (id === 'misterio-fe') return [
       { id: '', nome: 'As três aclamações (o padre escolhe na hora)' },
@@ -249,6 +257,7 @@ const Ordinario = (() => {
   };
   return {
     grupos, modelos, parte, formulas, formulaDe, textoProprio,
+    editados: () => ({ ...editados }),
     original: id => indice.get(id) || null,
     usarEditados: t => { editados = t && typeof t === 'object' ? { ...t } : {}; },
     editar: (id, slides) => { if (slides && slides.length) editados[id] = slides; else delete editados[id]; return { ...editados }; },

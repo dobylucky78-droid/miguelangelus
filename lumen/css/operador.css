@@ -1515,6 +1515,43 @@ html[data-tema-app="claro"] .slide .corpo.tl .quem, html[data-tema-app="claro"] 
 .esc-acoes { white-space: nowrap; text-align: right; width: 1%; }
 .esc-chk { display: inline-flex; align-items: center; gap: 4px; margin-right: 10px; white-space: nowrap; }
 .esc-chk input { width: auto; }
+/* 🌐 portal das pastorais (portal.js) */
+.esc-pt-tit { font-size: 1rem; margin: 14px 0 6px; display: flex; align-items: center; gap: 10px; }
+.esc-pt-funcs { display: inline-flex; flex-wrap: wrap; gap: 2px 12px; max-width: 440px; vertical-align: middle; }
+.esc-pt-funcs .esc-chk { font-size: .85em; display: inline-flex; flex-direction: row; justify-content: flex-start; margin: 0; width: auto; }
+.esc-pt-funcs .esc-chk input { margin: 0 4px 0 0; flex: none; width: auto; min-width: 0; }
+.esc-tab tr.esc-pt-off td { opacity: .6; }
+.esc-pt-guia { border: 1px solid var(--borda, #444); border-radius: 8px; padding: 8px 12px; margin: 4px 0 10px; }
+.esc-pt-guia summary { cursor: pointer; }
+.esc-pt-passos { margin: 8px 0; padding-left: 22px; }
+.esc-pt-passos li { margin: 0 0 9px; line-height: 1.5; }
+.esc-pt-passos button, .esc-pt-passos .botao { padding: 2px 10px; margin: 0 2px; }
+.esc-pt-passos a.botao { display: inline-block; color: inherit; text-decoration: none; border: 1px solid #e0b43c; border-radius: 6px; background: rgba(224, 180, 60, .15); font-weight: 600; }
+.esc-pt-passos a.botao:hover { background: rgba(224, 180, 60, .3); }
+.esc-pt-criar { border: 1px solid #e0b43c; border-radius: 8px; padding: 10px 14px; margin: 6px 0 10px; background: rgba(224, 180, 60, .08); }
+.esc-pt-criar > button { font-size: 1.05rem; padding: 8px 18px; }
+.esc-pt-criar .esc-pt-passos { list-style: none; padding-left: 4px; }
+.esc-pt-criar .esc-pt-passos li { margin: 0 0 3px; }
+.esc-pt-passos li.ok { color: #6fcf7f; } .esc-pt-passos li.erro { color: #ff8a80; } .esc-pt-passos li.ag { font-weight: 600; }
+#ptSituacao a { color: #e0b43c; }
+.esc-pt-conta { display: flex; flex-direction: column; gap: 4px; margin: 6px 0 10px; padding: 8px 12px; border: 1px solid var(--borda, #3a3f48); border-radius: 8px; }
+.esc-pt-conta label { display: flex; gap: 8px; align-items: center; justify-content: flex-start; text-align: left; cursor: pointer; }
+.esc-pt-conta input[type=radio] { width: auto; flex: none; margin: 0; }
+/* (1.7.1) 📆 calendário pastoral e o portal em três lugares */
+.pt-link-linha { margin: 0 0 8px; }
+.esc-pt-sem-area td { opacity: .75; }
+.esc-pt-pediu { color: var(--cor, #d4a93a); }
+.cp-mes { min-width: 10em; text-align: center; font-size: 1.05rem; }
+.cp-mes::first-letter { text-transform: uppercase; }
+.cp-dia { white-space: nowrap; }
+.cp-cor { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; vertical-align: middle; }
+.cp-lista { max-height: 55vh; overflow: auto; }
+.cp-rel { border-left: 4px solid var(--cor, #d4a93a); padding: 6px 10px; margin: 6px 0 10px; }
+.cp-logo2 { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--borda, #3a3f48); }
+.cp-logo2-previa img { height: 48px; background: #1b1e24; border-radius: 8px; padding: 4px 8px; vertical-align: middle; }
+.esc-pt-avancado { margin-top: 18px; }
+.esc-pt-avancado summary { cursor: pointer; }
+.esc-pt-passos kbd { border: 1px solid currentColor; border-radius: 4px; padding: 0 4px; font-size: .85em; opacity: .85; }
 .esc-avulso { font-size: 11px; padding: 1px 6px; border-radius: 8px; background: var(--painel2); border: 1px solid var(--borda); }
 .esc-form { padding: 8px; margin-bottom: 8px; border: 1px solid var(--borda); border-radius: 8px; }.esc-prog { margin: 2px 0; }
 .esc-prog select { flex: 1 1 auto; width: auto; }
