@@ -238,8 +238,22 @@ function imprimirFolhaSec(titulo, subtitulo, corpo, arquivo, { paisagem = false 
 const TIPOS_MARC = [
   ['batizado', 'Batizado', '💧', 60], ['casamento', 'Casamento', '💍', 60], ['15anos', '15 anos', '🌸', 60],
   ['7dia', 'Missa de 7º dia', '🕯', 60], ['crisma', 'Crisma', '🔥', 120], ['comunhao', '1ª comunhão', '🍞', 90],
-  ['bencao', 'Bênção', '✋', 30], ['outra', 'Outra', '📌', 60],
+  ['bencao', 'Bênção', '✋', 30], ['romaria', 'Romaria / peregrinação', '🚶', 120], ['outra', 'Outra', '📌', 60],   // 'outra' fica por último (tipoMarc)
 ];
+// (1.8.0) 🚶 romarias do Ano Jubilar: quantos grupos e quantos peregrinos vieram (no período ou no jubileu inteiro)
+const jubileuMarc = () => (typeof Esc !== 'undefined' && Esc.portal?.jubileu?.ligado && Esc.portal.jubileu.de) ? Esc.portal.jubileu : null;
+function resumoRomarias(lista) {
+  const rs = lista.filter(m => m.tipo === 'romaria' && m.situacao !== 'cancelada');
+  const feitas = rs.filter(m => m.situacao === 'realizada' || m.data < hojeIso());
+  const soma = l => l.reduce((s, m) => s + (+m.pessoas || 0), 0);
+  return { n: rs.length, pessoas: soma(rs), feitas: feitas.length, pessoasFeitas: soma(feitas), confissao: rs.filter(m => m.confissao).length, missa: rs.filter(m => m.missa).length };
+}
+function htmlResumoRomarias(listaPeriodo) {
+  const p = resumoRomarias(listaPeriodo), j = jubileuMarc();
+  const tj = j ? resumoRomarias(Marc.lista.filter(m => m.data >= j.de && (!j.ate || m.data <= j.ate))) : null;
+  return `<div class="mc-rom-resumo">🚶 <b>${p.n}</b> romaria(s) neste período, com <b>${p.pessoas}</b> peregrino(s) previstos${p.confissao ? ` · ${p.confissao} com confissão` : ''}${p.missa ? ` · ${p.missa} com Missa` : ''}.
+    ${tj ? `<br>No <b>${esc(j.nome || 'Ano Jubilar')}</b> (${dataBR(j.de)} a ${dataBR(j.ate || j.de)}): <b>${tj.n}</b> romaria(s), <b>${tj.pessoas}</b> peregrino(s)${tj.feitas && tj.feitas < tj.n ? ` (já vieram ${tj.feitas}, com ${tj.pessoasFeitas} peregrinos)` : ''}.` : ''}</div>`;
+}
 const SITUACOES_MARC = [['pre', 'Pré-marcada'], ['confirmada', 'Confirmada'], ['realizada', 'Realizada'], ['cancelada', 'Cancelada']];
 const tipoMarc = id => TIPOS_MARC.find(t => t[0] === id) || TIPOS_MARC[TIPOS_MARC.length - 1];
 
@@ -273,7 +287,7 @@ function conflitosMarc(m) {
     const oi = minutos(o.hora), of = minutos(o.horaFim) || oi + tipoMarc(o.tipo)[3];
     if (oi < fim && ini < of) out.push(`${tipoMarc(o.tipo)[1]} às ${o.hora}${o.nomes ? ` (${o.nomes.split('\n')[0]})` : ''}`);
   }
-  if (m.tipo !== '7dia' && m.localId) {
+  if (m.tipo !== '7dia' && m.tipo !== 'romaria' && m.localId) {      // a romaria muitas vezes participa da Missa do horário
     for (const c of ocorrencias(deIso(m.data))) {
       if (c.cancelada || c.localId !== m.localId) continue;
       const ci = minutos(c.hora), cf = ci + 60;
@@ -326,6 +340,12 @@ const HTML_MARCACOES = `
         <label class="campo">Situação <select id="mcfSituacao">${SITUACOES_MARC.map(s => `<option value="${s[0]}">${s[1]}</option>`).join('')}</select></label>
         <label class="campo mc-larga">Observações <input id="mcfObs" placeholder="Documentos entregues, curso de preparação, taxa paga…"></label>
       </div>
+      <div class="linha mc-rom" hidden>
+        <label class="campo" title="Quantas pessoas vêm (aproximado)">Peregrinos <input type="number" id="mcfPessoas" min="0" max="99999" step="1" style="width:7em"></label>
+        <label class="campo mc-larga">De onde vêm <input id="mcfOrigem" placeholder="Paróquia, cidade, colégio, grupo…"></label>
+        <label class="check"><input type="checkbox" id="mcfConfissao"> 🙏 querem confissão</label>
+        <label class="check"><input type="checkbox" id="mcfMissaRom"> ⛪ querem Missa (ou participar de uma)</label>
+      </div>
       <label class="check mc-int" hidden><input type="checkbox" id="mcfIntencao" checked> Lançar também em <b>🕯 Intenções de Missa</b> (Falecidos, 7º dia)</label>
       <div id="mcfConflito" class="mc-conflito" hidden></div>
       <div class="linha"><span class="espaco"></span>
@@ -358,7 +378,8 @@ function renderMarcacoes() {
     for (let d = new Date(a); d <= b; d.setDate(d.getDate() + 1)) if (!porDia.has(isoData(d))) porDia.set(isoData(d), []);
   }
   const dias = [...porDia.keys()].sort();
-  $('#mcLista').innerHTML = dias.length ? dias.map(iso => {
+  const rom = Marc.filtroTipo === 'romaria' ? htmlResumoRomarias(lista) : '';
+  $('#mcLista').innerHTML = rom + (dias.length ? dias.map(iso => {
     const d = deIso(iso), ms = porDia.get(iso);
     const cels = ocorrencias(d).filter(c => !c.cancelada && (!Marc.filtroLocal || c.localId === Marc.filtroLocal));
     return `<div class="mc-dia ${ms.length ? '' : 'vazio'}"><div class="mc-dia-tit">${DIAS[d.getDay()]}, ${dataBR(iso)}
@@ -370,15 +391,17 @@ function renderMarcacoes() {
           ${loc ? `<span class="card-ponto" style="background:${loc.cor}" title="${esc(nomeIgreja(m.localId))}"></span>` : ''}
           <span class="mc-tipo">${t[2]} ${esc(t[1])}</span>
           <span class="mc-txt"><b>${esc((m.nomes || '').replace(/\n/g, ' · ') || '(sem nomes)')}</b>
-            <small class="sutil">${[loc ? nomeCurtoLocal(loc) : '', m.celebrante, m.contato, m.obs].filter(Boolean).map(esc).join(' · ')}</small></span>
+            <small class="sutil">${[loc ? nomeCurtoLocal(loc) : '', ...extraMarc(m), m.celebrante, m.contato, m.obs].filter(Boolean).map(esc).join(' · ')}</small></span>
           ${conf.length ? `<span class="mc-alerta" title="Choca com: ${esc(conf.join('; '))}">⚠ choque</span>` : ''}
           <span class="mc-sit">${esc(SITUACOES_MARC.find(s => s[0] === (m.situacao || 'pre'))[1])}</span>
           <button type="button" data-mc-editar title="Editar">✎</button>
           <button type="button" data-mc-apagar class="perigo" title="Apagar">✕</button>
         </div>`;
       }).join('') : ''}</div>`;
-  }).join('') : `<p class="sutil">${Marc.busca.trim() ? 'Nada encontrado.' : 'Nenhuma marcação neste período.'}</p>`;
+  }).join('') : `<p class="sutil">${Marc.busca.trim() ? 'Nada encontrado.' : 'Nenhuma marcação neste período.'}</p>`);
 }
+// o que aparece na linha da marcação: a romaria mostra de onde vem, quantos e o que querem
+const extraMarc = m => m.tipo !== 'romaria' ? [] : [m.origem, m.pessoas ? `${m.pessoas} pessoas` : '', m.confissao ? 'confissão' : '', m.missa ? 'Missa' : ''];
 
 function preencherMissasMarc(chaveSel) {
   const data = $('#mcfData').value, local = $('#mcfLocal').value;
@@ -389,7 +412,9 @@ function preencherMissasMarc(chaveSel) {
 }
 
 function ajustarFormMarc(ev) {
-  const sete = $('#mcfTipo').value === '7dia';
+  const sete = $('#mcfTipo').value === '7dia', rom = $('#mcfTipo').value === 'romaria';
+  $('.mc-rom').hidden = !rom;
+  $('#mcfNomes').placeholder = rom ? 'Nome do grupo (ex.: Paróquia Santa Rita de Diadema)' : 'Noivos, batizandos, aniversariante, falecido(a)…';
   $('.mc-missa').hidden = !sete;
   $('.mc-int').hidden = !sete;
   if (sete) {
@@ -413,7 +438,9 @@ function lerFormMarc() {
   return { tipo: $('#mcfTipo').value, localId: $('#mcfLocal').value, data: $('#mcfData').value, hora: $('#mcfHora').value,
     horaFim: $('#mcfHoraFim').value, nomes: $('#mcfNomes').value.trim(), celebrante: $('#mcfCelebrante').value.trim(),
     contato: $('#mcfContato').value.trim(), situacao: $('#mcfSituacao').value, obs: $('#mcfObs').value.trim(),
-    missaChave: $('#mcfTipo').value === '7dia' ? $('#mcfMissa').value : '' };
+    missaChave: $('#mcfTipo').value === '7dia' ? $('#mcfMissa').value : '',
+    ...($('#mcfTipo').value === 'romaria' ? { pessoas: Math.max(0, Math.round(+$('#mcfPessoas').value) || 0), origem: $('#mcfOrigem').value.trim(),
+      confissao: $('#mcfConfissao').checked, missa: $('#mcfMissaRom').checked } : { pessoas: undefined, origem: undefined, confissao: undefined, missa: undefined }) };
 }
 
 function abrirFormMarc(m) {
@@ -431,6 +458,10 @@ function abrirFormMarc(m) {
   $('#mcfContato').value = m?.contato || '';
   $('#mcfSituacao').value = m?.situacao || 'pre';
   $('#mcfObs').value = m?.obs || '';
+  $('#mcfPessoas').value = m?.pessoas || '';
+  $('#mcfOrigem').value = m?.origem || '';
+  $('#mcfConfissao').checked = !!m?.confissao;
+  $('#mcfMissaRom').checked = !!m?.missa;
   $('#mcfIntencao').checked = m ? !!Int.lista.find(i => i.marcacaoId === m.id) : true;
   $('#mcfMissa').innerHTML = '';
   preencherMissasMarc(m?.missaChave);
@@ -494,11 +525,13 @@ function imprimirMarcacoes() {
     busca ? `procura: "${busca}"` : ''].filter(Boolean).join(' · ');
   const linhas = lista.map(m => `<tr><td>${esc(DIAS[deIso(m.data).getDay()].slice(0, 3))} ${dataBR(m.data)}</td><td>${esc(m.hora || '')}${m.horaFim ? '–' + esc(m.horaFim) : ''}</td>
       <td>${esc(nomeCurtoLocal(localDe(m.localId)) || '—')}</td><td>${esc(tipoMarc(m.tipo)[1])}</td>
-      <td>${esc(m.nomes).replace(/\n/g, '<br>')}</td><td>${esc(m.celebrante || '')}</td>
+      <td>${esc(m.nomes).replace(/\n/g, '<br>')}${m.tipo === 'romaria' ? `<br><small>${esc(extraMarc(m).filter(Boolean).join(' · '))}</small>` : ''}</td><td>${esc(m.celebrante || '')}</td>
       ${comContato ? `<td>${esc(m.contato || '')}</td>` : ''}<td>${esc(m.obs || '')}${m.situacao === 'pre' ? ' <span class="cinza">(pré-marcada)</span>' : ''}</td></tr>`).join('');
   const corpo = `<table><thead><tr><th>Dia</th><th>Hora</th><th>Igreja</th><th>Tipo</th><th>Nomes</th><th>Celebrante</th>${comContato ? '<th>Contato</th>' : ''}<th>Obs.</th></tr></thead>
     <tbody>${linhas}</tbody></table>`;
-  imprimirFolhaSec('Agenda de marcações', `${busca ? 'Todas as datas' : rotuloPeriodoMarc()} · ${filtros}`, corpo, `Marcações ${busca ? 'procura' : ini + ' a ' + fim}`);
+  const rom = resumoRomarias(lista);
+  const totalRom = rom.n ? `<p><b>🚶 Romarias:</b> ${rom.n} grupo(s), ${rom.pessoas} peregrino(s)${rom.confissao ? ` · ${rom.confissao} com confissão` : ''}${rom.missa ? ` · ${rom.missa} com Missa` : ''}.</p>` : '';
+  imprimirFolhaSec(Marc.filtroTipo === 'romaria' ? 'Romarias e peregrinações' : 'Agenda de marcações', `${busca ? 'Todas as datas' : rotuloPeriodoMarc()} · ${filtros}`, corpo + totalRom,`Marcações ${busca ? 'procura' : ini + ' a ' + fim}`);
 }
 
 async function abrirMarcacoes() {

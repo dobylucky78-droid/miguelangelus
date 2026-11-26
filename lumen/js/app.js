@@ -506,8 +506,13 @@ function gerarSlides(item) {
   const tam = item.tamSlides || {};
   // fundo próprio do item (1.6.6): no lugar do fundo do tema, com a opção de usar ou não
   const fundo = item.usarFundo && item.fundoImg ? { fundo: item.fundoImg, fundoEscurecer: +(item.fundoEscurecer ?? 35) } : null;
-  return slides.map((s, i) => (tam[i] || fundo) ? { ...s, ...(tam[i] ? { escala: tam[i] } : {}), ...(fundo || {}) } : s);
+  slides = slides.map((s, i) => (tam[i] || fundo) ? { ...s, ...(tam[i] ? { escala: tam[i] } : {}), ...(fundo || {}) } : s);
+  // (1.9.23, ideia do Luciano) 🔇 M: slides marcados para entrar em Mudo sozinhos (ex.: a consagração). Guardado no item
+  // do roteiro pelo texto do slide (não pela posição), então vale só para este roteiro e não se perde se outro slide sair
+  const mudos = item.mudoSlides?.length ? new Set(item.mudoSlides) : null;
+  return mudos ? slides.map(s => mudos.has(chaveMudo(s)) ? { ...s, mudoAuto: true } : s) : slides;
 }
+const chaveMudo = s => normEd(s.secao ? s.secaoNome : s.texto).slice(0, 120);
 
 // (1.7.8, Thiago) Números dos versículos das leituras, como no folheto: a importação guarda <v>23</v> antes do versículo;
 // no slide viram números sobrescritos (²³ — o telão os pinta), ou somem (Ajustes → Aparência do telão)
@@ -580,7 +585,7 @@ function nomeDaSecao(it) {
       return m ? [m, c?.titulo || ''] : c ? [c.titulo, ''] : null;
     }
     case 'texto': case 'preces': return (it.titulo || '').trim() ? [it.titulo.trim(), ''] : null;
-    case 'ordinario': { const p = Ordinario.parte(it.parte); return p ? [p.titulo, ''] : null; }
+    case 'ordinario': { const p = Ordinario.parte(it.parte, it.parte === 'ato-penitencial' ? formulaDoItem(it) : undefined); return p ? [p.titulo, ''] : null; }
     case 'oracao': { const o = oracaoDe(it); return o ? [o.titulo, ''] : null; }
     case 'salmo': return it.rotulo === 'Canto' ? (it.titulo ? [it.titulo, ''] : null) : [it.titulo || 'Salmo Responsorial', it.ref || ''];
     case 'prefacio': return [nomeEuc(it.prefId), ''];
@@ -811,6 +816,7 @@ function gerarSlidesBase(item) {
       return ap ? slidesDaApresentacao(ap) : [];
     }
     case 'ordinario': {
+      if (kyrieJaDito(item)) return [];
       const p = Ordinario.parte(item.parte, formulaDoItem(item));
       return p ? continuarFalas(p.slides).map(t => ({ texto: t, rodape: p.titulo })) : [];
     }
@@ -907,7 +913,12 @@ function projetar(i) {
   // só vai para o telão ao descongelar
   if (S.congelado) { S.congelado.preparado = { item: a.item, idx: i }; renderSlides(); renderRoteiroLista(); return renderControles(); }
   S.live = { slide: a.slides[i], preto: false, item: a.item, idx: i };
+  // (1.9.23) slide marcado com M: o Mudo liga antes de o slide ir (para não aparecer nem um instante); no próximo slide
+  // sem marca desliga, mas só se foi a marca que ligou (o Mudo ligado à mão continua com o operador)
+  const mudoSo = !!S.live.slide.mudoAuto;
+  if (mudoSo && !S.mudo) mudoAutomatico(true);
   enviar({ tipo: 'slide', slide: S.live.slide });
+  if (!mudoSo && S.mudo && S.mudoPelaMarca) mudoAutomatico(false);
   if (a.rIdx >= 0 && typeof pixAutomatico === 'function') pixAutomatico(a.item);     // 💠 sozinho no ofertório (pix.js)
   if (Minis.size) atualizarMinis();       // a miniatura dos Ajustes mostra o slide no ar
   enviar({ tipo: 'preto', on: false });
@@ -1172,7 +1183,9 @@ function proximo() {
   if (!a) return;
   if (a.idx < a.slides.length - 1) return projetar(a.idx + 1);
   if (a.rIdx >= 0 && a.rIdx < S.roteiro.itens.length - 1) {
-    abrirItem(S.roteiro.itens[a.rIdx + 1], a.rIdx + 1);
+    let i = a.rIdx + 1;
+    while (i < S.roteiro.itens.length - 1 && kyrieJaDito(S.roteiro.itens[i])) i++;    // (1.9.23) Kyrie já dito na 3ª fórmula
+    abrirItem(S.roteiro.itens[i], i);
     if (S.atual.slides.length) projetar(0);
   }
 }
@@ -1182,7 +1195,8 @@ function anterior() {
   if (!a) return;
   if (a.idx > 0) return projetar(a.idx - 1);
   if (a.rIdx > 0) {
-    const i = a.rIdx - 1;
+    let i = a.rIdx - 1;
+    while (i > 0 && kyrieJaDito(S.roteiro.itens[i])) i--;
     abrirItem(S.roteiro.itens[i], i);
     if (S.atual.slides.length) projetar(S.atual.slides.length - 1);
   }
@@ -1512,11 +1526,11 @@ function renderSlides() {
   // A+ / A− no canto do slide (aparece ao passar o mouse), só nos itens do roteiro
   const botoesTam = (s, i) => a.rIdx < 0 || editAp ? '' : `<span class="tam-slide" title="Tamanho da letra deste slide">
       ${s.escala ? `<span class="tam-n">${s.escala > 0 ? '+' : ''}${s.escala}</span>` : ''}
-      <button type="button" data-tam="-1" title="Diminuir a letra deste slide">A−</button><button type="button" data-tam="1" title="Aumentar a letra deste slide">A+</button>${s.secao ? '' : `
+      <button type="button" data-mudo class="${s.mudoAuto ? 'ligado' : ''}" title="${s.mudoAuto ? 'Tirar a marca: este slide deixa de entrar em Mudo sozinho' : 'Mudo automático: quando este slide for ao ar, o telão fica só com o fundo (ex.: na consagração); no próximo slide sem M volta sozinho. Vale só para este roteiro'}">M</button><button type="button" data-tam="-1" title="Diminuir a letra deste slide">A−</button><button type="button" data-tam="1" title="Aumentar a letra deste slide">A+</button>${s.secao ? '' : `
       <button type="button" data-ed title="Editar o texto deste slide — não projeta: o telão continua com o que está no ar">✎</button><button type="button" data-del class="perigo" title="Excluir este slide do roteiro (Ctrl+Z desfaz)">✕</button>`}</span>`;
   el.innerHTML = a.slides.map((s, i) => `
-    <div class="slide ${vivoAqui && S.live.idx === i ? 'vivo' : ''} ${a.idx === i ? 'foco' : ''} ${editAp && Apres.sel === i ? 'editando' : ''} ${s.img ? 'com-img lay-' + s.layout : ''} ${s.secao ? 'secao' : ''} ${s.escala ? 'com-tam' : ''}" data-i="${i}">
-      <span class="num">${i + 1}</span>${botoesTam(s, i)}
+    <div class="slide ${vivoAqui && S.live.idx === i ? 'vivo' : ''} ${a.idx === i ? 'foco' : ''} ${editAp && Apres.sel === i ? 'editando' : ''} ${s.img ? 'com-img lay-' + s.layout : ''} ${s.secao ? 'secao' : ''} ${s.escala ? 'com-tam' : ''} ${s.mudoAuto && a.rIdx >= 0 ? 'com-mudo' : ''}" data-i="${i}">
+      <span class="num">${i + 1}</span>${s.mudoAuto && a.rIdx >= 0 ? '<span class="mudo-auto" title="Entra em Mudo sozinho: o telão fica só com o fundo">🔇 Mudo</span>' : ''}${botoesTam(s, i)}
       ${s.img ? `<div class="mini"><img src="${s.img}" alt="">${s.texto ? `<div class="corpo">${htmlCartao(s)}</div>` : ''}</div>` : corpoCard(a, s)}
       ${s.rodape ? `<div class="rod">${esc(s.rodape)}</div>` : ''}
     </div>`).join('')
@@ -1623,11 +1637,30 @@ function escolherFormula(it, f) {
   } else if (f) it.formula = f; else delete it.formula;
 }
 function opcoesFormula(parte, sel, rotuloVazio) {
-  return (Ordinario.formulas(parte) || []).map(f => {
+  // (1.9.23) fórmulas com grupo (as invocações do Ato Penitencial por tempo) vão em optgroup; o do tempo do roteiro, marcado
+  let tempo = '';
+  try { tempo = litCompleta(S.roteiro)?.tituloTempo || ''; } catch (_) {}
+  let h = '', grupo = null;
+  for (const f of Ordinario.formulas(parte) || []) {
+    if ((f.grupo || null) !== grupo) {
+      if (grupo) h += '</optgroup>';
+      grupo = f.grupo || null;
+      if (grupo) h += `<optgroup label="${esc(grupo)}${f.tempo && tempo && f.tempo.test(tempo) ? ' (deste tempo)' : ''}">`;
+    }
     const pag = f.pag && typeof missalDe === 'function' ? missalDe(f.pag).pag : '';
     const semTexto = f.proprio && !Ordinario.textoProprio(parte, f.id);
-    return `<option value="${esc(f.id)}" ${f.id === (sel || '') ? 'selected' : ''}>${esc(!f.id && rotuloVazio ? rotuloVazio : f.nome)}${pag ? ' · p. ' + esc(pag) : ''}${semTexto ? ' (sem texto)' : ''}</option>`;
-  }).join('');
+    h += `<option value="${esc(f.id)}" ${f.id === (sel || '') ? 'selected' : ''}>${esc(!f.id && rotuloVazio ? rotuloVazio : f.nome)}${pag ? ' · p. ' + esc(pag) : ''}${semTexto ? ' (sem texto)' : ''}</option>`;
+  }
+  return h + (grupo ? '</optgroup>' : '');
+}
+// (1.9.23) Ato Penitencial na 3ª fórmula: o "Senhor, tende piedade" já foi dito nas invocações, então o item do Kyrie
+// logo depois fica sem slides e o Próximo/Anterior passa direto por ele
+function kyrieJaDito(it) {
+  if (it?.tipo !== 'ordinario' || it.parte !== 'kyrie') return false;
+  const itens = S.roteiro?.itens || [], i = itens.indexOf(it);
+  if (i < 0) return false;
+  const ant = itens.slice(0, i).reverse().find(x => x.tipo === 'ordinario');
+  return ant?.parte === 'ato-penitencial' && !!Ordinario.formulaDe('ato-penitencial', ant.formula || '')?.kyrie;
 }
 // (1.9.20) Mistério da Fé dentro da Oração Eucarística: troca a aclamação que veio no texto (do folheto ou colada) pela
 // fórmula escolhida; se o texto trouxer as três, fica só a escolhida. A resposta do povo vai até a próxima fala do padre.
@@ -1783,7 +1816,7 @@ function renderCabecalho() {
       const selF = Ordinario.formulas(it.parte)
         ? `<select data-campo="formula" class="estreito" title="Qual fórmula do Missal vai no telão${it.parte === 'bencao-final' ? ' (é a mesma bênção dos fitilhos da 💡 Dica)' : ''}">${opcoesFormula(it.parte, fSel)}</select>`
         : CREIOS.some(([id]) => id === it.parte) ? selCreio('parte', it.parte) : '';
-      const aviso = p?.falta ? `<div class="cab-linha"><span class="sutil pequeno">⚠ O MiguelAngelus não traz o texto desta fórmula. Clique em <b>✎ Editar texto</b> e copie do Missal uma vez: fica guardado só nos computadores da paróquia. Até lá, o telão mostra ${it.parte === 'saudacao' ? 'só o sinal da cruz' : 'a bênção simples'}.</span></div>` : '';
+      const aviso = p?.falta ? `<div class="cab-linha"><span class="sutil pequeno">⚠ O MiguelAngelus não traz o texto desta fórmula. Clique em <b>✎ Editar texto</b> e copie do Missal uma vez: fica guardado só nos computadores da paróquia. ${it.parte === 'ato-penitencial' ? 'Dá para trazer todas as fórmulas de uma vez de um arquivo .txt (📄 dentro do ✎ Editar texto). ' : ''}Até lá, o telão mostra ${it.parte === 'saudacao' ? 'só o sinal da cruz' : it.parte === 'ato-penitencial' ? 'o Confesso (1ª fórmula)' : 'a bênção simples'}.</span></div>` : '';
       h = noRoteiro
         ? `<div class="cab-linha"><span class="tag t-ordinario">Missa</span><select data-campo="parte">${opcoesOrdinario(it.parte)}</select>${selF}${btnEd}</div>${aviso}`
         : `<div class="cab-linha"><span class="tag t-ordinario">Missa</span><h2>${esc(p?.titulo)}</h2>${selF}<span class="espaco"></span>${btnEd}${btnAdd}</div>${aviso}`;
@@ -1919,6 +1952,7 @@ function resumoItem(it) {
     case 'imagem': return { rot: it.abertura ? 'Abertura' : 'Imagem', tit: it.titulo || (it.texto || '').split('\n')[0] || (it.imagem ? 'imagem' : 'escolher imagem…'), vazio: !it.imagem };
     case 'ordinario': {
       const p = Ordinario.parte(it.parte, formulaDoItem(it));
+      if (kyrieJaDito(it)) return { rot: 'Missa', tit: `${p?.titulo || 'Senhor, tende piedade'} · já no Ato Penitencial (pula)`, vazio: false };
       const nf = p?.formula?.nome || '', fo = nf ? ' · ' + nf.replace(/:\s*".*$/, '').replace(/^Saudação /, '') : '';
       return { rot: 'Missa', tit: (p?.titulo || '?') + fo + (p?.falta ? ' (sem texto)' : ''), vazio: !!p?.falta };
     }
@@ -3153,6 +3187,7 @@ function ligarEventos() {
     if (!s) return;
     const bt = e.target.closest('[data-tam]');
     if (bt) return mudarTamanhoSlide(+s.dataset.i, +bt.dataset.tam);
+    if (e.target.closest('[data-mudo]')) return marcarMudoSlide(+s.dataset.i);
     if (e.target.closest('[data-ed]')) return editarSlide(+s.dataset.i);
     if (e.target.closest('[data-del]')) return excluirSlide(+s.dataset.i);
     // apresentação em edição: o clique escolhe o slide para editar (não projeta)
@@ -3624,8 +3659,29 @@ function ligarEventos() {
 
 // 🔇 Mudo (ideia do Hermínio): o telão fica só com o fundo do tema enquanto se navega pelos slides (procurar a parte certa,
 // o padre mudou a ordem…); os slides continuam indo, escondidos. Ao tirar o mudo, aparece o slide que estiver no ar.
+function mudoAutomatico(on) {
+  S.mudo = on;
+  S.mudoPelaMarca = on;
+  enviar({ tipo: 'mudo', on });
+  atualizarFaixa();
+  if (typeof agendarEstadoCelular === 'function') agendarEstadoCelular();
+}
+// (1.9.23) M no slide: marca/desmarca para entrar em Mudo sozinho (só neste roteiro)
+function marcarMudoSlide(i) {
+  const a = S.atual;
+  if (!a || a.rIdx < 0 || !a.slides[i]) return;
+  const it = a.item, k = chaveMudo(a.slides[i]), lista = new Set(it.mudoSlides || []);
+  const marcar = !lista.has(k);
+  if (marcar) lista.add(k); else lista.delete(k);
+  if (lista.size) it.mudoSlides = [...lista]; else delete it.mudoSlides;
+  salvarRoteiro();
+  atualizarSlides();
+  toast(marcar ? '🔇 Este slide vai entrar em Mudo sozinho (o telão fica só com o fundo). No próximo slide sem M, o Mudo sai sozinho.' : 'Marca de Mudo tirada deste slide.');
+}
+
 function alternarMudo() {
   S.mudo = !S.mudo;
+  S.mudoPelaMarca = false;
   enviar({ tipo: 'mudo', on: S.mudo });
   atualizarFaixa();
   renderControles();

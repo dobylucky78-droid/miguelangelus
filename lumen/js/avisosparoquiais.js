@@ -197,7 +197,8 @@ function renderAvisosPar() {
     return `<div class="ap-item ${cls} ${AvPar.editando === a.id ? 'sel' : ''}" data-id="${a.id}">
       <div class="ap-txt">${htmlAviso(a.texto)}</div>
       <div class="ap-info">${etiquetaLigado(a)}<span class="ap-sit">${esc(txt)}</span> · ${locs.length ? locs.map(l => `<span class="card-ponto" style="background:${l.cor}"></span> ${esc(l.nome)}`).join(', ') : 'todas as comunidades'}</div>
-      <div class="ap-bts"><button type="button" data-ap="editar">Editar</button><button type="button" data-ap="apagar" class="perigo">🗑</button></div>
+      <div class="ap-bts">${a.auto === 'cal' ? `<button type="button" data-ap="apagar" title="Não avisar este evento (no 📆 Calendário pastoral, 📢 volta a avisar)">🔕</button>`
+        : '<button type="button" data-ap="editar">Editar</button><button type="button" data-ap="apagar" class="perigo">🗑</button>'}</div>
     </div>`;
   }).join('') : '<p class="sutil">Nenhum aviso programado. Escreva um aviso abaixo, escolha até quando ele vale e clique em Adicionar.</p>';
   const n = AvPar.lista.filter(a => situacao(a)[0] === 'vencido').length;
@@ -210,6 +211,8 @@ function etiquetaLigado(a) {
   const t = tipoDoAviso(a);
   if (t === 'aviso') return '';
   const l = ligadoDoAviso(a);
+  // (1.7.4) automático, do calendário pastoral do portal: muda sozinho quando o evento muda
+  if (a.auto === 'cal') return `<span class="ap-ligado">📆 Calendário pastoral <small>(automático${l ? ', slide do 🎉 evento no telão' : ''})</small></span> · `;
   if (l) return `<span class="ap-ligado">${t === 'evento' ? '🎉' : '💝'} ${esc(l.titulo)} <small>(slide no telão)</small></span> · `;
   const sumiu = a.ligadoId ? (t === 'evento' ? ' — o evento foi apagado' : ' — a campanha não está no telão') : '';
   return `<span class="ap-ligado">${TIPOS_AVISO[t]} <small>(só texto${sumiu})</small></span> · `;
@@ -646,6 +649,11 @@ function ligarAvisosPar() {
     if (!row || !acao) return;
     const a = AvPar.lista.find(x => x.id === row.dataset.id);
     if (acao === 'editar') return editarAvisoPar(a.id);
+    // (1.7.4) do calendário pastoral: na Secretaria, 🔕 = não avisar este evento (senão ele voltaria sozinho)
+    if (acao === 'apagar' && a.auto === 'cal' && typeof foraAvisoCP === 'function') {
+      if (confirm(`Não avisar este evento do calendário pastoral?\n\n"${a.texto}"\n\n(Para voltar: 📆 Calendário pastoral › 📢 na linha do evento.)`)) await foraAvisoCP(a.calId, true);
+      return;
+    }
     if (acao === 'apagar' && confirm(`Apagar o aviso?\n\n"${a.texto}"`)) {
       AvPar.lista = AvPar.lista.filter(x => x !== a);
       (AvPar.apagados ||= {})[a.id] = Date.now();

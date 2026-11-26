@@ -8,7 +8,7 @@
 <script>try { if (localStorage.getItem('lumen.temaApp') === 'claro') document.documentElement.dataset.temaApp = 'claro'; } catch (_) {}
   // (Secretaria MiguelAngelus 1.0) o mesmo programa aberto no modo Secretaria: só Agenda e Avisos (index.html?app=secretaria)
   const SECRETARIA = new URLSearchParams(location.search).get('app') === 'secretaria';
-  const VERSAO_SECRETARIA = '1.7.1';   // versão da Secretaria (a do .iss e do .csproj precisam bater)
+  const VERSAO_SECRETARIA = '1.8.0';   // versão da Secretaria (a do .iss e do .csproj precisam bater)
   if (SECRETARIA) { document.documentElement.classList.add('app-secretaria'); document.title = 'Secretaria MiguelAngelus ' + VERSAO_SECRETARIA; }</script>
 <link rel="icon" type="image/svg+xml" href="img/icone.svg">
 </head>
@@ -25,7 +25,7 @@
     </div>
     <div class="splash-info">
       <div class="splash-gratis"><b>Gratuito · uso livre</b></div>
-      <div data-versao>Versão 1.9.22</div>
+      <div data-versao>Versão 1.9.23</div>
       <div>© 2026</div>
       <div><b>PASCOM</b></div>
       <div><b>São José Operário Ilha</b></div>
@@ -1421,6 +1421,8 @@ if (SECRETARIA) {
     <details><summary class="sutil pequeno">Ver o texto original do programa</summary><pre id="ordOriginal" class="sutil pequeno" style="white-space:pre-wrap"></pre></details>
     <div class="linha">
       <button id="ordRestaurar" value="restaurar" formnovalidate>Restaurar original</button>
+      <button type="button" id="ordArquivo" hidden title="Lê um arquivo .txt com as fórmulas (1ª, 2ª, 3ª e as invocações de cada tempo) e guarda todas de uma vez">📄 Trazer as fórmulas de um arquivo .txt</button>
+      <input type="file" id="ordArquivoInput" accept=".txt,text/plain" hidden>
       <span class="espaco"></span>
       <button value="cancelar" formnovalidate>Cancelar</button>
       <button value="salvar" class="primario">Salvar</button>

@@ -369,7 +369,10 @@ async function lerPdfEscala(bytes) {
     const nomesDoQuadro = pal.filter(p => !ehHora(p) && !ehData(p) && !naColunaDeDatas(p) && p.x >= x0 && p.x < x1 && faixas.some(f => p.y >= f.y0 && p.y < f.y1));
     // a data de cada hora: as datas à esquerda dividem as horas em blocos seguidos, cada data no meio do seu bloco
     // (a data mais perto na altura erra: o 19:00 do fim de um bloco fica mais perto da data do bloco de baixo)
-    const dts = datas.filter(d => d.x < col[0].x && col[0].x - d.x < 300).sort((a, b) => a.y - b.y);
+    // (1.7.5) só as datas DESTE quadro: à direita das horas de um quadro vizinho à esquerda (folha com dois quadros lado a lado)
+    const limEsq = Math.max(-Infinity, ...colsHora.filter(c => c !== col && cx(c[0]) < cx(col[0]) - 15).flatMap(c => c.map(h => h.x + h.w)));
+    const doQuadro = d => d.x < col[0].x && col[0].x - d.x < 300 && d.x > limEsq;
+    const dts = datas.filter(doQuadro).sort((a, b) => a.y - b.y);
     const dataDe = new Map(), n = col.length, m = dts.length;
     if (m && m <= n) {
       const custo = (i, j, d) => Math.abs((col[i].y + col[j].y) / 2 - d.y);
@@ -389,10 +392,13 @@ async function lerPdfEscala(bytes) {
     for (const f of faixas) {
       const h = f.h;
       // a data: à esquerda da hora, a mais perto na altura
-      const d = dataDe.get(h) || datas.filter(p => p.x < h.x && h.x - p.x < 300).sort((a, b) => Math.abs(a.y - h.y) - Math.abs(b.y - h.y))[0];
-      // a igreja: o texto em cima/embaixo da hora, na mesma célula; ou o rótulo junto da data
-      const junto = pal.filter(p => p !== h && !ehHora(p) && Math.abs(cx(p) - cx(h)) < 30 && Math.abs(p.y - h.y) < 22).map(p => p.s);
-      const daData = d ? pal.filter(p => p !== d && Math.abs(cx(p) - cx(d)) < 45 && Math.abs(p.y - d.y) < 40).map(p => p.s) : [];
+      const d = dataDe.get(h) || datas.filter(doQuadro).sort((a, b) => Math.abs(a.y - h.y) - Math.abs(b.y - h.y))[0];
+      // a igreja: o texto em cima/embaixo da hora, na mesma célula; ou o rótulo junto da data.
+      // (1.7.5) o MAIS PERTO que é uma igreja (antes juntava tudo: o "FÁTIMA" da célula de baixo vencia a "CONCEIÇÃO")
+      const perto = (alvo, dx, dy) => pal.filter(p => p !== alvo && !ehHora(p) && !ehData(p) && Math.abs(cx(p) - cx(alvo)) < dx && Math.abs(p.y - alvo.y) < dy)
+        .sort((a, b) => Math.abs(a.y - alvo.y) - Math.abs(b.y - alvo.y) || Math.abs(cx(a) - cx(alvo)) - Math.abs(cx(b) - cx(alvo)));
+      const igr = [...perto(h, 30, 22), ...(d ? perto(d, 45, 40) : [])].find(p => igrejaDoTexto(p.s));
+      const junto = igr ? [igr.s] : [], daData = [];
       const cols = {};
       for (const p of nomesDoQuadro.filter(p => p.y >= f.y0 && p.y < f.y1).sort((a, b) => a.y - b.y)) (cols['c' + colDe(p)] ||= []).push(p.s);
       linhas.push({ iso: d ? isoDeDataBR(d.s) : '', hora: normHora(h.s), igreja: [...junto, ...daData].join(' '), cols, y: h.y, x: h.x });
@@ -417,9 +423,16 @@ function igrejaDoTexto(txt) {
 
 function missaDaLinha(l) {
   if (!l.iso || !l.hora) return { erro: 'sem data ou hora' };
-  const ocs = ocorrencias(deIso(l.iso)).filter(o => !o.cancelada && ehMissa(o.tipo) && o.hora === l.hora);
-  if (!ocs.length) return { erro: 'não há Missa na Agenda neste dia e hora' };
+  const doDia = ocorrencias(deIso(l.iso)).filter(o => !o.cancelada && ehMissa(o.tipo));
+  const ocs = doDia.filter(o => o.hora === l.hora);
   const loc = igrejaDoTexto(l.igreja);
+  if (!ocs.length) {
+    // (1.7.5) horário diferente do da Agenda (18:30 na escala, 19:00 na Agenda): a da mesma igreja até 1 hora antes ou depois, com ⚠
+    const min = h => { const [a, b] = h.split(':').map(Number); return a * 60 + b; };
+    const quase = doDia.filter(o => (!loc || o.localId === loc.id) && Math.abs(min(o.hora) - min(l.hora)) <= 60);
+    if (quase.length === 1) return { o: quase[0], aviso: `na Agenda é às ${quase[0].hora}` };
+    return { erro: 'não há Missa na Agenda neste dia e hora' };
+  }
   const certas = loc ? ocs.filter(o => o.localId === loc.id) : ocs;
   if (certas.length === 1) return { o: certas[0] };
   if (!certas.length) return { erro: `a Agenda não tem Missa às ${l.hora} em ${loc.nome}` };
@@ -474,10 +487,11 @@ function renderPrevia() {
   const usadas = p.colunas.filter(c => mapa[c.key]);
   $('#ecTabela').innerHTML = `<table class="esc-tab"><thead><tr><th>Dia</th><th>Hora</th><th>Igreja</th><th>Missa da Agenda</th>${p.colunas.map(c => `<th>${esc(c.rotulo)}${mapa[c.key] ? `<br><small>→ ${esc(funcoesEsc().find(f => f.id === mapa[c.key])?.nome || '')}</small>` : '<br><small class="sutil">não usar</small>'}</th>`).join('')}</tr></thead><tbody>
     ${p.itens.map(l => `<tr class="${l.m.o ? '' : 'esc-carga-erro'}"><td class="esc-dia">${l.iso ? dataBR(l.iso).slice(0, 5) : '?'}</td><td>${esc(l.hora || '?')}</td><td>${esc(l.igreja || '')}</td>
-      <td>${l.m.o ? `✔ ${esc(nomeCurtoLocal(localDe(l.m.o.localId)) || l.m.o.texto)}` : `✖ ${esc(l.m.erro)}`}</td>
+      <td>${l.m.o ? `${l.m.aviso ? '⚠' : '✔'} ${esc(nomeCurtoLocal(localDe(l.m.o.localId)) || l.m.o.texto)}${l.m.aviso ? ` <small title="Confira: o horário da escala é diferente do da Agenda">(${esc(l.m.aviso)})</small>` : ''}` : `✖ ${esc(l.m.erro)}`}</td>
       ${p.colunas.map(c => `<td>${esc((l.cols[c.key] || []).join(', '))}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
   const ok = p.itens.filter(l => l.m.o).length;
-  $('#ecResumo').textContent = `${ok} de ${p.itens.length} Missas encontradas na Agenda${usadas.length ? '' : ' · escolha a função de pelo menos uma coluna'}.`;
+  const av = p.itens.filter(l => l.m.aviso).length;
+  $('#ecResumo').textContent = `${ok} de ${p.itens.length} Missas encontradas na Agenda${av ? ` (${av} com ⚠ horário diferente: confira)` : ''}${usadas.length ? '' : ' · escolha a função de pelo menos uma coluna'}.`;
   $('#ecAplicar').disabled = !ok || !usadas.length;
 }
 

@@ -11,6 +11,32 @@
 // VERSAO_SECRETARIA fica no <head> do index.html (o splash usa antes deste arquivo carregar)
 
 const NOVIDADES_SECRETARIA = [
+  { versao: '1.8.0', data: '2026-11-25', itens: [
+    '📨 Entregas das pastorais (portal 0.4.0): em 📆 Calendário pastoral › 📨 Entregas, peça algo às pastorais com prazo (ex.: “Planejamento 2027, até 27/11” ou a avaliação do ano), para todas ou só algumas. No portal, cada coordenação entrega na aba 📨 Entregas, escrevendo e/ou mandando um arquivo (PDF, planilha, documento ou foto, até 5 MB), e vê quanto falta para o prazo.',
+    '✅ Aqui você vê quem entregou e quem falta (“2 de 3 entregaram”), baixa os arquivos, marca ✔ o que chegou por fora (em papel, por e-mail, na reunião), copia 📋 a cobrança pronta para o grupo dos coordenadores e 🖨 imprime a situação para a reunião. Com o ano do calendário preenchido, aparece quantos eventos cada pastoral já pôs no 📅 calendário daquele ano. 🔒 Fechar para de receber.',
+    '🔴 Choque de sala: em ⛪ Pastorais e programação, escreva os espaços da paróquia (igreja, salão, salas, capelas). No portal eles viram a lista do campo Local. Dois eventos no mesmo local, no mesmo dia e com menos de 2 horas entre os começos (ou sem hora) aparecem com 🔴, no portal (ao pôr o evento e no calendário) e aqui (no 📅 Calendário e no ✅ Aprovar, que mostra o choque em vermelho e acompanha o “Ajustar e aprovar”). Mesmo dia em outro lugar continua só ⚠.',
+    '🤝 Reuniões (portal 0.5.0): em 📆 Calendário pastoral › 🤝 Reuniões, marque a reunião do Conselho Pastoral com a pauta (ela entra no 📅 calendário para quem entra no portal, mas não vira aviso paroquial), 📋 copie o convite para o grupo, anote a presença de cada pastoral (veio, representante, faltou, justificou), a ata e os encaminhamentos (para todas, uma pastoral ou a coordenação da paróquia, com responsável e prazo). Com a ata 🌐 publicada, cada coordenação vê no portal, na aba 🤝 Reuniões, e marca ✔ feito; aqui aparece “✔ 3 de 5”. 🖨 Ata para imprimir e 📊 presença de cada pastoral no ano.',
+    '🚶 Ano Jubilar: em ⛪ Pastorais e programação, ligue o Ano Jubilar com o nome e as datas. No portal, a pastoral marca o evento dela como 🚶 peregrinação; no 📅 Calendário aparece quantas pastorais já marcaram e quais não, com 📋 lembrete pronto para o grupo e o filtro “🚶 Só as peregrinações”.',
+    '🚶 Romarias: no 📒 Agenda de marcações há o tipo “Romaria / peregrinação”, com quantos peregrinos, de onde vêm e se querem confissão ou Missa. Filtrando por romaria, aparece o total de grupos e peregrinos no período e no Ano Jubilar inteiro (também na folha impressa).',
+    'Para usar: abra ⚙ Ajustes › 🌐 Portal e clique em ⬆ Atualizar o portal.',
+  ] },
+  { versao: '1.7.4', data: '2026-11-25', itens: [
+    '📢 Avisos paroquiais automáticos: cada evento aprovado do 📆 Calendário pastoral entra sozinho nos avisos paroquiais, em todas as celebrações de todas as comunidades (e no MiguelAngelus, pela nuvem). Começa 3 semanas antes e sai no dia seguinte ao evento (no de vários dias, depois do último). ⏳ Provisórios e pedidos ainda não aprovados não entram. Se o evento mudar de data no portal, o aviso acompanha; se sair do calendário, o aviso sai.',
+    '⚙ Em 📆 Calendário pastoral › ⛪ Pastorais e programação › 📢 Avisos paroquiais automáticos: ligar ou desligar, quantos dias ou semanas antes e quais pastorais viram aviso. Para um evento só, use o 📢/🔕 na linha dele no 📅 Calendário (ou o 🔕 na lista de avisos).',
+    '🎉 Os eventos com cartaz não se repetem: se já existe um aviso feito à mão para o evento, não entra outro; se não existe, o aviso automático já sai com o slide do evento no telão.',
+  ] },
+  { versao: '1.7.3', data: '2026-11-25', itens: [
+    '📥 Programação como proposta (portal 0.3.1): um arquivo de programação marcado como proposta (por exemplo, o planejamento do ano que uma pastoral mandou em planilha) entra ⏳ provisório e vai para a aba ✅ Aprovar, para você decidir um a um. Quem não entrou no portal só vê depois de aprovado. Se o portal ainda for o antigo, a Secretaria avisa e não manda nada.',
+    '⛪ Ao trazer uma programação, a pastoral que já existe com o mesmo nome é usada (não aparece repetida na lista).',
+  ] },
+  { versao: '1.7.2', data: '2026-11-25', itens: [
+    '✅ Aprovar o calendário pastoral (portal 0.3.0): o que as coordenações põem no portal fica ⏳ provisório. Só quem entra no portal vê, e o calendário aberto não mostra. Na aba ✅ Aprovar do 📆 Calendário pastoral você decide um a um, em letra grande, para fazer na reunião das pastorais. Para cada pedido aparece o que mais está marcado nesses dias, e há um motivo opcional para quando não aprovar (a pastoral vê o motivo).',
+    '🔁 Num evento já aprovado, mudar o dia, a hora ou o local (ou tirar o evento) também vai para a aprovação; até lá, vale o que estava aprovado. Nome, pastoral e detalhes a coordenação muda sozinha, a qualquer hora.',
+    '📥 O que a Secretaria põe (a programação trazida, o ＋ Novo evento do card e os 🎉 eventos com cartaz) já entra aprovado. Quem tem “muda tudo” no portal também não precisa de aprovação.',
+    '✏ Ajustar e aprovar: na reunião, dá para acertar ali mesmo o dia, a hora, o local ou o nome e aprovar assim, sem recusar. O aviso de outras pastorais muda junto com a data. No portal, a pastoral vê o que ela pediu e como ficou.',
+    '📝 Relatório do mês: cada pessoa escreve só o relatório das pastorais marcadas para ela, mesmo quem tem “muda tudo” (antes, o “muda tudo” abria o relatório de todas). A secretaria continua vendo todos no card.',
+    'Para usar: abra ⚙ Ajustes › 🌐 Portal e clique em ⬆ Atualizar o portal.',
+  ] },
   { versao: '1.7.1', data: '2026-11-25', itens: [
     '📆 Calendário pastoral (card novo na tela inicial; portal 0.2.0): no portal, cada coordenação põe os eventos da sua pastoral em qualquer dia, e todos veem tudo, num calendário do mês ou numa lista. Cada um muda e apaga só os eventos da própria pastoral; quem tem "muda tudo" muda qualquer evento, inclusive os da paróquia. Quando duas pastorais marcam o mesmo dia aparece um ⚠, mas pode.',
     '🎉 Os eventos com cartaz (Eventos com QR code) entram sozinhos no calendário pastoral, como da paróquia. Mudou ou apagou na Secretaria, muda ou some lá também; no portal ninguém mexe neles.',

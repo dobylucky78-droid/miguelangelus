@@ -211,6 +211,14 @@ const Ordinario = (() => {
   // (✎ Editar texto, com a fórmula escolhida) e o texto fica guardado nos computadores dela, como as outras edições.
   // { id, nome, pag (id da página na tabela 📖), proprio: texto próprio da fórmula (chave "parte#fórmula") }
   const CRUZ = 'P. Em nome do Pai e do Filho e do Espírito Santo.\nT. Amém.';
+  // invocações alternativas da 3ª fórmula, por tempo: só algumas palavras para reconhecer cada uma (o texto, a paróquia)
+  const INVOCACOES = [
+    ['Tempo Comum', /comum/i, ['…o caminho que leva ao Pai', '…o vosso perdão a Pedro', '…não para condenar, mas para perdoar', '…procurar quem estava perdido', '…a plenitude da verdade e da graça']],
+    ['Advento', /advento/i, ['…viestes ao mundo para nos salvar', '…o defensor dos pobres', '…visitar vosso povo na paz']],
+    ['Natal', /natal|epifania/i, ['…nascendo da Virgem Maria', '…rei da paz']],
+    ['Quaresma', /quaresma/i, ['…perdoastes o ladrão arrependido', '…na água e no Espírito', '…da morte para a vida']],
+    ['Páscoa', /p[áa]scoa|pascal|ascens|pentecostes/i, ['…nossa paz', '…o eterno sacerdote da nova Aliança', '…nos presenteastes com o dom do Espírito', '…levastes cativo o cativeiro', '…pelo Espírito Santo estais presente']],
+  ];
   const formulas = id => {
     // (1.9.22, Luciano 24/11/2026) as oito do Missal (a até h) e a do bispo. Os ids não são as letras: o "c" de antes
     // (1.9.20) era "O Senhor esteja convosco", que no Missal é a h; o id ficou para não mudar os roteiros já salvos.
@@ -232,6 +240,17 @@ const Ordinario = (() => {
       { id: '2', nome: '2ª: "Todas as vezes que comemos deste pão…"', n: 1 },
       { id: '3', nome: '3ª: "Salvador do mundo, salvai-nos…"', n: 2 },
     ];
+    // (1.9.23, Luciano 26/11/2026) Ato Penitencial: a 1ª é o Confesso de sempre; a 2ª ("Tende compaixão") e a 3ª
+    // (invocações com "Senhor, tende piedade", que então não se repete no item seguinte) a paróquia escreve uma vez,
+    // ou traz todas de um arquivo .txt (✎ Editar texto › 📄). A 3ª tem as invocações do Missal e as de cada tempo.
+    if (id === 'ato-penitencial') return [
+      { id: '', nome: '1ª fórmula: "Confesso a Deus todo-poderoso…"' },
+      { id: '2', nome: '2ª fórmula: "Tende compaixão de nós, Senhor…"', proprio: true },
+      { id: '3', nome: '3ª fórmula: "Senhor, que viestes salvar os corações arrependidos…" (invocações do Missal)', proprio: true, kyrie: true },
+      ...INVOCACOES.flatMap(([g, re, lista]) => lista.map((inc, i) => ({
+        id: `3-${g.toLowerCase().normalize('NFD').replace(/[^a-z]/g, '')}-${i + 1}`, nome: `3ª · ${g} ${i + 1}: "${inc}"`,
+        grupo: `3ª fórmula · ${g}`, tempo: re, proprio: true, kyrie: true }))),
+    ];
     if (id === 'bencao-final' && typeof opcoesBencao === 'function')
       return opcoesBencao().map(([k, nome, pag]) => ({ id: k === 'simples' ? '' : k, nome: nome.replace(/ \(anote.*\)$/, ''), pag, proprio: k !== 'simples' }));
     return null;
@@ -250,6 +269,10 @@ const Ordinario = (() => {
     if (!fo) return p;
     if (fo.n != null) return p.slides[fo.n] ? { ...p, slides: [p.slides[fo.n]], formula: fo } : p;
     const tp = textoProprio(id, f);
+    if (id === 'ato-penitencial') {     // a absolvição (último slide da 1ª) fecha as três fórmulas
+      const t = { ...p, titulo: 'Ato Penitencial', formula: fo };
+      return tp ? { ...t, slides: [...tp.slides, p.slides.at(-1)] } : { ...t, falta: true };
+    }
     if (!tp) return { ...p, formula: fo, falta: true };
     if (id === 'saudacao') return { ...p, slides: [p.slides[0] || CRUZ, ...tp.slides], formula: fo };
     if (id === 'bencao-final') return { ...p, slides: [p.slides[0], ...tp.slides, p.slides.at(-1)], formula: fo };   // "O Senhor esteja…" e a despedida ficam
@@ -284,10 +307,13 @@ function abrirEditorOrdinario(id, f) {
   const tp = proprio ? Ordinario.textoProprio(id, f) : null;
   const dlg = $('#dlgOrdinario');
   dlg.dataset.id = proprio ? id + '#' + f : id;
-  $('#ordTitulo').textContent = proprio ? `${p.titulo}: ${fo.nome.replace(/:\s*".*$/, '').replace(/^Saudação /, 'fórmula ')}` : p.titulo;
+  $('#ordTitulo').textContent = proprio ? `${id === 'ato-penitencial' ? 'Ato Penitencial' : p.titulo}: ${fo.nome.replace(/:\s*".*$/, '').replace(/^Saudação /, 'fórmula ')}` : p.titulo;
   $('#ordTexto').value = proprio ? (tp?.slides || []).join('\n\n') : p.slides.join('\n\n');
+  $('#ordArquivo').hidden = id !== 'ato-penitencial';
   $('#ordTexto').placeholder = proprio ? (id === 'saudacao'
     ? 'Escreva só a saudação desta fórmula, com P. e T. (o sinal da cruz já vem antes). Linha em branco = outro slide.'
+    : id === 'ato-penitencial'
+    ? 'Escreva só as falas desta fórmula, com P. e T. (a absolvição "Deus todo-poderoso tenha compaixão…" já vem depois). Linha em branco = outro slide.\n\nOu traga todas as fórmulas de uma vez de um arquivo .txt (botão 📄).'
     : 'Escreva só a bênção desta fórmula, com P. e T. ("O Senhor esteja convosco" vem antes e o "Ide em paz" depois). Linha em branco = outro slide.') : '';
   const editado = proprio ? !!tp?.editado : !!p.editado;
   $('#ordRestaurar').hidden = !editado;
@@ -308,7 +334,123 @@ async function salvarOrdinario(id, slides) {
   if (S.atual) { atualizarSlides(); renderCabecalho(); }
 }
 
+// (1.9.23) 📄 Ato Penitencial de um arquivo .txt da paróquia (como o do Luciano: "Primeira/Segunda/Terceira fórmula" e
+// as "Invocações alternativas" por tempo). Lê só as falas: convites ("Irmãos e irmãs…", os Ⓑ) e rubricas ficam de fora.
+// Devolve { "ato-penitencial": [...] (só se o Confesso do arquivo for diferente), "ato-penitencial#2": [...], … }.
+function lerAtoPenitencialTxt(txt) {
+  const L = String(txt).replace(/\r/g, '').split('\n').map(l => l.replace(/\s+/g, ' ').replace(/,(?=[A-Za-zÀ-ú])/g, ', ').trim());
+  const achar = (re, de = 0, ate = L.length) => { for (let i = Math.max(0, de); i < ate; i++) if (re.test(L[i])) return i; return -1; };
+  const rubrica = l => /:$/.test(l);
+  const quem = l => /^(o povo|todos)/i.test(l) ? 'T' : /^(o sacerdote|o di[áa]cono)/i.test(l) ? 'P' : null;
+  // falas de..ate: a rubrica muda quem fala; com quebrar, a volta do P. depois do T. começa outro slide
+  const falas = (de, ate, quebrar, ini = 'P') => {
+    const slides = [];
+    let atual = [], q = ini, ult = null;
+    for (let i = de; i < ate; i++) {
+      const l = L[i];
+      if (!l || /^_{3,}/.test(l)) continue;
+      if (rubrica(l)) { q = quem(l) || q; continue; }
+      if (quebrar && q === 'P' && ult === 'T' && atual.length) { slides.push(atual.join('\n')); atual = []; ult = null; }
+      atual.push(q !== ult ? `${q}. ${l}` : l); ult = q;
+    }
+    if (atual.length) slides.push(atual.join('\n'));
+    return slides;
+  };
+  const absolvicao = de => achar(/^segue-se a absolvi/i, de);
+  const out = {};
+  const iF2 = achar(/segunda f[óo]rmula/i), iF3 = achar(/terceira f[óo]rmula/i);
+  const iAlt = achar(/invoca[çc][õo]es alternativas/i), iFim = achar(/^seguem-se as invoca/i, iAlt);
+  // 1ª: o Confesso em três slides (quebra na rubrica do "batendo no peito" e no "E peço") + a absolvição
+  const iC = achar(/^confesso a deus/i, 0, iF2 > 0 ? iF2 : L.length);
+  if (iC >= 0) {
+    const iA = absolvicao(iC), iAm = achar(/^am[ée]m\.?$/i, iA);
+    if (iA > 0 && iAm > 0) {
+      const sl = [];
+      let atual = [];
+      for (let i = iC; i < iA; i++) {
+        const l = L[i];
+        if (!l) continue;
+        if (rubrica(l) || /^e peço/i.test(l)) { if (atual.length) sl.push(atual.join('\n')); atual = []; if (rubrica(l)) continue; }
+        atual.push(l);
+      }
+      if (atual.length) sl.push(atual.join('\n'));
+      if (sl.length) sl[0] = 'T. ' + sl[0];
+      const conf = [...sl, ...falas(iA + 1, iAm + 1, false)];
+      const orig = Ordinario.original('ato-penitencial')?.slides || [];
+      if (conf.length > 1 && conf.join('\n\n') !== orig.join('\n\n')) out['ato-penitencial'] = conf;
+    }
+  }
+  // 2ª: o diálogo "Tende compaixão…" num slide
+  if (iF2 >= 0) {
+    const i = achar(/^tende compaix/i, iF2, iF3 > 0 ? iF3 : L.length), a = i >= 0 ? absolvicao(i) : -1;
+    if (a > i) { const s = falas(i, a, false); if (s.length) out['ato-penitencial#2'] = s; }
+  }
+  // 3ª do Missal: cada invocação com a resposta do povo é um slide
+  if (iF3 >= 0) {
+    const i = achar(/^(senhor|cristo),/i, iF3, iAlt > 0 ? iAlt : L.length), a = i >= 0 ? absolvicao(i) : -1;
+    if (a > i) { const s = falas(i, a, true); if (s.length) out['ato-penitencial#3'] = s; }
+  }
+  // invocações por tempo: "Tempo comum:" / "1. Senhor, que…" / "R. Senhor, tende piedade de nós."
+  if (iAlt >= 0) {
+    const chaves = [[/comum/i, 'tempocomum'], [/advento/i, 'advento'], [/natal/i, 'natal'], [/quaresma/i, 'quaresma'], [/p[áa]scoa|pascal/i, 'pascoa']];
+    let g = null, n = 0, sl = [], p = [];
+    const fechar = () => { if (g && n && sl.length) out[`ato-penitencial#3-${g}-${n}`] = sl; sl = []; p = []; };
+    for (let i = iAlt + 1; i < (iFim > 0 ? iFim : L.length); i++) {
+      const l = L[i];
+      if (!l) continue;
+      if (/^tempo\b/i.test(l) && rubrica(l)) { fechar(); g = chaves.find(([re]) => re.test(l))?.[1] || null; n = 0; continue; }
+      const m = l.match(/^(\d+)\.\s*(.*)$/);
+      if (m) { fechar(); n = +m[1]; if (m[2]) p.push(m[2]); continue; }
+      const r = l.match(/^R\.\s*(.*)$/);
+      if (r) { if (p.length) sl.push(`P. ${p.join('\n')}\nT. ${r[1]}`); p = []; continue; }
+      p.push(l);
+    }
+    fechar();
+  }
+  // só as fórmulas que o programa conhece
+  for (const k of Object.keys(out)) { const f = k.split('#')[1]; if (f && !Ordinario.formulaDe('ato-penitencial', f)) delete out[k]; }
+  return out;
+}
+
+async function trazerAtoPenitencialTxt(arq) {
+  const lidos = lerAtoPenitencialTxt(await arq.text());
+  const atuais = Ordinario.editados(), igual = k => atuais[k] && atuais[k].join('\n\n') === lidos[k].join('\n\n');
+  for (const k of Object.keys(lidos)) if (igual(k)) delete lidos[k];
+  // o Confesso (1ª) já existe no programa: se só mudam quebras de linha, maiúsculas e pontuação, fica o daqui;
+  // se mudam palavras, pergunta à parte, mostrando o que muda
+  const soPalavras = sl => sl.join(' ').replace(/^[PT]\. |\s[PT]\. /g, ' ').replace(/[\s,.;:!]+/g, ' ').toLowerCase().trim();
+  if (lidos['ato-penitencial'] && soPalavras(lidos['ato-penitencial']) === soPalavras(atuais['ato-penitencial'] || Ordinario.original('ato-penitencial').slides))
+    delete lidos['ato-penitencial'];
+  if (lidos['ato-penitencial']) {
+    const agora = (atuais['ato-penitencial'] || Ordinario.original('ato-penitencial').slides).join('\n').replace(/^[PT]\. /gm, '');
+    const novo = lidos['ato-penitencial'].join('\n').replace(/^[PT]\. /gm, '');
+    const a = agora.split('\n'), n = novo.split('\n'), dif = n.filter(l => !a.includes(l)).slice(0, 6);
+    if (!confirm(`O Confesso (1ª fórmula) do arquivo é diferente do que está ${atuais['ato-penitencial'] ? 'guardado aqui' : 'no programa'}. No arquivo:\n• ${dif.join('\n• ')}\n\nOK = usar o Confesso do arquivo · Cancelar = manter o daqui (as outras fórmulas entram do mesmo jeito)`))
+      delete lidos['ato-penitencial'];
+  }
+  const ks = Object.keys(lidos);
+  if (!ks.length) return toast('Nada de novo: as fórmulas do arquivo já estão iguais às daqui (ou o arquivo não tem as fórmulas do Ato Penitencial).');
+  const troca = ks.filter(k => k !== 'ato-penitencial' && atuais[k]);
+  const nome = k => k === 'ato-penitencial' ? '1ª fórmula (Confesso)' : Ordinario.formulaDe('ato-penitencial', k.split('#')[1]).nome.replace(/:\s*".*$/, '');
+  if (!confirm(`Achei ${ks.length} texto(s) no arquivo:\n• ${ks.map(nome).join('\n• ')}`
+    + (troca.length ? `\n\n${troca.length} já tinha(m) texto aqui e será(ão) trocado(s) pelo do arquivo.` : '')
+    + '\n\nOs textos ficam guardados só nos computadores da paróquia (e vão para os outros pela nuvem). Trazer?')) return;
+  for (const k of ks) Ordinario.editar(k, lidos[k]);
+  await DB.salvar('config', { id: 'ordinario', valor: { textos: Ordinario.editados() } });
+  $('#dlgOrdinario').close();
+  renderOrdinario();
+  renderRoteiroLista();
+  if (S.atual) { atualizarSlides(); renderCabecalho(); }
+  toast(`${ks.length} texto(s) do Ato Penitencial guardado(s). Escolha a fórmula no item do Ato Penitencial.`);
+}
+
 function ligarEditorOrdinario() {
+  $('#ordArquivo').addEventListener('click', () => $('#ordArquivoInput').click());
+  $('#ordArquivoInput').addEventListener('change', e => {
+    const arq = e.target.files?.[0];
+    e.target.value = '';
+    if (arq) trazerAtoPenitencialTxt(arq).catch(err => toast('Não consegui ler o arquivo: ' + err.message));
+  });
   $('#listaOrdinario').addEventListener('dblclick', e => {
     const it = e.target.closest('[data-parte]');
     if (it) abrirEditorOrdinario(it.dataset.parte);
